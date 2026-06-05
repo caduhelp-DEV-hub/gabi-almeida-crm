@@ -510,7 +510,8 @@ export default function CRMPage() {
     const dbChangesChannel = supabase
       .channel('schema-db-changes')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'patients' }, () => {
-        supabase.from('patients').select('*').then(({ data }) => {
+        supabase.from('patients').select('*').then((res: any) => {
+          const data = res.data;
           if (data) {
             setPatients(data.map(mapPatientToFrontend));
             const financialsMap: Record<string, PatientFinancialItem[]> = {};
@@ -525,19 +526,19 @@ export default function CRMPage() {
         });
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'appointments' }, () => {
-        supabase.from('appointments').select('*').then(({ data }) => { if (data) setAppointments(data.map(mapAppointmentToFrontend)); });
+        supabase.from('appointments').select('*').then((res: any) => { const data = res.data; if (data) setAppointments(data.map(mapAppointmentToFrontend)); });
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'transactions' }, () => {
-        supabase.from('transactions').select('*').then(({ data }) => { if (data) setTransactions(data as Transaction[]); });
+        supabase.from('transactions').select('*').then((res: any) => { const data = res.data; if (data) setTransactions(data as Transaction[]); });
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'services' }, () => {
-        supabase.from('services').select('*').then(({ data }) => { if (data) setServices(data as ServiceObj[]); });
+        supabase.from('services').select('*').then((res: any) => { const data = res.data; if (data) setServices(data as ServiceObj[]); });
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'inventory' }, () => {
-        supabase.from('inventory').select('*').then(({ data }) => { if (data) setInventory(data.map(mapInventoryToFrontend)); });
+        supabase.from('inventory').select('*').then((res: any) => { const data = res.data; if (data) setInventory(data.map(mapInventoryToFrontend)); });
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'users' }, () => {
-        supabase.from('users').select('*').then(({ data }) => { if (data) setAppUsers(data.map(mapUserToFrontend)); });
+        supabase.from('users').select('*').then((res: any) => { const data = res.data; if (data) setAppUsers(data.map(mapUserToFrontend)); });
       })
       .subscribe();
 
