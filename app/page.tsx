@@ -265,6 +265,8 @@ export default function CRMPage() {
   const [agendaView, setAgendaView] = useState<'diaria' | 'semanal' | 'mensal'>('diaria');
   const [selectedCalendarDay, setSelectedCalendarDay] = useState<number>(24);
   const [isNewUserModalOpen, setIsNewUserModalOpen] = useState<boolean>(false);
+  const [editingUser, setEditingUser] = useState<AppUser | null>(null);
+  const [editingAppointment, setEditingAppointment] = useState<Appointment | null>(null);
   
   // Perfil / Menu
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
@@ -411,18 +413,18 @@ export default function CRMPage() {
 
   // Dynamic metrics helpers
   const totalFinancialRevenue = transactions.filter(t => t.value > 0).reduce((acc, t) => acc + t.value, 0);
-  const totalRevenueThisMonth = totalFinancialRevenue > 0 ? totalFinancialRevenue + 142580 : 142580;
+  const totalRevenueThisMonth = totalFinancialRevenue;
   
-  const dailyFinancialRevenue = transactions.filter(t => t.value > 0 && (dashboardPeriod === 'Hoje' ? String(t.date).includes('Hoje') : true)).reduce((acc, t) => acc + t.value, 0);
-  const totalDailyRevenueDisplay = dashboardPeriod === 'Hoje' ? (dailyFinancialRevenue > 0 ? dailyFinancialRevenue : 12450) : dailyFinancialRevenue;
+  const dailyFinancialRevenue = transactions.filter(t => t.value > 0).reduce((acc, t) => acc + t.value, 0);
+  const totalDailyRevenueDisplay = dailyFinancialRevenue;
   
-  const appointmentsToConsider = dashboardPeriod === 'Hoje' ? appointments.filter(a => a.time) : appointments;
+  const appointmentsToConsider = appointments;
   const appointmentsToday = appointmentsToConsider.length;
-  const totalAtendimentosDisplay = dashboardPeriod === 'Hoje' ? (appointmentsToday > 0 ? appointmentsToday : 24) : appointmentsToday;
-  const ticketMedio = totalAtendimentosDisplay > 0 ? (totalDailyRevenueDisplay / totalAtendimentosDisplay) : (dashboardPeriod === 'Hoje' ? 518 : 0);
+  const totalAtendimentosDisplay = appointmentsToday;
+  const ticketMedio = totalAtendimentosDisplay > 0 ? (totalDailyRevenueDisplay / totalAtendimentosDisplay) : 0;
   const leadsAtivos = patients.length;
   const conversoes = appointmentsToConsider.filter(a => a.status === 'Confirmado').length;
-  const taxaConversao = appointmentsToday > 0 ? Math.round((conversoes / appointmentsToday) * 100) : (dashboardPeriod === 'Hoje' ? 68 : 0);
+  const taxaConversao = appointmentsToday > 0 ? Math.round((conversoes / appointmentsToday) * 100) : 0;
 
   const commissionsToPay = Math.round(totalRevenueThisMonth * 0.25); // estimate
   const primaryRevenueTarget = 170000;
@@ -550,24 +552,33 @@ export default function CRMPage() {
   // Handle new appointment submission
   const handleAddNewAppointment = async (e: React.FormEvent) => {
     e.preventDefault();
-    const newRecord = {
+    const apptData = {
       time: newApptTime,
       patientName: newApptPatient,
       procedure: newApptProcedure,
-      status: 'Confirmado' as const,
+      status: editingAppointment ? editingAppointment.status : ('Confirmado' as const),
       professional: newApptProfessional,
       category: newApptCategory
     };
     
     try {
-      const { error } = await supabase.from('appointments').insert([mapAppointmentToBackend(newRecord)]);
-      if (error) throw error;
+      if (editingAppointment) {
+        const { error } = await supabase
+          .from('appointments')
+          .update(mapAppointmentToBackend(apptData))
+          .eq('id', editingAppointment.id);
+        if (error) throw error;
+        showAlert('Agendamento atualizado com sucesso!');
+      } else {
+        const { error } = await supabase.from('appointments').insert([mapAppointmentToBackend(apptData)]);
+        if (error) throw error;
+        // Dynamic AI insight triggering when an appointment is added
+        setAiAdvice(`Dica Gabi Almeida AI: Agendamento agendado às ${newApptTime}. Com isso, sua jornada de ocupação de hoje subiu para ${Math.min(98, 92 + 2)}%. Excelente trabalho de otimização de horário!`);
+      }
       setIsNewAppointmentOpen(false);
-
-      // Dynamic AI insight triggering when an appointment is added
-      setAiAdvice(`Dica Gabi Almeida AI: Agendamento agendado às ${newApptTime}. Com isso, sua jornada de ocupação de hoje subiu para ${Math.min(98, 92 + 2)}%. Excelente trabalho de otimização de horário!`);
+      setEditingAppointment(null);
     } catch (err: any) {
-      console.error('Error adding appointment:', err);
+      console.error('Error saving appointment:', err);
       showAlert(`Erro ao salvar na agenda: ${err.message || err}`);
     }
   };
@@ -1485,7 +1496,7 @@ export default function CRMPage() {
                       </div>
 
                       {/* Operational appointment slots */}
-                      <div className="p-4 relative min-h-[580px]" id="appointments-drop-zone">
+                      <div className="p-4 relative min-h-[580px] select-text" id="appointments-drop-zone">
                         <div className="absolute inset-x-0 top-0 pointer-events-none space-y-20 pt-6">
                           <div className="border-b border-outline-variant/10 w-full h-0"></div>
                           <div className="border-b border-outline-variant/10 w-full h-0"></div>
@@ -1495,88 +1506,110 @@ export default function CRMPage() {
                           <div className="border-b border-outline-variant/10 w-full h-0"></div>
                         </div>
 
-                        {/* Slot 08:15 */}
-                        <div className="absolute top-[28px] left-4 right-4 h-18 bg-secondary-container/10 border-l-4 border-secondary-container rounded-r-xl p-3 flex items-center justify-between group hover:bg-[#fed65b]/20 transition-all cursor-pointer">
-                          <div className="flex items-center gap-3">
-                            <img className="w-8 h-8 rounded-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBEkjXxcStiiutr_TflFiVONKwKaDnZdH1QVwowMunfj7PRiu99DgY1EZjcTLda1zDr3jbU9hNxjKz05jHPW1r9GgtJ8AjwqAJQo_iX3MdC7nBEeu-B0rxEwj63JLhJPxTTYsmpJRbUHHjsjowIGOjdOKk6P13hxurYM6ZyOMUYjLf4w2jqLuvh2-czyV2fQta2bCs8ropo6w7HY3hVu3kNP9VsEZJ5mx9c_6-Q0JVV2mRKbf07uQNjiAU_5HLl5ren2yXkeQXMKwg" alt="Isabella"/>
-                            <div>
-                              <p className="font-manrope text-[12px] font-bold text-on-surface">Isabella Albuquerque</p>
-                              <p className="text-[10px] text-on-surface-variant flex items-center gap-1 mt-0.5">
-                                <span className="material-symbols-outlined text-[13px]">face</span> Limpeza de Pele Profunda
-                              </p>
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-4">
-                            <div className="text-right">
-                              <p className="font-manrope text-[11px] font-bold text-on-surface">08:15 - 09:00</p>
-                              <span className="text-[9px] bg-white-pure px-2 py-0.5 rounded-full border border-[#fed65b] text-[#745c00] font-bold uppercase">Confirmado</span>
-                            </div>
-                            <span className="material-symbols-outlined text-outline group-hover:text-primary">more_vert</span>
-                          </div>
-                        </div>
+                        {appointments.map((appt) => {
+                          // Calcular posicionamento aproximado na agenda baseando-se no horário
+                          // 08:00 é top=0, e cada hora tem aproximadamente 80px
+                          const [hour, minute] = appt.time.split(':').map(Number);
+                          const startHour = 8;
+                          const relativeHour = (hour + (minute / 60)) - startHour;
+                          const topPos = Math.max(10, Math.round(relativeHour * 80 + 10));
 
-                        {/* Slot 09:30 */}
-                        <div className="absolute top-[120px] left-4 right-4 h-36 bg-primary-container/10 border-l-4 border-primary-container rounded-r-xl p-4 flex flex-col justify-between group hover:bg-primary-container/20 transition-all cursor-pointer">
-                          <div className="flex justify-between items-start">
-                            <div className="flex gap-3">
-                              <div className="w-10 h-10 rounded-full bg-surface-container-high flex items-center justify-center text-primary font-bold text-[12px] font-manrope">JS</div>
-                              <div>
-                                <p className="font-manrope text-[13px] font-bold text-on-surface">Juliana Silveira</p>
-                                <p className="text-[11px] text-on-surface-variant flex items-center gap-1 mt-0.5">
-                                  <span className="material-symbols-outlined text-[14px]">medical_services</span> Aplicação Botulínica (3 áreas)
-                                </p>
+                          const isInjectable = appt.category === 'Injetáveis';
+                          const isConsult = appt.category === 'Consulta';
+                          const categoryColorClass = isInjectable 
+                            ? 'bg-primary-container/10 border-primary-container text-primary' 
+                            : isConsult 
+                              ? 'bg-tertiary-container/10 border-tertiary-container text-tertiary' 
+                              : 'bg-secondary-container/10 border-secondary-container text-[#745c00]';
+
+                          const labelBg = isInjectable ? 'bg-primary' : isConsult ? 'bg-tertiary' : 'bg-[#fed65b]/30 text-[#745c00]';
+
+                          return (
+                            <div 
+                              key={appt.id} 
+                              style={{ top: `${topPos}px` }} 
+                              className={`absolute left-4 right-4 h-20 border-l-4 rounded-r-xl p-3 flex items-center justify-between group hover:shadow-md transition-all ${categoryColorClass}`}
+                            >
+                              <div className="flex items-center gap-3">
+                                {appt.patientAvatar ? (
+                                  <img className="w-8 h-8 rounded-full object-cover" src={appt.patientAvatar} alt={appt.patientName}/>
+                                ) : (
+                                  <div className="w-8 h-8 rounded-full bg-surface-container flex items-center justify-center font-bold text-[10px] font-manrope">
+                                    {appt.patientName.charAt(0)}
+                                  </div>
+                                )}
+                                <div>
+                                  <p className="font-manrope text-[12px] font-bold text-on-surface">{appt.patientName}</p>
+                                  <p className="text-[10px] text-on-surface-variant flex items-center gap-1 mt-0.5">
+                                    <span className="material-symbols-outlined text-[13px]">
+                                      {isInjectable ? 'medical_services' : isConsult ? 'event_note' : 'face'}
+                                    </span> 
+                                    {appt.procedure}
+                                  </p>
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-4">
+                                <div className="text-right">
+                                  <p className="font-manrope text-[11px] font-bold text-on-surface">{appt.time}</p>
+                                  <span className={`text-[8px] px-2 py-0.5 rounded-full font-bold uppercase ${labelBg}`}>
+                                    {appt.status}
+                                  </span>
+                                </div>
+                                <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                  <button 
+                                    onClick={() => {
+                                      setEditingAppointment(appt);
+                                      setNewApptPatient(appt.patientName);
+                                      setNewApptProcedure(appt.procedure);
+                                      setNewApptProfessional(appt.professional);
+                                      setNewApptTime(appt.time);
+                                      setNewApptCategory(appt.category);
+                                      setIsNewAppointmentOpen(true);
+                                    }}
+                                    className="p-1 hover:text-primary transition-colors material-symbols-outlined text-[16px]"
+                                    title="Editar Agendamento"
+                                  >
+                                    edit
+                                  </button>
+                                  <button 
+                                    onClick={() => {
+                                      showConfirm(`Remover agendamento de ${appt.patientName}?`, async () => {
+                                        try {
+                                          const { error } = await supabase.from('appointments').delete().eq('id', appt.id);
+                                          if (error) throw error;
+                                          showAlert('Agendamento removido.');
+                                        } catch (err: any) {
+                                          console.error('Delete appt error:', err);
+                                          showAlert(`Erro ao excluir: ${err.message}`);
+                                        }
+                                      });
+                                    }}
+                                    className="p-1 hover:text-error transition-colors material-symbols-outlined text-[16px]"
+                                    title="Remover Agendamento"
+                                  >
+                                    delete
+                                  </button>
+                                </div>
                               </div>
                             </div>
-                            <div className="text-right">
-                              <p className="font-manrope text-[11px] font-bold text-on-surface">09:30 - 11:00</p>
-                              <span className="text-[8px] bg-primary text-on-primary px-2 py-0.5 rounded-full font-bold uppercase tracking-widest animate-pulse">Em Atendimento</span>
-                            </div>
-                          </div>
-                          <div className="flex justify-between items-end mt-2 pt-2 border-t border-primary/10">
-                            <div className="flex gap-2">
-                              <span className="px-2 py-0.5 bg-white-pure/80 rounded-md text-[9px] text-primary border border-primary/20 font-bold">Prioritário</span>
-                              <span className="px-2 py-0.5 bg-white-pure/80 rounded-md text-[9px] text-on-surface-variant border border-outline-variant font-bold">Retorno 15 dias</span>
-                            </div>
-                            <div className="flex items-center -space-x-1.5">
-                              <img className="w-5 h-5 rounded-full border border-white-pure object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDjl-5MOCfqPf7UVhTK-is80Cvip_9vTjfI7dNFTBZWB3YpgEPWwpMLrys8OOyqeOhgDt2bdS18QJm-swcDlptppKLbuXyu0HrKgKFVP1gb1jMQy2vdlwJww466vSmsi19_01Owyu0O9rmPyVzzKhkVT0tp9njNZ--Qd69ATOLsXVJrUsI8zjbhNAN39-XpaprOz7NVxRFzN5_a3StQJvRKHhJ4GUS6fHfE3zudxjaFt-f8Xiv4fgUJlIJ8LW56_c585Yk3cH6aol0" alt="Avatar"/>
-                              <span className="w-5 h-5 rounded-full bg-surface-container text-[8px] flex items-center justify-center font-bold border border-white-pure text-primary">+1</span>
-                            </div>
-                          </div>
-                        </div>
+                          );
+                        })}
 
-                        {/* Slot 11:15 */}
-                        <div className="absolute top-[284px] left-4 right-4 h-18 bg-tertiary-container/10 border-l-4 border-tertiary-container rounded-r-xl p-3 flex items-center justify-between group opacity-85 hover:opacity-100 transition-all cursor-pointer">
-                          <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 rounded-full bg-surface-container flex items-center justify-center text-on-surface-variant font-bold text-[11px]">RM</div>
-                            <div>
-                              <p className="font-manrope text-[12px] font-bold text-on-surface">Roberto Mendes</p>
-                              <p className="text-[10px] text-on-surface-variant flex items-center gap-1 mt-0.5">
-                                <span className="material-symbols-outlined text-[13px]">event_note</span> Consulta Dermatológica Geral
-                              </p>
-                            </div>
+                        {appointments.length === 0 && (
+                          <div className="py-20 flex flex-col items-center justify-center text-outline gap-2 text-center select-none">
+                            <span className="material-symbols-outlined text-4xl opacity-30">calendar_today</span>
+                            <p className="text-[12px] font-bold">Nenhum agendamento para este dia.</p>
+                            <button 
+                              onClick={() => {
+                                setNewApptTime('09:00');
+                                setIsNewAppointmentOpen(true);
+                              }}
+                              className="mt-2 text-[11px] bg-primary text-white-pure px-4 py-1.5 rounded-xl font-bold hover:opacity-90 shadow-sm"
+                            >
+                              Novo Agendamento
+                            </button>
                           </div>
-                          <div className="flex items-center gap-4">
-                            <div className="text-right">
-                              <p className="font-manrope text-[11px] font-bold text-on-surface">11:15 - 12:00</p>
-                              <span className="text-[9px] bg-tertiary text-on-tertiary px-2 py-0.5 rounded-full font-bold uppercase">Finalizado</span>
-                            </div>
-                            <span className="material-symbols-outlined text-tertiary text-[20px]">check_circle</span>
-                          </div>
-                        </div>
-
-                        {/* Slot 13:00 - Available creation slot */}
-                        <div 
-                          onClick={() => {
-                            setNewApptTime('13:00');
-                            setIsNewAppointmentOpen(true);
-                          }}
-                          className="absolute top-[384px] left-4 right-4 h-20 border-2 border-dashed border-outline-variant rounded-2xl flex items-center justify-center group hover:border-primary/40 transition-colors cursor-pointer"
-                        >
-                          <span className="text-[12px] font-manrope text-outline group-hover:text-primary transition-colors flex items-center gap-2 font-bold select-none">
-                            <span className="material-symbols-outlined">add_circle</span>
-                            Horário disponível - Toque para agendar às 13:00
-                          </span>
-                        </div>
+                        )}
 
                       </div>
                     </div>
@@ -2815,6 +2848,7 @@ export default function CRMPage() {
                       try {
                         const { error } = await supabase.from('transactions').delete().neq('id', '00000000-0000-0000-0000-000000000000');
                         if (error) throw error;
+                        showAlert('Histórico financeiro resetado com sucesso!');
                       } catch (err: any) {
                         console.error('Error resetting transactions:', err);
                         showAlert(`Erro ao resetar financeiro: ${err.message}`);
@@ -2822,6 +2856,22 @@ export default function CRMPage() {
                     });
                   }} className="px-3 py-1.5 border border-error/50 text-error hover:bg-error/10 rounded-lg text-[12px] font-bold transition-colors">
                     Resetar Financeiro
+                  </button>
+                  <button onClick={() => {
+                    showConfirm('Aviso: Isso apagará todas as transações, pacientes e agendamentos para limpar a base. Deseja prosseguir?', async () => {
+                      try {
+                        // Apagar todas as tabelas operacionais
+                        await supabase.from('transactions').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+                        await supabase.from('appointments').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+                        await supabase.from('patients').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+                        showAlert('Base limpa com sucesso!');
+                      } catch (err: any) {
+                        console.error('Database clean error:', err);
+                        showAlert(`Erro ao limpar base: ${err.message}`);
+                      }
+                    });
+                  }} className="px-3 py-1.5 bg-error text-white-pure rounded-lg text-[12px] font-bold shadow-sm hover:opacity-90">
+                    Limpar Base de Dados
                   </button>
                 </div>
               </div>
@@ -3233,6 +3283,16 @@ export default function CRMPage() {
                           </td>
                           <td className="px-6 py-4 text-right space-x-1.5">
                             <button 
+                              onClick={() => {
+                                setEditingUser(u);
+                                setIsNewUserModalOpen(true);
+                              }}
+                              className="p-2 text-on-surface-variant hover:text-primary transition-colors text-[18px] material-symbols-outlined rounded-lg hover:bg-surface-container"
+                              title="Editar Cadastro / Senha"
+                            >
+                              edit
+                            </button>
+                            <button 
                               onClick={async () => {
                                 try {
                                   const { error } = await supabase
@@ -3465,7 +3525,10 @@ export default function CRMPage() {
           <div className="bg-white-pure rounded-3xl border border-outline-variant w-full max-w-xl p-8 shadow-2xl relative select-none">
             
             <button 
-              onClick={() => setIsNewUserModalOpen(false)}
+              onClick={() => {
+                setIsNewUserModalOpen(false);
+                setEditingUser(null);
+              }}
               className="absolute top-6 right-6 text-on-surface-variant hover:text-primary transition-all p-2 font-black"
             >
               <span className="material-symbols-outlined">close</span>
@@ -3474,7 +3537,9 @@ export default function CRMPage() {
             <div className="flex items-center gap-2 mb-6">
               <span className="material-symbols-outlined text-primary text-3xl">badge</span>
               <div>
-                <h3 className="font-manrope text-[18px] font-bold text-primary">Novo Integrante da Equipe</h3>
+                <h3 className="font-manrope text-[18px] font-bold text-primary">
+                  {editingUser ? 'Editar Integrante da Equipe' : 'Novo Integrante da Equipe'}
+                </h3>
                 <p className="text-[12px] text-on-surface-variant">Configure os dados cadastrais e o nível de acesso ao CRM</p>
               </div>
             </div>
@@ -3487,6 +3552,7 @@ export default function CRMPage() {
               const role = (document.getElementById('new_user_role') as HTMLSelectElement).value as any;
               const specialty = (document.getElementById('new_user_specialty') as HTMLInputElement).value;
               const commissionRate = parseInt((document.getElementById('new_user_comm') as HTMLInputElement).value) || 0;
+              const password = (document.getElementById('new_user_pass') as HTMLInputElement).value;
               
               const canAccessCRM = (document.getElementById('perm_crm') as HTMLInputElement).checked;
               const canAccessAgenda = (document.getElementById('perm_agenda') as HTMLInputElement).checked;
@@ -3499,62 +3565,93 @@ export default function CRMPage() {
                 return;
               }
 
-              const email = `${username}@gabialmeida.com.br`;
-              const password = '123'; // Default initialization
-
               try {
-                const res = await fetch('/api/auth/register', {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({
-                    name,
-                    username,
-                    role,
-                    specialty,
-                    phone,
-                    commissionRate,
-                    permissions: {
-                      accessCRM: canAccessCRM,
-                      accessAgenda: canAccessAgenda,
-                      accessFinanceiro: canAccessFinanceiro,
-                      canSchedule,
-                      editPatients: canEditPatient
-                    }
-                  })
-                });
+                if (editingUser) {
+                  // Editar usuário existente
+                  const res = await fetch('/api/auth/users/update', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                      id: editingUser.id,
+                      name,
+                      username,
+                      role,
+                      status: editingUser.status,
+                      specialty,
+                      phone,
+                      commissionRate,
+                      password,
+                      permissions: {
+                        accessCRM: canAccessCRM,
+                        accessAgenda: canAccessAgenda,
+                        accessFinanceiro: canAccessFinanceiro,
+                        canSchedule,
+                        editPatients: canEditPatient
+                      }
+                    })
+                  });
 
-                const data = await res.json();
-                if (!res.ok) {
-                  throw new Error(data.error || 'Erro ao cadastrar integrante.');
+                  const data = await res.json();
+                  if (!res.ok) {
+                    throw new Error(data.error || 'Erro ao editar integrante.');
+                  }
+                  showAlert(`Cadastro de ${name} atualizado com sucesso!`);
+                } else {
+                  // Cadastrar novo usuário
+                  const res = await fetch('/api/auth/register', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                      name,
+                      username,
+                      role,
+                      specialty,
+                      phone,
+                      commissionRate,
+                      permissions: {
+                        accessCRM: canAccessCRM,
+                        accessAgenda: canAccessAgenda,
+                        accessFinanceiro: canAccessFinanceiro,
+                        canSchedule,
+                        editPatients: canEditPatient
+                      }
+                    })
+                  });
+
+                  const data = await res.json();
+                  if (!res.ok) {
+                    throw new Error(data.error || 'Erro ao cadastrar integrante.');
+                  }
+                  showAlert(`Cadastrado com sucesso! ${name} agora possui acesso ao sistema com senha padrão "123".`);
                 }
 
                 setIsNewUserModalOpen(false);
-                showAlert(`Cadastrado com sucesso! ${name} agora possui acesso ao sistema.`);
+                setEditingUser(null);
               } catch (err: any) {
-                console.error('Error registering new team member:', err);
-                showAlert(`Erro ao cadastrar integrante: ${err.message || err}`);
+                console.error('Error saving team member:', err);
+                showAlert(`Erro ao salvar integrante: ${err.message || err}`);
               }
             }} className="space-y-4 text-[12px] font-bold text-on-surface-variant">
               
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block mb-1">Nome Completo</label>
-                  <input type="text" id="new_user_name" placeholder="Ex: Dr. Luciano Santos" required className="w-full bg-surface border border-outline-variant rounded-xl p-2.5 focus:outline-none focus:border-primary font-medium" />
+                  <input type="text" id="new_user_name" defaultValue={editingUser?.name || ''} placeholder="Ex: Dr. Luciano Santos" required className="w-full bg-surface border border-outline-variant rounded-xl p-2.5 focus:outline-none focus:border-primary font-medium" />
                 </div>
                 <div>
                   <label className="block mb-1">Login (Username)</label>
-                  <input type="text" id="new_user_username" placeholder="luciano.s" required className="w-full bg-surface border border-outline-variant rounded-xl p-2.5 focus:outline-none focus:border-primary font-medium" />
+                  <input type="text" id="new_user_username" defaultValue={editingUser?.username || ''} placeholder="luciano.s" required className="w-full bg-surface border border-outline-variant rounded-xl p-2.5 focus:outline-none focus:border-primary font-medium" />
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block mb-1">Telefone Celular</label>
-                  <input type="text" id="new_user_phone" placeholder="(11) 98721-0012" className="w-full bg-surface border border-outline-variant rounded-xl p-2.5 focus:outline-none focus:border-primary font-medium" />
+                  <input type="text" id="new_user_phone" defaultValue={editingUser?.phone || ''} placeholder="(11) 98721-0012" className="w-full bg-surface border border-outline-variant rounded-xl p-2.5 focus:outline-none focus:border-primary font-medium" />
                 </div>
                 <div>
                   <label className="block mb-1">Perfil de Operação</label>
-                  <select id="new_user_role" defaultValue="prestador" className="w-full bg-surface border border-outline-variant rounded-xl p-2.5 focus:outline-none focus:border-primary font-medium">
+                  <select id="new_user_role" defaultValue={editingUser?.role || 'prestador'} className="w-full bg-surface border border-outline-variant rounded-xl p-2.5 focus:outline-none focus:border-primary font-medium">
                     <option value="prestador">Especialista / Médico</option>
                     <option value="staff">Assistente / Recepção</option>
                     <option value="admin">Administrador Geral</option>
@@ -3565,12 +3662,19 @@ export default function CRMPage() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block mb-1">Especialidade (Se Aplicável)</label>
-                  <input type="text" id="new_user_specialty" placeholder="Biomédico / Dermato" className="w-full bg-surface border border-outline-variant rounded-xl p-2.5 focus:outline-none focus:border-primary font-medium" />
+                  <input type="text" id="new_user_specialty" defaultValue={editingUser?.specialty || ''} placeholder="Biomédico / Dermato" className="w-full bg-surface border border-outline-variant rounded-xl p-2.5 focus:outline-none focus:border-primary font-medium" />
                 </div>
                 <div>
                   <label className="block mb-1">Repasse / Comissão (%)</label>
-                  <input type="number" id="new_user_comm" defaultValue="30" className="w-full bg-surface border border-outline-variant rounded-xl p-2.5 focus:outline-none focus:border-primary font-medium" />
+                  <input type="number" id="new_user_comm" defaultValue={editingUser?.commissionRate ?? 30} className="w-full bg-surface border border-outline-variant rounded-xl p-2.5 focus:outline-none focus:border-primary font-medium" />
                 </div>
+              </div>
+
+              <div>
+                <label className="block mb-1">
+                  {editingUser ? 'Alterar Senha (Deixe em branco para não alterar)' : 'Definir Senha Inicial (Deixe em branco para padrão "123")'}
+                </label>
+                <input type="password" id="new_user_pass" placeholder="Definir nova senha de acesso" className="w-full bg-surface border border-outline-variant rounded-xl p-2.5 focus:outline-none focus:border-primary font-medium" />
               </div>
 
               {/* Usability & CRM Access Rules checkboxes */}
@@ -3578,23 +3682,23 @@ export default function CRMPage() {
                 <p className="font-manrope text-[12px] font-black text-on-surface mb-2">Usabilidade &amp; Níveis de Acesso do CRM</p>
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                   <label className="flex items-center gap-2 cursor-pointer font-medium text-[11px]">
-                    <input type="checkbox" id="perm_crm" defaultChecked className="rounded border-outline-variant text-primary" />
+                    <input type="checkbox" id="perm_crm" defaultChecked={editingUser ? !!editingUser.permissions?.accessCRM : true} className="rounded border-outline-variant text-primary" />
                     Módulo CRM
                   </label>
                   <label className="flex items-center gap-2 cursor-pointer font-medium text-[11px]">
-                    <input type="checkbox" id="perm_agenda" defaultChecked className="rounded border-outline-variant text-primary" />
+                    <input type="checkbox" id="perm_agenda" defaultChecked={editingUser ? !!editingUser.permissions?.accessAgenda : true} className="rounded border-outline-variant text-primary" />
                     Ver Agenda
                   </label>
                   <label className="flex items-center gap-2 cursor-pointer font-medium text-[11px]">
-                    <input type="checkbox" id="perm_fin" className="rounded border-outline-variant text-primary" />
+                    <input type="checkbox" id="perm_fin" defaultChecked={editingUser ? !!editingUser.permissions?.accessFinanceiro : false} className="rounded border-outline-variant text-primary" />
                     Finanças / Caixa
                   </label>
                   <label className="flex items-center gap-2 cursor-pointer font-medium text-[11px]">
-                    <input type="checkbox" id="perm_sched" defaultChecked className="rounded border-outline-variant text-primary" />
+                    <input type="checkbox" id="perm_sched" defaultChecked={editingUser ? !!editingUser.permissions?.canSchedule : true} className="rounded border-outline-variant text-primary" />
                     Agendar Horas
                   </label>
                   <label className="flex items-center gap-2 cursor-pointer font-medium text-[11px]">
-                    <input type="checkbox" id="perm_edit" defaultChecked className="rounded border-outline-variant text-primary" />
+                    <input type="checkbox" id="perm_edit" defaultChecked={editingUser ? !!editingUser.permissions?.editPatients : true} className="rounded border-outline-variant text-primary" />
                     Editar Clientes
                   </label>
                 </div>
@@ -3603,7 +3707,10 @@ export default function CRMPage() {
               <div className="pt-4 flex gap-3">
                 <button 
                   type="button"
-                  onClick={() => setIsNewUserModalOpen(false)}
+                  onClick={() => {
+                    setIsNewUserModalOpen(false);
+                    setEditingUser(null);
+                  }}
                   className="flex-1 py-3 text-[12px] font-bold text-on-surface border border-outline-variant rounded-xl hover:bg-surface transition-all cursor-pointer"
                 >
                   Cancelar
@@ -3612,7 +3719,7 @@ export default function CRMPage() {
                   type="submit"
                   className="flex-1 py-3 text-[12px] font-bold text-white-pure bg-primary rounded-xl hover:opacity-95 transition-all cursor-pointer shadow-md"
                 >
-                  Gravar Cadastro
+                  {editingUser ? 'Salvar Alterações' : 'Gravar Cadastro'}
                 </button>
               </div>
 
@@ -4009,7 +4116,10 @@ export default function CRMPage() {
           <div className="bg-white-pure rounded-3xl border border-outline-variant w-full max-w-lg p-8 shadow-2xl relative select-none">
             
             <button 
-              onClick={() => setIsNewAppointmentOpen(false)}
+              onClick={() => {
+                setIsNewAppointmentOpen(false);
+                setEditingAppointment(null);
+              }}
               className="absolute top-6 right-6 text-on-surface-variant hover:text-primary transition-all p-2 font-black"
             >
               <span className="material-symbols-outlined">close</span>
@@ -4018,8 +4128,12 @@ export default function CRMPage() {
             <div className="flex items-center gap-2 mb-6">
               <span className="material-symbols-outlined text-primary text-3xl">spa</span>
               <div>
-                <h3 className="font-manrope text-[20px] font-bold text-primary">Novo Agendamento</h3>
-                <p className="text-[12px] text-on-surface-variant">Lançamento de novo procedimento no fluxo principal</p>
+                <h3 className="font-manrope text-[20px] font-bold text-primary">
+                  {editingAppointment ? 'Editar Agendamento' : 'Novo Agendamento'}
+                </h3>
+                <p className="text-[12px] text-on-surface-variant">
+                  {editingAppointment ? 'Altere as informações do procedimento da agenda' : 'Lançamento de novo procedimento no fluxo principal'}
+                </p>
               </div>
             </div>
 
@@ -4107,7 +4221,10 @@ export default function CRMPage() {
               <div className="pt-4 flex gap-3">
                 <button 
                   type="button"
-                  onClick={() => setIsNewAppointmentOpen(false)}
+                  onClick={() => {
+                    setIsNewAppointmentOpen(false);
+                    setEditingAppointment(null);
+                  }}
                   className="flex-1 py-3 text-[12px] font-bold text-on-surface border border-outline-variant rounded-xl hover:bg-surface transition-all cursor-pointer"
                 >
                   Cancelar
@@ -4116,7 +4233,7 @@ export default function CRMPage() {
                   type="submit"
                   className="flex-1 py-3 text-[12px] font-bold text-white-pure bg-primary rounded-xl hover:opacity-95 transition-all cursor-pointer shadow-md"
                 >
-                  Salvar na Agenda
+                  {editingAppointment ? 'Salvar Alterações' : 'Salvar na Agenda'}
                 </button>
               </div>
 
