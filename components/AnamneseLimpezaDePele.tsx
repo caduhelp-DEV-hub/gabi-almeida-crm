@@ -4,7 +4,18 @@ interface AnamneseLimpezaProps {
   patientName: string;
   patientPhone?: string;
   onCancel: () => void;
-  onSave: () => void;
+  onSave: (data: {
+    healthToggles: Record<string, boolean>;
+    otherHealth: string;
+    generalObs: string;
+    oleosidade: string;
+    acnegrau: string;
+    espessura: string;
+    hidratacao: string;
+    fototipo: string;
+    selectedSkinProblems: string[];
+    signatureBase64: string;
+  }) => void;
 }
 
 export default function AnamneseLimpeza({ patientName, patientPhone = '(11) 97434-5511', onCancel, onSave }: AnamneseLimpezaProps) {
@@ -15,6 +26,15 @@ export default function AnamneseLimpeza({ patientName, patientPhone = '(11) 9743
 
   // Example toggles
   const [healthToggles, setHealthToggles] = useState<Record<string, boolean>>({});
+  const [otherHealth, setOtherHealth] = useState('');
+  const [generalObs, setGeneralObs] = useState('');
+  const [oleosidade, setOleosidade] = useState('');
+  const [acnegrau, setAcnegrau] = useState('');
+  const [espessura, setEspessura] = useState('');
+  const [hidratacao, setHidratacao] = useState('');
+  const [fototipo, setFototipo] = useState('');
+  const [selectedSkinProblems, setSelectedSkinProblems] = useState<string[]>([]);
+  const [consentGiven, setConsentGiven] = useState(false);
 
   const toggleHealth = (key: string) => setHealthToggles(prev => ({ ...prev, [key]: !prev[key] }));
 
@@ -86,6 +106,35 @@ export default function AnamneseLimpeza({ patientName, patientPhone = '(11) 9743
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     setSignatureSaved(false);
   };
+
+  const handleSave = () => {
+    if (!consentGiven) {
+      alert("Por favor, confirme o termo de consentimento.");
+      return;
+    }
+    const canvas = canvasRef.current;
+    let signatureBase64 = '';
+    if (canvas && signatureSaved) {
+      signatureBase64 = canvas.toDataURL('image/png');
+    }
+    if (!signatureBase64) {
+      alert("Por favor, desenhe sua assinatura no campo indicado.");
+      return;
+    }
+    onSave({
+      healthToggles,
+      otherHealth,
+      generalObs,
+      oleosidade,
+      acnegrau,
+      espessura,
+      hidratacao,
+      fototipo,
+      selectedSkinProblems,
+      signatureBase64
+    });
+  };
+
 
   return (
     <div className="bg-surface rounded-3xl overflow-hidden w-full max-w-5xl mx-auto border border-outline-variant/50 flex flex-col font-manrope">
@@ -160,6 +209,8 @@ export default function AnamneseLimpeza({ patientName, patientPhone = '(11) 9743
         <div className="bg-white-pure rounded-2xl border border-outline-variant/60 shadow-sm p-6">
           <label className="block font-bold text-[13px] text-on-surface tracking-wider uppercase mb-3">Existe algum outro problema de saúde relevante que julgue necessário informar?</label>
           <textarea 
+            value={otherHealth}
+            onChange={(e) => setOtherHealth(e.target.value)}
             className="w-full bg-surface border border-outline-variant/50 rounded-xl p-4 text-[13px] outline-none focus:border-primary focus:ring-1 focus:ring-primary resize-none placeholder:text-on-surface-variant/50"
             rows={3}
             placeholder="Ex: Doença autoimune leve, asma, rinite crônica..."
@@ -176,7 +227,7 @@ export default function AnamneseLimpeza({ patientName, patientPhone = '(11) 9743
                 <div className="flex gap-4 flex-wrap">
                   {['Alípica', 'Lipídica', 'Normal', 'Seborreica'].map(opt => (
                     <label key={opt} className="flex items-center gap-1.5 text-[13px] text-on-surface-variant cursor-pointer group">
-                      <input type="radio" name="oleosidade" className="w-4 h-4 accent-primary" /> {opt}
+                      <input type="radio" name="oleosidade" checked={oleosidade === opt} onChange={() => setOleosidade(opt)} className="w-4 h-4 accent-primary" /> {opt}
                     </label>
                   ))}
                 </div>
@@ -187,7 +238,7 @@ export default function AnamneseLimpeza({ patientName, patientPhone = '(11) 9743
                 <div className="flex gap-4 flex-wrap">
                   {['I', 'II', 'III', 'IV'].map(opt => (
                     <label key={opt} className="flex items-center gap-1.5 text-[13px] text-on-surface-variant cursor-pointer group">
-                      <input type="radio" name="acnegrau" className="w-4 h-4 accent-primary" /> {opt}
+                      <input type="radio" name="acnegrau" checked={acnegrau === opt} onChange={() => setAcnegrau(opt)} className="w-4 h-4 accent-primary" /> {opt}
                     </label>
                   ))}
                 </div>
@@ -198,7 +249,7 @@ export default function AnamneseLimpeza({ patientName, patientPhone = '(11) 9743
                 <div className="flex gap-4 flex-wrap">
                   {['Espessa', 'Fina', 'Muito Fina'].map(opt => (
                     <label key={opt} className="flex items-center gap-1.5 text-[13px] text-on-surface-variant cursor-pointer group">
-                      <input type="radio" name="espessura" className="w-4 h-4 accent-primary" /> {opt}
+                      <input type="radio" name="espessura" checked={espessura === opt} onChange={() => setEspessura(opt)} className="w-4 h-4 accent-primary" /> {opt}
                     </label>
                   ))}
                 </div>
@@ -209,7 +260,7 @@ export default function AnamneseLimpeza({ patientName, patientPhone = '(11) 9743
                 <div className="flex gap-4 flex-wrap">
                   {['Hidratada', 'Normal', 'Desidratada'].map(opt => (
                     <label key={opt} className="flex items-center gap-1.5 text-[13px] text-on-surface-variant cursor-pointer group">
-                      <input type="radio" name="hidratacao" className="w-4 h-4 accent-primary" /> {opt}
+                      <input type="radio" name="hidratacao" checked={hidratacao === opt} onChange={() => setHidratacao(opt)} className="w-4 h-4 accent-primary" /> {opt}
                     </label>
                   ))}
                 </div>
@@ -220,7 +271,7 @@ export default function AnamneseLimpeza({ patientName, patientPhone = '(11) 9743
                 <div className="flex gap-3 flex-wrap">
                   {['I', 'II', 'III', 'IV', 'V', 'VI'].map(opt => (
                     <label key={opt} className="flex items-center gap-1.5 text-[13px] text-on-surface-variant cursor-pointer group">
-                      <input type="radio" name="fototipo" className="w-4 h-4 accent-primary" /> {opt}
+                      <input type="radio" name="fototipo" checked={fototipo === opt} onChange={() => setFototipo(opt)} className="w-4 h-4 accent-primary" /> {opt}
                     </label>
                   ))}
                 </div>
@@ -265,6 +316,8 @@ export default function AnamneseLimpeza({ patientName, patientPhone = '(11) 9743
                 <div>
                    <label className="block font-bold text-[11px] text-on-surface tracking-wider uppercase mb-2">Observações Gerais (Opcional):</label>
                    <textarea 
+                    value={generalObs}
+                    onChange={(e) => setGeneralObs(e.target.value)}
                     className="w-full bg-surface border border-outline-variant/50 rounded-xl p-3 text-[13px] outline-none focus:border-primary focus:ring-1 focus:ring-primary resize-none placeholder:text-on-surface-variant/50"
                     rows={4}
                     placeholder="Insira detalhes adicionais sobre a sessão de limpeza de pele..."
@@ -281,12 +334,24 @@ export default function AnamneseLimpeza({ patientName, patientPhone = '(11) 9743
           </div>
           <div className="p-6">
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
-              {skinProblems.map(problem => (
-                <label key={problem} className="flex items-center gap-2 p-2 border border-outline-variant/40 rounded-xl cursor-pointer hover:bg-surface-container-lowest transition-colors group">
-                  <input type="checkbox" className="w-4 h-4 rounded text-primary border-outline-variant focus:ring-primary accent-primary" />
-                  <span className="text-[13px] text-on-surface-variant group-hover:text-on-surface">{problem}</span>
-                </label>
-              ))}
+              {skinProblems.map(problem => {
+                const isChecked = selectedSkinProblems.includes(problem);
+                return (
+                  <label key={problem} className="flex items-center gap-2 p-2 border border-outline-variant/40 rounded-xl cursor-pointer hover:bg-surface-container-lowest transition-colors group">
+                    <input 
+                      type="checkbox" 
+                      checked={isChecked}
+                      onChange={() => {
+                        setSelectedSkinProblems(prev => 
+                          prev.includes(problem) ? prev.filter(p => p !== problem) : [...prev, problem]
+                        );
+                      }}
+                      className="w-4 h-4 rounded text-primary border-outline-variant focus:ring-primary accent-primary" 
+                    />
+                    <span className="text-[13px] text-on-surface-variant group-hover:text-on-surface">{problem}</span>
+                  </label>
+                );
+              })}
             </div>
           </div>
         </div>
@@ -306,7 +371,12 @@ export default function AnamneseLimpeza({ patientName, patientPhone = '(11) 9743
                </div>
                
                <label className="mt-8 flex items-start gap-3 cursor-pointer p-4 rounded-xl bg-primary/5 border border-primary/20 hover:bg-primary/10 transition-colors">
-                  <input type="checkbox" className="w-5 h-5 rounded text-primary border-primary focus:ring-primary accent-primary mt-0.5 shrink-0" />
+                  <input 
+                    type="checkbox" 
+                    checked={consentGiven}
+                    onChange={(e) => setConsentGiven(e.target.checked)}
+                    className="w-5 h-5 rounded text-primary border-primary focus:ring-primary accent-primary mt-0.5 shrink-0" 
+                  />
                   <span className="text-[13px] font-bold text-primary leading-snug">
                     Confirmo o termo de limpeza de pele e autorizo o procedimento.
                   </span>
@@ -342,7 +412,7 @@ export default function AnamneseLimpeza({ patientName, patientPhone = '(11) 9743
 
         {/* Save Button */}
         <div className="flex justify-end pt-4 pb-12">
-            <button onClick={onSave} className="px-8 py-3.5 bg-[#a322d8] hover:bg-[#861cae] text-white-pure font-bold rounded-2xl text-[15px] shadow-lg hover:shadow-xl hover:-translate-y-0.5 transition-all flex items-center gap-2 cursor-pointer">
+            <button onClick={handleSave} className="px-8 py-3.5 bg-[#a322d8] hover:bg-[#861cae] text-white-pure font-bold rounded-2xl text-[15px] shadow-lg hover:shadow-xl hover:-translate-y-0.5 transition-all flex items-center gap-2 cursor-pointer">
                <span className="material-symbols-outlined text-[18px]">check</span>
                Salvar Ficha de Limpeza de Pele
             </button>

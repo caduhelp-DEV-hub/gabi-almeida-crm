@@ -338,6 +338,8 @@ export default function CRMPage() {
     date: string;
     size: string;
     signed: boolean;
+    signatureBase64?: string;
+    content?: any;
   }
 
   const [patientFinancials, setPatientFinancials] = useState<Record<string, PatientFinancialItem[]>>({});
@@ -2728,9 +2730,97 @@ export default function CRMPage() {
                   <AnamneseLimpezaDePele 
                     patientName={selectedPatient.name} 
                     onCancel={() => setActivePatientSubTab('evolution')} 
-                    onSave={() => {
-                        showAlert('Ficha de anamnese salva com sucesso!');
+                    onSave={async (data) => {
+                      try {
+                        // 1. Mapear alergias
+                        let allergiesStr = selectedPatient.allergies || 'Nenhuma';
+                        if (data.healthToggles['Possui algum tipo de alergia?']) {
+                          allergiesStr = 'Sim (verificar anamnese)';
+                        }
+                        if (data.otherHealth) {
+                          allergiesStr += ` - Outros relatos: ${data.otherHealth}`;
+                        }
+
+                        // 2. Mapear medicamentos
+                        let medicationsStr = selectedPatient.medications || 'Nenhum';
+                        if (data.healthToggles['Utiliza anticoncepcional?'] || data.healthToggles['Utiliza cremes ou loções facial?']) {
+                          const meds = [];
+                          if (data.healthToggles['Utiliza anticoncepcional?']) meds.push('Anticoncepcional');
+                          if (data.healthToggles['Utiliza cremes ou loções facial?']) meds.push('Cremes/Loções Faciais');
+                          medicationsStr = meds.join(', ');
+                        }
+
+                        // 3. Mapear procedimentos anteriores
+                        let prevProceduresStr = selectedPatient.previousProcedures || 'Nenhum';
+                        if (data.healthToggles['Tratamento facial anterior?']) {
+                          prevProceduresStr = 'Sim (verificar anamnese)';
+                        }
+
+                        // 4. Montar o novo documento assinado
+                        const newDoc: PatientDocument = {
+                          id: 'doc_anamnese_' + Math.random().toString(36).substring(2, 9),
+                          name: `Ficha Anamnese - Limpeza de Pele - ${new Date().toLocaleDateString('pt-BR')}`,
+                          type: 'Anamnese',
+                          date: new Date().toLocaleDateString('pt-BR'),
+                          size: '0.1 MB',
+                          signed: true,
+                          signatureBase64: data.signatureBase64,
+                          content: data
+                        };
+
+                        const updatedDocs = [...(patientDocuments[selectedPatient.id] || []), newDoc];
+
+                        // 5. Adicionar item à timeline
+                        const newTimelineItem = {
+                          id: 'tl_anamnese_' + Math.random().toString(36).substring(2, 9),
+                          title: 'Anamnese Preenchida',
+                          date: new Date().toLocaleDateString('pt-BR'),
+                          description: 'Ficha de Anamnese: Limpeza de Pele salva e assinada digitalmente.',
+                          category: 'Procedimento',
+                          status: 'Concluído'
+                        };
+
+                        const updatedTimeline = [newTimelineItem, ...(selectedPatient.timeline || [])];
+
+                        // 6. Atualizar no Supabase
+                        const { error } = await supabase
+                          .from('patients')
+                          .update({
+                            allergies: allergiesStr,
+                            medications: medicationsStr,
+                            previous_procedures: prevProceduresStr,
+                            documents: updatedDocs,
+                            timeline: updatedTimeline
+                          })
+                          .eq('id', selectedPatient.id);
+
+                        if (error) throw error;
+
+                        // 7. Atualizar estados locais
+                        setPatients(prev => prev.map(p => {
+                          if (p.id === selectedPatient.id) {
+                            return {
+                              ...p,
+                              allergies: allergiesStr,
+                              medications: medicationsStr,
+                              previousProcedures: prevProceduresStr,
+                              timeline: updatedTimeline
+                            };
+                          }
+                          return p;
+                        }));
+
+                        setPatientDocuments(prev => ({
+                          ...prev,
+                          [selectedPatient.id]: updatedDocs
+                        }));
+
+                        showAlert('Ficha de anamnese e assinatura salvas com sucesso!');
                         setActivePatientSubTab('evolution');
+                      } catch (err: any) {
+                        console.error('Erro ao salvar anamnese:', err);
+                        showAlert(`Erro ao salvar ficha de anamnese: ${err.message || err}`);
+                      }
                     }}
                   />
                 )}
@@ -2892,6 +2982,31 @@ export default function CRMPage() {
                                     value: val
                                   }]);
                                 if (txErr) throw txErr;
+
+                                // Atualizar estados locais para reatividade instantânea
+                                setPatientFinancials(prev => ({
+                                  ...prev,
+                                  [selectedPatient.id]: updatedFinancials
+                                }));
+                                setPatients(prev => prev.map(p => {
+                                  if (p.id === selectedPatient.id) {
+                                    return {
+                                      ...p,
+                                      totalSpent: (p.totalSpent || 0) + val,
+                                      proceduresCount: (p.proceduresCount || 0) + 1
+                                    };
+                                  }
+                                  return p;
+                                }));
+                                const newTx: Transaction = {
+                                  id: Math.random().toString(),
+                                  description: `${proc} - ${selectedPatient.name}`,
+                                  date: new Date().toLocaleDateString('pt-BR'),
+                                  category: 'Procedimento',
+                                  status: status === 'Pago' ? 'Pago' : 'Pendente',
+                                  value: val
+                                };
+                                setTransactions(prev => [newTx, ...prev]);
 
                                 showAlert('Lançamento registrado e integrado ao prontuário de atendimento com sucesso!');
                                 ((document.getElementById('new_proc_name') as HTMLInputElement).value = '');
