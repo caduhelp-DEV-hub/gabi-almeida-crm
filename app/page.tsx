@@ -341,35 +341,40 @@ export default function CRMPage() {
   // 1. Firebase Auth listener
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      if (user) {
-        // Fetch user data from Firestore
-        const userDocRef = doc(db, 'users', user.uid);
-        const userDoc = await getDoc(userDocRef);
-        if (userDoc.exists()) {
-          const userData = userDoc.data() as AppUser;
-          setCurrentUser({ ...userData, id: user.uid });
-          setIsAuthenticated(true);
+      try {
+        if (user) {
+          // Fetch user data from Firestore
+          const userDocRef = doc(db, 'users', user.uid);
+          const userDoc = await getDoc(userDocRef);
+          if (userDoc.exists()) {
+            const userData = userDoc.data() as AppUser;
+            setCurrentUser({ ...userData, id: user.uid });
+            setIsAuthenticated(true);
+          } else {
+            // If auth user exists but no Firestore doc, create it as admin
+            const defaultAdmin: AppUser = {
+              id: user.uid,
+              name: 'Dra. Gabi Almeida',
+              username: 'admin',
+              role: 'admin',
+              status: 'active',
+              specialty: 'Fundadora & Biomédica Esteta',
+              phone: '(11) 99876-5432',
+              avatar: 'https://api.dicebear.com/7.x/notionists/svg?seed=GabiAlmeida',
+              commissionRate: 40,
+              permissions: { accessCRM: true, accessAgenda: true, accessFinanceiro: true, canSchedule: true, editPatients: true }
+            };
+            await setDoc(userDocRef, defaultAdmin);
+            setCurrentUser(defaultAdmin);
+            setIsAuthenticated(true);
+          }
         } else {
-          // If auth user exists but no Firestore doc, create it as admin
-          const defaultAdmin: AppUser = {
-            id: user.uid,
-            name: 'Dra. Gabi Almeida',
-            username: 'admin',
-            role: 'admin',
-            status: 'active',
-            specialty: 'Fundadora & Biomédica Esteta',
-            phone: '(11) 99876-5432',
-            avatar: 'https://api.dicebear.com/7.x/notionists/svg?seed=GabiAlmeida',
-            commissionRate: 40,
-            permissions: { accessCRM: true, accessAgenda: true, accessFinanceiro: true, canSchedule: true, editPatients: true }
-          };
-          await setDoc(userDocRef, defaultAdmin);
-          setCurrentUser(defaultAdmin);
-          setIsAuthenticated(true);
+          setCurrentUser(null);
+          setIsAuthenticated(false);
         }
-      } else {
-        setCurrentUser(null);
-        setIsAuthenticated(false);
+      } catch (authListenerErr: any) {
+        console.error('Auth listener error:', authListenerErr);
+        setLoginError(`Erro de inicialização do banco: ${authListenerErr.message || authListenerErr.code}`);
       }
     });
     return () => unsubscribe();
