@@ -1,10 +1,12 @@
 -- Script de inicialização do banco de dados do CRM Gabi Almeida no Supabase (PostgreSQL)
+-- Autenticação gerenciada pela API do Next.js (sem Supabase Auth)
 
--- 1. Tabela de Perfis de Usuários (Integrada com o Supabase Auth)
+-- 1. Tabela de Usuários do CRM (autenticação própria)
 CREATE TABLE IF NOT EXISTS public.users (
-    id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name TEXT NOT NULL,
     username TEXT NOT NULL UNIQUE,
+    password_hash TEXT NOT NULL,
     role TEXT NOT NULL CHECK (role IN ('admin', 'staff', 'prestador')),
     status TEXT NOT NULL CHECK (status IN ('active', 'inactive')) DEFAULT 'active',
     specialty TEXT,
@@ -15,39 +17,23 @@ CREATE TABLE IF NOT EXISTS public.users (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
--- Habilitar RLS para usuários
+-- RLS: Permitir acesso total via anon key (segurança gerenciada pela API Next.js)
 ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Allow anon full access to users" ON public.users;
+CREATE POLICY "Allow anon full access to users" ON public.users
+    FOR ALL TO anon USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Allow authenticated full access to users" ON public.users;
+CREATE POLICY "Allow authenticated full access to users" ON public.users
+    FOR ALL TO authenticated USING (true) WITH CHECK (true);
+
+-- Limpar policies antigas que dependiam de auth.uid()
 DROP POLICY IF EXISTS "Allow authenticated reads on users" ON public.users;
-CREATE POLICY "Allow authenticated reads on users" ON public.users 
-    FOR SELECT TO authenticated USING (true);
-
 DROP POLICY IF EXISTS "Allow users to update their own profile" ON public.users;
-CREATE POLICY "Allow users to update their own profile" ON public.users 
-    FOR UPDATE TO authenticated USING (auth.uid() = id);
-
 DROP POLICY IF EXISTS "Allow insert profile from triggers/seeding" ON public.users;
-CREATE POLICY "Allow insert profile from triggers/seeding" ON public.users 
-    FOR INSERT TO authenticated WITH CHECK (true);
-
-DROP POLICY IF EXISTS "Allow full admin control on users" ON public.users;
 DROP POLICY IF EXISTS "Allow admin to update users" ON public.users;
-CREATE POLICY "Allow admin to update users" ON public.users 
-    FOR UPDATE TO authenticated USING (
-        EXISTS (
-            SELECT 1 FROM public.users 
-            WHERE public.users.id = auth.uid() AND public.users.role = 'admin'
-        )
-    );
-
 DROP POLICY IF EXISTS "Allow admin to delete users" ON public.users;
-CREATE POLICY "Allow admin to delete users" ON public.users 
-    FOR DELETE TO authenticated USING (
-        EXISTS (
-            SELECT 1 FROM public.users 
-            WHERE public.users.id = auth.uid() AND public.users.role = 'admin'
-        )
-    );
 
 -- 2. Tabela de Clientes/Pacientes
 CREATE TABLE IF NOT EXISTS public.patients (
@@ -82,6 +68,10 @@ DROP POLICY IF EXISTS "Allow authenticated full access to patients" ON public.pa
 CREATE POLICY "Allow authenticated full access to patients" ON public.patients 
     FOR ALL TO authenticated USING (true) WITH CHECK (true);
 
+DROP POLICY IF EXISTS "Allow anon full access to patients" ON public.patients;
+CREATE POLICY "Allow anon full access to patients" ON public.patients
+    FOR ALL TO anon USING (true) WITH CHECK (true);
+
 -- 3. Tabela de Agenda/Compromissos
 CREATE TABLE IF NOT EXISTS public.appointments (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -102,6 +92,10 @@ DROP POLICY IF EXISTS "Allow authenticated full access to appointments" ON publi
 CREATE POLICY "Allow authenticated full access to appointments" ON public.appointments 
     FOR ALL TO authenticated USING (true) WITH CHECK (true);
 
+DROP POLICY IF EXISTS "Allow anon full access to appointments" ON public.appointments;
+CREATE POLICY "Allow anon full access to appointments" ON public.appointments
+    FOR ALL TO anon USING (true) WITH CHECK (true);
+
 -- 4. Tabela de Lançamentos Financeiros (Transações)
 CREATE TABLE IF NOT EXISTS public.transactions (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -119,6 +113,10 @@ DROP POLICY IF EXISTS "Allow authenticated full access to transactions" ON publi
 CREATE POLICY "Allow authenticated full access to transactions" ON public.transactions 
     FOR ALL TO authenticated USING (true) WITH CHECK (true);
 
+DROP POLICY IF EXISTS "Allow anon full access to transactions" ON public.transactions;
+CREATE POLICY "Allow anon full access to transactions" ON public.transactions
+    FOR ALL TO anon USING (true) WITH CHECK (true);
+
 -- 5. Tabela de Serviços e Tratamentos
 CREATE TABLE IF NOT EXISTS public.services (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -135,6 +133,10 @@ DROP POLICY IF EXISTS "Allow authenticated full access to services" ON public.se
 CREATE POLICY "Allow authenticated full access to services" ON public.services 
     FOR ALL TO authenticated USING (true) WITH CHECK (true);
 
+DROP POLICY IF EXISTS "Allow anon full access to services" ON public.services;
+CREATE POLICY "Allow anon full access to services" ON public.services
+    FOR ALL TO anon USING (true) WITH CHECK (true);
+
 -- 6. Tabela de Insumos/Estoque
 CREATE TABLE IF NOT EXISTS public.inventory (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -150,3 +152,18 @@ ALTER TABLE public.inventory ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Allow authenticated full access to inventory" ON public.inventory;
 CREATE POLICY "Allow authenticated full access to inventory" ON public.inventory 
     FOR ALL TO authenticated USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Allow anon full access to inventory" ON public.inventory;
+CREATE POLICY "Allow anon full access to inventory" ON public.inventory
+    FOR ALL TO anon USING (true) WITH CHECK (true);
+
+-- ============================================================
+-- MIGRATION: Executar APENAS se a tabela users já existe com schema antigo
+-- ============================================================
+-- Se a tabela users já existir com a coluna id referenciando auth.users,
+-- rode os seguintes comandos manualmente no SQL Editor do Supabase:
+--
+-- ALTER TABLE public.users DROP CONSTRAINT IF EXISTS users_id_fkey;
+-- ALTER TABLE public.users ADD COLUMN IF NOT EXISTS password_hash TEXT;
+-- UPDATE public.users SET password_hash = '$2a$10$placeholder' WHERE password_hash IS NULL;
+-- ALTER TABLE public.users ALTER COLUMN password_hash SET NOT NULL;

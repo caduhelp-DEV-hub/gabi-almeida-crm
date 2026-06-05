@@ -2,7 +2,7 @@
 
 import React, {useState, useEffect, useRef} from 'react';
 import AnamneseLimpezaDePele from '../components/AnamneseLimpezaDePele';
-import { supabase, createTempClient } from '../lib/supabase';
+import { supabase } from '../lib/supabase';
 
 const mapUserToFrontend = (u: any): AppUser => ({
   id: u.id,
@@ -441,77 +441,33 @@ export default function CRMPage() {
     { id: 'al2', type: 'followup', title: 'Retorno Pendente', text: 'Cliente Luísa Costa atingiu D+15 do pós-procedimento.', icon: 'assignment_late', alertClass: 'bg-secondary/5 border-secondary text-on-surface' }
   ];
 
-  // 1. Supabase Auth listener
+  // 1. Session check on mount
   useEffect(() => {
-    // Check initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) {
-        loadUserProfile(session.user.id);
-      } else {
+    const checkSession = async () => {
+      try {
+        const res = await fetch('/api/auth/session');
+        const data = await res.json();
+        if (data.user) {
+          setCurrentUser(mapUserToFrontend(data.user));
+          setIsAuthenticated(true);
+        } else {
+          // If no session exists, try to automatically seed the admin if it doesn't exist
+          try {
+            await fetch('/api/auth/seed', { method: 'POST' });
+          } catch (e) {
+            console.error('Auto-seed check failed:', e);
+          }
+          setCurrentUser(null);
+          setIsAuthenticated(false);
+        }
+      } catch (err) {
+        console.error('Error checking session:', err);
         setCurrentUser(null);
         setIsAuthenticated(false);
       }
-    }).catch((err) => {
-      console.error('Error getting session:', err);
-      // Network error during getSession - Supabase may be unreachable
-      setCurrentUser(null);
-      setIsAuthenticated(false);
-    });
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (session) {
-        loadUserProfile(session.user.id);
-      } else {
-        setCurrentUser(null);
-        setIsAuthenticated(false);
-      }
-    });
-
-    return () => subscription.unsubscribe();
+    };
+    checkSession();
   }, []);
-
-  const loadUserProfile = async (userId: string) => {
-    try {
-      const { data, error } = await supabase
-        .from('users')
-        .select('*')
-        .eq('id', userId)
-        .single();
-
-      if (error && error.code !== 'PGRST116') {
-        throw error;
-      }
-
-      if (data) {
-        setCurrentUser(mapUserToFrontend(data));
-        setIsAuthenticated(true);
-      } else {
-        // Create profile if authenticated but profile doc does not exist
-        const defaultAdmin: AppUser = {
-          id: userId,
-          name: 'Dra. Gabi Almeida',
-          username: 'admin',
-          role: 'admin',
-          status: 'active',
-          specialty: 'Fundadora & Biomédica Esteta',
-          phone: '(11) 99876-5432',
-          avatar: 'https://api.dicebear.com/7.x/notionists/svg?seed=GabiAlmeida',
-          commissionRate: 40,
-          permissions: { accessCRM: true, accessAgenda: true, accessFinanceiro: true, canSchedule: true, editPatients: true }
-        };
-        const { error: insertErr } = await supabase
-          .from('users')
-          .insert([mapUserToBackend(defaultAdmin)]);
-
-        if (insertErr) throw insertErr;
-        setCurrentUser(defaultAdmin);
-        setIsAuthenticated(true);
-      }
-    } catch (err: any) {
-      console.error('Error loading user profile:', err);
-      setLoginError(`Erro de inicialização do banco: ${err.message || err.code}`);
-    }
-  };
 
   // 2. Sync Supabase collections
   useEffect(() => {
@@ -762,90 +718,43 @@ export default function CRMPage() {
     }
   };
 
-  const ADMIN_EMAIL = 'caduhelp@gmail.com';
-  const ADMIN_PASSWORD = 'admin123';
-
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoginError('');
-    const email = loginUsername.includes('@') ? loginUsername : (loginUsername === 'admin' ? ADMIN_EMAIL : `${loginUsername}@gmail.com`);
     
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password: loginPassword
+      const res = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: loginUsername, password: loginPassword })
       });
-      if (error) {
-        // If invalid credentials AND user is trying the admin login, try to seed
-        if (error.code === 'invalid_credentials' && 
-            (loginUsername === 'admin' || email === ADMIN_EMAIL) && 
-            (loginPassword === 'admin' || loginPassword === ADMIN_PASSWORD)) {
-          await seedAdminUser();
-          return;
-        }
-        throw error;
+      const data = await res.json();
+      
+      if (!res.ok) {
+        throw new Error(data.error || 'Erro na autenticação.');
       }
-      setLoginError('');
+      
+      if (data.user) {
+        setCurrentUser(mapUserToFrontend(data.user));
+        setIsAuthenticated(true);
+        setLoginError('');
+      }
     } catch (err: any) {
       console.error('Login error:', err);
-      if (err.message === 'Failed to fetch' || err.name === 'TypeError') {
-        setLoginError('Erro de conexão: Não foi possível conectar ao servidor. Verifique sua internet e tente novamente.');
-      } else {
-        setLoginError(`Erro ao autenticar: ${err.message || err.code}`);
-      }
+      setLoginError(err.message || 'Erro de conexão ou falha ao autenticar.');
     }
   };
 
-  const seedAdminUser = async () => {
+  const handleLogout = async () => {
     try {
-      const { data: signUpData, error: signUpErr } = await supabase.auth.signUp({
-        email: ADMIN_EMAIL,
-        password: ADMIN_PASSWORD
-      });
-      if (signUpErr) throw signUpErr;
-
-      if (signUpData.user) {
-        const defaultAdmin: AppUser = {
-          id: signUpData.user.id,
-          name: 'Dra. Gabi Almeida',
-          username: 'admin',
-          role: 'admin',
-          status: 'active',
-          specialty: 'Fundadora & Biomédica Esteta',
-          phone: '(11) 99876-5432',
-          avatar: 'https://api.dicebear.com/7.x/notionists/svg?seed=GabiAlmeida',
-          commissionRate: 40,
-          permissions: { accessCRM: true, accessAgenda: true, accessFinanceiro: true, canSchedule: true, editPatients: true }
-        };
-        const { error: insertErr } = await supabase
-          .from('users')
-          .insert([mapUserToBackend(defaultAdmin)]);
-        if (insertErr) console.error('Profile insert error (non-blocking):', insertErr);
-
-        // Auto login after registration
-        const { error: loginErr } = await supabase.auth.signInWithPassword({
-          email: ADMIN_EMAIL,
-          password: ADMIN_PASSWORD
-        });
-        if (loginErr) throw loginErr;
-        showAlert('Administrador padrão cadastrado com sucesso! Bem-vinda, Dra. Gabi!');
-      } else {
-        // signUp returned no user and no error - email confirmation might be required
-        setLoginError('Conta criada! Verifique o email para confirmar o cadastro, ou desative a confirmação de email no painel do Supabase (Authentication > Settings).');
-      }
-    } catch (seedErr: any) {
-      console.error('Seeding failed:', seedErr);
-      if (seedErr.message === 'Failed to fetch' || seedErr.name === 'TypeError') {
-        setLoginError('Erro de conexão: Não foi possível conectar ao servidor. Verifique sua internet.');
-      } else if (seedErr.message?.includes('already registered') || seedErr.code === 'user_already_exists') {
-        setLoginError('Senha incorreta para o administrador. Use a senha: admin123');
-      } else if (seedErr.code === 'email_address_invalid') {
-        setLoginError('Email inválido. Tente fazer login com um email real (ex: seuemail@gmail.com).');
-      } else if (seedErr.code === 'over_email_send_rate_limit') {
-        setLoginError('Limite de emails atingido. Aguarde alguns minutos e tente novamente.');
-      } else {
-        setLoginError(`Erro ao cadastrar: ${seedErr.message || seedErr.code}`);
-      }
+      await fetch('/api/auth/session', { method: 'DELETE' });
+      setCurrentUser(null);
+      setIsAuthenticated(false);
+    } catch (err) {
+      console.error('Logout error:', err);
+      // Fallback local clearing
+      setCurrentUser(null);
+      setIsAuthenticated(false);
     }
   };
 
@@ -1030,7 +939,7 @@ export default function CRMPage() {
             <span className="font-manrope">Configurações</span>
           </button>
            <button onClick={() => {
-            supabase.auth.signOut();
+            handleLogout();
             setCurrentTab('dashboard');
           }} className="w-full flex items-center gap-4 px-4 py-2.5 rounded-xl text-error/80 hover:text-error transition-colors text-left text-[14px]">
             <span className="material-symbols-outlined">logout</span>
@@ -1179,7 +1088,7 @@ export default function CRMPage() {
                   <button 
                     onClick={() => {
                        setIsProfileMenuOpen(false);
-                       supabase.auth.signOut();
+                       handleLogout();
                     }}
                     className="w-full text-left px-4 py-2.5 hover:bg-error/10 flex items-center gap-3 text-error transition-colors"
                   >
@@ -3593,40 +3502,30 @@ export default function CRMPage() {
               const password = '123'; // Default initialization
 
               try {
-                const tempClient = createTempClient();
-                const { data: signUpData, error: signUpErr } = await tempClient.auth.signUp({
-                  email,
-                  password
+                const res = await fetch('/api/auth/register', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    name,
+                    username,
+                    role,
+                    specialty,
+                    phone,
+                    commissionRate,
+                    permissions: {
+                      accessCRM: canAccessCRM,
+                      accessAgenda: canAccessAgenda,
+                      accessFinanceiro: canAccessFinanceiro,
+                      canSchedule,
+                      editPatients: canEditPatient
+                    }
+                  })
                 });
-                if (signUpErr) throw signUpErr;
 
-                if (!signUpData.user) {
-                  throw new Error('User creation returned empty payload');
+                const data = await res.json();
+                if (!res.ok) {
+                  throw new Error(data.error || 'Erro ao cadastrar integrante.');
                 }
-
-                const newMember: AppUser = {
-                  id: signUpData.user.id,
-                  name,
-                  username,
-                  password,
-                  role,
-                  status: 'active',
-                  specialty: role === 'prestador' ? specialty : undefined,
-                  phone,
-                  commissionRate: role === 'prestador' ? commissionRate : undefined,
-                  permissions: {
-                    accessCRM: canAccessCRM,
-                    accessAgenda: canAccessAgenda,
-                    accessFinanceiro: canAccessFinanceiro,
-                    canSchedule,
-                    editPatients: canEditPatient
-                  }
-                };
-
-                const { error: insertErr } = await supabase
-                  .from('users')
-                  .insert([mapUserToBackend(newMember)]);
-                if (insertErr) throw insertErr;
 
                 setIsNewUserModalOpen(false);
                 showAlert(`Cadastrado com sucesso! ${name} agora possui acesso ao sistema.`);
