@@ -330,7 +330,7 @@ export default function AnamneseLimpeza({ patientName, patientPhone = '(11) 9743
         {/* Lesoes */}
         <div className="bg-white-pure rounded-2xl border border-outline-variant/60 shadow-sm overflow-hidden">
            <div className="p-5 border-b border-outline-variant/40 bg-surface/30">
-            <h3 className="font-bold text-[14px] text-primary tracking-wider uppercase">Problemas de Pele Identificados / Lesões Clínicas na Sessão</h3>
+            <h3 className="font-bold text-[14px] text-primary tracking-wider uppercase">Problemas de Pele Identificados / Lesões Studios na Sessão</h3>
           </div>
           <div className="p-6">
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">

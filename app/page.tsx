@@ -2,6 +2,7 @@
 
 import React, {useState, useEffect, useRef} from 'react';
 import AnamneseLimpezaDePele from '../components/AnamneseLimpezaDePele';
+import DocumentViewerModal from '../components/DocumentViewerModal';
 import { supabase } from '../lib/supabase';
 
 const mapUserToFrontend = (u: any): AppUser => ({
@@ -201,7 +202,7 @@ interface Appointment {
   procedure: string;
   status: 'Confirmado' | 'Em Atendimento' | 'Finalizado' | 'Pendente';
   professional: string;
-  category: 'Estética' | 'Injetáveis' | 'Consulta';
+  category: 'Estética' | 'Consulta';
   notes?: string;
   date: string;
 }
@@ -261,7 +262,7 @@ interface AppUser {
 const defaultAppUsers: AppUser[] = [
   { 
     id: '1', 
-    name: 'Dra. Gabi Almeida', 
+    name: 'Gabi Almeida', 
     username: 'admin', 
     password: 'admin',
     role: 'admin', 
@@ -296,7 +297,6 @@ export default function CRMPage() {
   
   // Agenda View Control (Diária / Semanal / Mensal)
   const [agendaView, setAgendaView] = useState<'diaria' | 'semanal' | 'mensal'>('diaria');
-  const [selectedCalendarDay, setSelectedCalendarDay] = useState<number>(24);
   const [isNewUserModalOpen, setIsNewUserModalOpen] = useState<boolean>(false);
   const [editingUser, setEditingUser] = useState<AppUser | null>(null);
   const [editingAppointment, setEditingAppointment] = useState<Appointment | null>(null);
@@ -346,12 +346,26 @@ export default function CRMPage() {
 
   const [patientDocuments, setPatientDocuments] = useState<Record<string, PatientDocument[]>>({});
 
+  const [viewingDocument, setViewingDocument] = useState<PatientDocument | null>(null);
+  const [primaryRevenueTarget, setPrimaryRevenueTarget] = useState<number>(170000);
+  const [agendaNavDate, setAgendaNavDate] = useState<Date>(new Date());
+  const selectedCalendarDay = agendaNavDate.getDate();
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const savedTarget = localStorage.getItem('primaryRevenueTarget');
+      if (savedTarget) {
+        setPrimaryRevenueTarget(parseFloat(savedTarget));
+      }
+    }
+  }, []);
+
   // Search state (unified search experience across views)
   const [searchQuery, setSearchQuery] = useState('');
   
   // Current logged in medical professional representation
   const [currentProfessional, setCurrentProfessional] = useState<{name: string; role: string; avatar: string}>({
-    name: 'Dra. Gabi Almeida',
+    name: 'Gabi Almeida',
     role: 'Especialista em Estética',
     avatar: 'https://lh3.googleusercontent.com/aida-public/AB6AXuAT08URyhdfggkdZ7ICFiM_aQytGw7uUJWUutntKzSZ2THn_qUatoCkxPlUDBzFo87XxXHDIl7bCPEF2zrZVbTVxZ6-ljXhgCjobz-tjjXWRgRPn8QgwKryuOkx4g6g_vI6k7ReJVAlRtFVi6oS_cA6ulr-fFIr2DH5ORI4qFAGBjKPoXtENy5oCT-Oi75JuN0RlQBMgw7dzZwQ5Fis2TriJ2rG67NgCQN4Hi2OzqyWrFUUPWiR2Dp4895lJRurxR0r_L6Qa600ado'
   });
@@ -359,17 +373,17 @@ export default function CRMPage() {
   // Professionals Database for header switching
   const professionals = [
     {
-      name: 'Dra. Gabi Almeida',
+      name: 'Gabi Almeida',
       role: 'Especialista em Estética',
       avatar: 'https://lh3.googleusercontent.com/aida-public/AB6AXuAT08URyhdfggkdZ7ICFiM_aQytGw7uUJWUutntKzSZ2THn_qUatoCkxPlUDBzFo87XxXHDIl7bCPEF2zrZVbTVxZ6-ljXhgCjobz-tjjXWRgRPn8QgwKryuOkx4g6g_vI6k7ReJVAlRtFVi6oS_cA6ulr-fFIr2DH5ORI4qFAGBjKPoXtENy5oCT-Oi75JuN0RlQBMgw7dzZwQ5Fis2TriJ2rG67NgCQN4Hi2OzqyWrFUUPWiR2Dp4895lJRurxR0r_L6Qa600ado'
     },
     {
-      name: 'Dra. Isabella Rose',
+      name: 'Isabella Rose',
       role: 'Master Injector',
       avatar: 'https://lh3.googleusercontent.com/aida-public/AB6AXuADwr1ObfSJUgydcL7PHjSKoqnO196ABFeWsdSt6YhNHDeEOFz-y_JD6GG3pWkN68tnE1-s063un2xBQALOj4AkROm8wVbDDzwanl_TmCKzYQle7KVp_za4fgkU9dN8D-RAynszmfWSUX36eWFcqojk7aiRss-BO9EEGlTyHs3v19wbtQrPNN1IJet6-mwqCSqoVGJSrBvaaMks8EOfFjHfE8GLJkqQmOTiHxCjosKWLBffQQtI4UlJXEXGxtUU3jkOcrFHYPwlLkg'
     },
     {
-      name: 'Dr. Ricardo Silva',
+      name: 'Ricardo Silva',
       role: 'Diretor Clínico',
       avatar: 'https://lh3.googleusercontent.com/aida-public/AB6AXuByvB-wQG87z1_3zlQXV52c6s-FUG-KVyeJ6AiND9whxeCuJ6OG177GS-IzCthCMsslpHGcE0_e03imkYqDEl2-6XtUYb1-Cqod27zUDWg-Gzp8AGYCvZEWaJ3JgIUc0mbIbjtXs8tcZkN3usDylUuQn5xowrCsy3UiYjpB38S80HOpMxeJZo4Ap2gjSwLCvurMm0wuqUL5iVHgfQmMjYZ6m_UJkaA6IqefJOo83zu_Tq9PUw0VRdYkzSi6rmc2PKHQhnG7LcP2L9U'
     }
@@ -394,10 +408,10 @@ export default function CRMPage() {
   const [isNewAppointmentOpen, setIsNewAppointmentOpen] = useState(false);
   const [newApptPatient, setNewApptPatient] = useState('');
   const [newApptProcedure, setNewApptProcedure] = useState('Limpeza de Pele Profunda');
-  const [newApptProfessional, setNewApptProfessional] = useState('Dra. Gabi Almeida');
+  const [newApptProfessional, setNewApptProfessional] = useState('Gabi Almeida');
   const [newApptTime, setNewApptTime] = useState('09:00');
   const [newApptDate, setNewApptDate] = useState(new Date().toISOString().split('T')[0]);
-  const [newApptCategory, setNewApptCategory] = useState<'Estética' | 'Injetáveis' | 'Consulta'>('Estética');
+  const [newApptCategory, setNewApptCategory] = useState<'Estética' | 'Consulta'>('Estética');
 
   // Clientes Module Detail Tab
   const [activePatientSubTab, setActivePatientSubTab] = useState<'evolution' | 'anamnese' | 'financeiro' | 'documentos'>('evolution');
@@ -455,7 +469,7 @@ export default function CRMPage() {
   // Dynamic metrics helpers
   const todayDate = new Date();
   const todayDateStr = todayDate.toISOString().split('T')[0]; // YYYY-MM-DD
-  const todayStr = todayDate.toLocaleDateString('pt-BR'); // DD/MM/YYYY
+  const todayStr = agendaNavDate.toLocaleDateString('pt-BR'); // DD/MM/YYYY
   const [,, todayYear] = todayStr.split('/');
   const [, todayMonth] = todayStr.split('/');
 
@@ -485,7 +499,7 @@ export default function CRMPage() {
   const taxaConversao = appointmentsToday > 0 ? Math.round((conversoes / appointmentsToday) * 100) : 0;
 
   const getWeekDays = () => {
-    const today = new Date();
+    const today = agendaNavDate;
     const currentDay = today.getDay();
     const distance = currentDay === 0 ? -6 : 1 - currentDay;
     const monday = new Date(today);
@@ -530,7 +544,7 @@ export default function CRMPage() {
         return descLower.includes(patNameLower) || patNameLower.includes(descLower);
       });
 
-      const profName = matchedAppt ? matchedAppt.professional : 'Dra. Gabi Almeida';
+      const profName = matchedAppt ? matchedAppt.professional : 'Gabi Almeida';
       const profUser = appUsers.find(u => u.name === profName);
       const rate = profUser && profUser.commissionRate !== undefined ? profUser.commissionRate : 25;
       const commVal = t.value * (rate / 100);
@@ -558,7 +572,6 @@ export default function CRMPage() {
   };
 
   const { leaders: commissionLeaders, total: commissionsToPay } = getDynamicCommissions();
-  const primaryRevenueTarget = 170000;
   const currentRevenuePercent = Math.min(100, Math.round((totalRevenueThisMonth / primaryRevenueTarget) * 100));
 
   // Active Alerts state derived from inventory
@@ -1059,7 +1072,7 @@ export default function CRMPage() {
             className={`flex items-center gap-4 px-4 py-3 rounded-xl transition-all duration-300 text-left ${currentTab === 'clientes' ? 'text-primary font-bold border-r-4 border-primary bg-primary/10 scale-95' : 'text-on-surface-variant hover:text-primary hover:bg-surface-container'}`}
           >
             <span className="material-symbols-outlined" style={{fontVariationSettings: currentTab === 'clientes' ? "'FILL' 1" : "'FILL' 0"}}>group</span>
-            <span className="font-manrope text-[14px] leading-none">Clientes CRM</span>
+            <span className="font-manrope text-[14px] leading-none">Clientes</span>
           </button>
 
           <button 
@@ -1131,7 +1144,7 @@ export default function CRMPage() {
               <span className="font-manrope">Usuários</span>
             </button>
           )}
-          <button onClick={() => showAlert('Desenvolvido com carinho para clínica de estética avançada Gabi Almeida.')} className="w-full flex items-center gap-4 px-4 py-2.5 rounded-xl text-on-surface-variant hover:text-primary transition-colors text-left text-[14px]">
+          <button onClick={() => showAlert('Desenvolvido com carinho para studio de estética avançada Gabi Almeida.')} className="w-full flex items-center gap-4 px-4 py-2.5 rounded-xl text-on-surface-variant hover:text-primary transition-colors text-left text-[14px]">
             <span className="material-symbols-outlined">settings</span>
             <span className="font-manrope">Configurações</span>
           </button>
@@ -1149,7 +1162,7 @@ export default function CRMPage() {
       <main className="flex-1 flex flex-col h-full overflow-hidden relative">
         
         {/* TopNavBar Shell */}
-        <header className="h-20 w-full flex justify-between items-center px-4 md:px-8 lg:px-12 bg-white-pure/60 backdrop-blur-xl border-b border-outline-variant z-20 relative gap-4">
+        <header className="h-20 w-full flex justify-between items-center px-6 md:px-8 bg-white-pure/60 backdrop-blur-xl border-b border-outline-variant z-20 relative gap-4">
           
           <button 
             onClick={() => setIsMobileMenuOpen(true)}
@@ -1229,7 +1242,7 @@ export default function CRMPage() {
                 )}
               </div>
 
-              <button onClick={() => setCurrentTab('agenda')} className="p-2 hover:text-primary transition-colors cursor-pointer" title="Histórico da Clínica">
+              <button onClick={() => setCurrentTab('agenda')} className="p-2 hover:text-primary transition-colors cursor-pointer" title="Histórico da Studio">
                 <span className="material-symbols-outlined">history</span>
               </button>
               
@@ -1301,7 +1314,7 @@ export default function CRMPage() {
 
         {/* 3. Main Dashboard Tab Canvas */}
         {currentTab === 'dashboard' && (
-          <section className="flex-1 overflow-y-auto p-4 sm:p-8 lg:p-12 bg-surface select-none">
+          <section className="flex-1 overflow-y-auto p-6 md:p-8 bg-surface select-none">
             
             {/* Greeting Header */}
             <div className="mb-8 lg:mb-10 flex flex-col lg:flex-row justify-between lg:items-end gap-4">
@@ -1310,7 +1323,7 @@ export default function CRMPage() {
                   Bom dia, {currentProfessional.name.split(' ')[1]}.
                 </h2>
                 <p className="font-sans text-[14px] lg:text-[15px] text-on-surface-variant">
-                  Sua clínica de estética avançada está com <span className="font-bold text-primary">92%</span> de ocupação hoje.
+                  Sua studio de estética avançada está com <span className="font-bold text-primary">92%</span> de ocupação hoje.
                 </p>
               </div>
 
@@ -1585,14 +1598,14 @@ export default function CRMPage() {
 
         {/* 4. Agenda Tab Canvas */}
         {currentTab === 'agenda' && (
-          <section className="flex-1 overflow-hidden flex flex-col p-12 bg-surface select-none relative">
+          <section className="flex-1 overflow-hidden flex flex-col p-6 md:p-8 bg-surface select-none relative">
             
             {/* Calendar Controls */}
             <div className="flex justify-between items-end mb-6">
               <div className="space-y-3">
                 <h2 className="font-manrope text-headline-md font-bold text-on-surface flex items-center gap-3 text-[26px]">
                   <span className="material-symbols-outlined text-primary" style={{fontVariationSettings: "'FILL' 1"}}>calendar_today</span>
-                  Agenda Diária Clinica
+                  Agenda Diária Studio
                   <span className="text-on-surface-variant font-normal text-[15px] ml-2">Quinta-feira, 24 de Outubro, 2023</span>
                 </h2>
                 
@@ -1622,8 +1635,8 @@ export default function CRMPage() {
                   
                   {/* Dynamic Practitioner Avatars */}
                   <div className="flex -space-x-2">
-                    <img className="w-8 h-8 rounded-full border-2 border-surface object-cover hover:z-10 transition-transform hover:scale-110" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAN-Snz7tw2cfJzM9hV2bOvnyopMNo02cO7qeufmV6KniT2HUq20-Uc-RRAkUX48x8ZKf93EvatW4M98a7buubdfWLGNqkXPLNrTtU1ZbEUEcVs5f5uWuhpl0Q2I0NaGJlrZCINa5rkAAXLS_CBdLRVveaDh9UGjr2iDt1eA0F0RWq5cWvfZcYUBxTyjUMTf5iKZ5-lEAATGNSqS2ap6D_9sr90et2Y5BEv3NCQhawEF3qma8IVuNwPY5_Z5dpvYHi2gmvEsUKME3A" title="Dr. Ricardo" />
-                    <img className="w-8 h-8 rounded-full border-2 border-surface object-cover hover:z-10 transition-transform hover:scale-110" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAZIoJ5rvFEd0QMoDhK--t5eo06m0e_1bwl91JesfdGrGuK7jx2D0IbCslQ2BXI21cNsAIomQGuNVKemV7t_bk7l9Cq2EIUbZRmflXAbPRdFMZ8ZNJwCA9_OQmPUHWdNJGN3xUo8DhmzgV2zzvBpZHhQBAKbGADEMh-nPQlk7t75ZOoYy4NkrQIWwst_VAWsIODxR87XUbLjQ5Gj_y2sZHFebWcQxLtztQv3_M9YOPoSuSyQEh-GYl3QCbRV7ZC2vngKjoQswx1GIw" title="Dra. Helena" />
+                    <img className="w-8 h-8 rounded-full border-2 border-surface object-cover hover:z-10 transition-transform hover:scale-110" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAN-Snz7tw2cfJzM9hV2bOvnyopMNo02cO7qeufmV6KniT2HUq20-Uc-RRAkUX48x8ZKf93EvatW4M98a7buubdfWLGNqkXPLNrTtU1ZbEUEcVs5f5uWuhpl0Q2I0NaGJlrZCINa5rkAAXLS_CBdLRVveaDh9UGjr2iDt1eA0F0RWq5cWvfZcYUBxTyjUMTf5iKZ5-lEAATGNSqS2ap6D_9sr90et2Y5BEv3NCQhawEF3qma8IVuNwPY5_Z5dpvYHi2gmvEsUKME3A" title="Ricardo" />
+                    <img className="w-8 h-8 rounded-full border-2 border-surface object-cover hover:z-10 transition-transform hover:scale-110" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAZIoJ5rvFEd0QMoDhK--t5eo06m0e_1bwl91JesfdGrGuK7jx2D0IbCslQ2BXI21cNsAIomQGuNVKemV7t_bk7l9Cq2EIUbZRmflXAbPRdFMZ8ZNJwCA9_OQmPUHWdNJGN3xUo8DhmzgV2zzvBpZHhQBAKbGADEMh-nPQlk7t75ZOoYy4NkrQIWwst_VAWsIODxR87XUbLjQ5Gj_y2sZHFebWcQxLtztQv3_M9YOPoSuSyQEh-GYl3QCbRV7ZC2vngKjoQswx1GIw" title="Helena" />
                     <div className="w-8 h-8 rounded-full border-2 border-surface bg-[#e5e2df] flex items-center justify-center text-[10px] font-bold text-primary cursor-pointer hover:bg-primary/10 hover:text-primary transition-colors">+2</div>
                   </div>
                 </div>
@@ -1638,10 +1651,7 @@ export default function CRMPage() {
                     <span className="w-2.5 h-2.5 rounded-full bg-secondary-container"></span>
                     <span className="text-label-md text-[11px] font-semibold text-on-surface-variant">Estética</span>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <span className="w-2.5 h-2.5 rounded-full bg-primary-container"></span>
-                    <span className="text-label-md text-[11px] font-semibold text-on-surface-variant">Injetáveis</span>
-                  </div>
+                  
                   <div className="flex items-center gap-2">
                     <span className="w-2.5 h-2.5 rounded-full bg-tertiary-container"></span>
                     <span className="text-label-md text-[11px] font-semibold text-on-surface-variant">Consulta</span>
@@ -1700,14 +1710,14 @@ export default function CRMPage() {
                           <span className="w-9 h-9 bg-primary text-on-primary rounded-full flex items-center justify-center font-bold font-manrope text-[14px]">{selectedCalendarDay}</span>
                           <span className="font-manrope text-[14px] font-bold text-on-surface">
                             {(() => {
-                              const activeDate = new Date(todayDate.getFullYear(), todayDate.getMonth(), selectedCalendarDay);
+                              const activeDate = new Date(agendaNavDate.getFullYear(), agendaNavDate.getMonth(), selectedCalendarDay);
                               const weekdayName = activeDate.toLocaleDateString('pt-BR', { weekday: 'long' });
                               return weekdayName.charAt(0).toUpperCase() + weekdayName.slice(1) + ' (Dia Ativo)';
                             })()}
                           </span>
                         </div>
                         {(() => {
-                          const activeDate = new Date(todayDate.getFullYear(), todayDate.getMonth(), selectedCalendarDay);
+                          const activeDate = new Date(agendaNavDate.getFullYear(), agendaNavDate.getMonth(), selectedCalendarDay);
                           const isToday = activeDate.toDateString() === new Date().toDateString();
                           return isToday ? (
                             <span className="text-[11px] bg-tertiary/10 text-tertiary px-3 py-1 rounded-full font-bold">Hoje</span>
@@ -1729,8 +1739,8 @@ export default function CRMPage() {
                         {appointments
                           .filter(appt => {
                             const formattedDay = String(selectedCalendarDay).padStart(2, '0');
-                            const formattedMonth = String(todayDate.getMonth() + 1).padStart(2, '0');
-                            const dateStr = `${todayDate.getFullYear()}-${formattedMonth}-${formattedDay}`;
+                            const formattedMonth = String(agendaNavDate.getMonth() + 1).padStart(2, '0');
+                            const dateStr = `${agendaNavDate.getFullYear()}-${formattedMonth}-${formattedDay}`;
                             return appt.date === dateStr;
                           })
                           .map((appt) => {
@@ -1741,7 +1751,7 @@ export default function CRMPage() {
                           const relativeHour = (hour + (minute / 60)) - startHour;
                           const topPos = Math.max(10, Math.round(relativeHour * 80 + 10));
 
-                          const isInjectable = appt.category === 'Injetáveis';
+                          const isInjectable = false;
                           const isConsult = appt.category === 'Consulta';
                           const appointmentColorClass = getAppointmentColorClass(appt.status);
 
@@ -1874,7 +1884,7 @@ export default function CRMPage() {
                           return (
                             <div key={idx} className={`p-1.5 space-y-3 ${day.active ? 'bg-primary/[0.01]' : ''}`}>
                               {dayAppts.map(appt => {
-                                const isInjectable = appt.category === 'Injetáveis';
+                                const isInjectable = false;
                                 const isConsult = appt.category === 'Consulta';
                                 const cardClass = isInjectable
                                   ? 'bg-primary-container/10 border-primary-container text-primary'
@@ -1914,9 +1924,9 @@ export default function CRMPage() {
                     <div className="flex-1 p-6 border-b md:border-b-0 md:border-r border-outline-variant overflow-y-auto">
                       <div className="flex justify-between items-center mb-6 select-none font-manrope">
                         <h4 className="font-black text-primary text-[15px] uppercase tracking-wider">
-                          {todayDate.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' }).toUpperCase()}
+                          {agendaNavDate.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' }).toUpperCase()}
                         </h4>
-                        <span className="text-[12px] text-on-surface-variant font-bold">Clínica Activa</span>
+                        <span className="text-[12px] text-on-surface-variant font-bold">Studio Activa</span>
                       </div>
 
                       {/* Calendar grid headers */}
@@ -1932,19 +1942,19 @@ export default function CRMPage() {
 
                       {/* Calendar day keys */}
                       <div className="grid grid-cols-7 gap-2">
-                        {Array.from({ length: new Date(todayDate.getFullYear(), todayDate.getMonth() + 1, 0).getDate() }).map((_, index) => {
+                        {Array.from({ length: new Date(agendaNavDate.getFullYear(), agendaNavDate.getMonth() + 1, 0).getDate() }).map((_, index) => {
                           const dayNum = index + 1;
                           const isSelected = dayNum === selectedCalendarDay;
                           const formattedDay = String(dayNum).padStart(2, '0');
-                          const formattedMonth = String(todayDate.getMonth() + 1).padStart(2, '0');
-                          const dateStr = `${todayDate.getFullYear()}-${formattedMonth}-${formattedDay}`;
+                          const formattedMonth = String(agendaNavDate.getMonth() + 1).padStart(2, '0');
+                          const dateStr = `${agendaNavDate.getFullYear()}-${formattedMonth}-${formattedDay}`;
                           const dayAppts = appointments.filter(appt => appt.date === dateStr);
                           const hasAppt = dayAppts.length > 0;
                           
                           return (
                             <button 
                               key={dayNum}
-                              onClick={() => setSelectedCalendarDay(dayNum)}
+                              onClick={() => setAgendaNavDate(new Date(agendaNavDate.getFullYear(), agendaNavDate.getMonth(), dayNum))}
                               className={`aspect-square rounded-2xl flex flex-col items-center justify-center relative cursor-pointer transition-all ${
                                 isSelected ? 'bg-[#79542e] text-white-pure shadow-md font-bold' : 'hover:bg-surface-container text-on-surface'
                               }`}
@@ -1967,7 +1977,7 @@ export default function CRMPage() {
                         <div className="border-b border-outline-variant pb-3">
                           <p className="text-[10px] text-outline font-extrabold uppercase tracking-widest font-manrope">Agenda do Dia Selecionado</p>
                           <h5 className="font-manrope text-[15px] font-black text-on-surface mt-1">
-                            {selectedCalendarDay} de {todayDate.toLocaleDateString('pt-BR', { month: 'long' })}
+                            {selectedCalendarDay} de {agendaNavDate.toLocaleDateString('pt-BR', { month: 'long' })}
                           </h5>
                         </div>
 
@@ -1976,12 +1986,12 @@ export default function CRMPage() {
                           {appointments
                             .filter(appt => {
                               const formattedDay = String(selectedCalendarDay).padStart(2, '0');
-                              const formattedMonth = String(todayDate.getMonth() + 1).padStart(2, '0');
-                              const dateStr = `${todayDate.getFullYear()}-${formattedMonth}-${formattedDay}`;
+                              const formattedMonth = String(agendaNavDate.getMonth() + 1).padStart(2, '0');
+                              const dateStr = `${agendaNavDate.getFullYear()}-${formattedMonth}-${formattedDay}`;
                               return appt.date === dateStr;
                             })
                             .map(appt => {
-                              const isInjectable = appt.category === 'Injetáveis';
+                              const isInjectable = false;
                               const isConsult = appt.category === 'Consulta';
                               const categoryColorClass = isInjectable 
                                 ? 'bg-primary-container/10 border-primary-container text-primary' 
@@ -2004,8 +2014,8 @@ export default function CRMPage() {
 
                           {appointments.filter(appt => {
                             const formattedDay = String(selectedCalendarDay).padStart(2, '0');
-                            const formattedMonth = String(todayDate.getMonth() + 1).padStart(2, '0');
-                            const dateStr = `${todayDate.getFullYear()}-${formattedMonth}-${formattedDay}`;
+                            const formattedMonth = String(agendaNavDate.getMonth() + 1).padStart(2, '0');
+                            const dateStr = `${agendaNavDate.getFullYear()}-${formattedMonth}-${formattedDay}`;
                             return appt.date === dateStr;
                           }).length === 0 && (
                             <div className="text-center py-10 text-outline space-y-2 select-none">
@@ -2014,8 +2024,8 @@ export default function CRMPage() {
                               <button 
                                 onClick={() => {
                                   const formattedDay = String(selectedCalendarDay).padStart(2, '0');
-                                  const formattedMonth = String(todayDate.getMonth() + 1).padStart(2, '0');
-                                  const dateStr = `${todayDate.getFullYear()}-${formattedMonth}-${formattedDay}`;
+                                  const formattedMonth = String(agendaNavDate.getMonth() + 1).padStart(2, '0');
+                                  const dateStr = `${agendaNavDate.getFullYear()}-${formattedMonth}-${formattedDay}`;
                                   setEditingAppointment(null);
                                   setNewApptPatient(patients[0]?.name || '');
                                   setNewApptProcedure(services[0]?.name || '');
@@ -2111,7 +2121,7 @@ export default function CRMPage() {
                         type="text"
                         value={aiCustomInput}
                         onChange={(e)=>setAiCustomInput(e.target.value)}
-                        placeholder="Perguntar dica clínica..."
+                        placeholder="Perguntar dica studio..."
                         className="flex-1 bg-white-pure/10 text-[10px] rounded-lg px-2.5 py-1.5 text-white-pure placeholder:text-white-pure/50 border-none focus:outline-none focus:ring-1 focus:ring-white-pure/30"
                         onKeyDown={(e) => {
                           if (e.key === 'Enter') handleQueryAI();
@@ -2286,7 +2296,7 @@ export default function CRMPage() {
                         <p className="font-manrope text-[16px] font-black text-on-surface">{selectedPatient.lastPhotoDate}</p>
                       </div>
                       <div className="bg-surface rounded-xl p-3 border border-outline-variant/30">
-                        <p className="text-[10px] text-outline mb-0.5 uppercase tracking-wider font-semibold">Status Clínico</p>
+                        <p className="text-[10px] text-outline mb-0.5 uppercase tracking-wider font-semibold">Status do Studio</p>
                         <div className="flex items-center gap-1.5 mt-1">
                           <span className="w-2.5 h-2.5 rounded-full bg-tertiary"></span>
                           <p className="font-manrope text-[12px] font-bold text-tertiary">{selectedPatient.status}</p>
@@ -2538,7 +2548,7 @@ export default function CRMPage() {
 
                       {/* Observations banner block */}
                       <div className="mt-6 p-5 bg-surface rounded-2xl border border-outline-variant/30">
-                        <p className="text-[11px] text-primary font-bold uppercase mb-1.5 tracking-wider font-manrope">Observações Clínicas da Evolução</p>
+                        <p className="text-[11px] text-primary font-bold uppercase mb-1.5 tracking-wider font-manrope">Observações Studios da Evolução</p>
                         <p className="text-[13px] text-on-surface font-medium leading-relaxed bg-transparent">{selectedPatient.evolutionNotes}</p>
                       </div>
                     </div>
@@ -2579,7 +2589,7 @@ export default function CRMPage() {
                           <div className="flex items-start gap-2.5">
                             <span className="material-symbols-outlined text-tertiary text-[18px] mt-0.5">history_edu</span>
                             <div>
-                              <p className="font-manrope text-[11px] font-bold text-on-surface leading-none">Histórico de Injetáveis</p>
+                              <p className="font-manrope text-[11px] font-bold text-on-surface leading-none">Histórico de Estética</p>
                               <p className="text-[12px] text-on-surface-variant mt-1">{selectedPatient.previousProcedures}</p>
                             </div>
                           </div>
@@ -2825,7 +2835,7 @@ export default function CRMPage() {
                   />
                 )}
 
-                 {/* Interactive Clinical Finance Sub-Tab */}
+                 {/* Interactive Studiol Finance Sub-Tab */}
                 {activePatientSubTab === 'financeiro' && (
                   <div className="space-y-6 animate-fade-in">
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
@@ -2853,7 +2863,7 @@ export default function CRMPage() {
                       {/* Billed items table (Left) */}
                       <div className="lg:col-span-8 bg-white-pure p-6 rounded-3xl border border-outline-variant/70 shadow-sm">
                         <div className="flex justify-between items-center mb-5 flex-wrap gap-2">
-                          <h4 className="font-manrope text-[15px] font-bold text-on-surface">Transações Clínicas Registradas</h4>
+                          <h4 className="font-manrope text-[15px] font-bold text-on-surface">Transações Studios Registradas</h4>
                           <span className="text-[10px] text-outline font-semibold">ICP-Brasil Autenticado</span>
                         </div>
 
@@ -3026,7 +3036,7 @@ export default function CRMPage() {
                   </div>
                 )}
 
-                {/* Interactive Clinical Document Manager Sub-Tab */}
+                {/* Interactive Studiol Document Manager Sub-Tab */}
                 {activePatientSubTab === 'documentos' && (
                   <div className="space-y-6 animate-fade-in">
                     <div className="bg-white-pure p-6 rounded-3xl border border-outline-variant/70 shadow-sm">
@@ -3106,7 +3116,7 @@ export default function CRMPage() {
                             <div className="pt-3 border-t border-outline-variant/50 flex gap-2 justify-end">
                               <button 
                                 onClick={() => {
-                                  showAlert(`Abrindo visualização segura de: ${doc.name}\nCertificado ICP-Brasil ID: #${doc.id}`);
+                                  setViewingDocument(doc);
                                 }}
                                 className="px-2.5 py-1.5 text-[10px] bg-white-pure hover:bg-surface border border-outline text-on-surface rounded-lg font-black"
                               >
@@ -3167,7 +3177,7 @@ export default function CRMPage() {
 
         {/* 6. Financeiro Module (Image 1 Layout) */}
         {currentTab === 'financeiro' && (
-          <section className="flex-1 overflow-y-auto p-12 bg-surface">
+          <section className="flex-1 overflow-y-auto p-6 md:p-8 bg-surface">
             
             {/* Bento cards metric panel (Image 1) */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
@@ -3242,17 +3252,42 @@ export default function CRMPage() {
                   </h2>
                   <p className="text-[12px] opacity-95 text-primary-fixed mt-1.5">
                     {primaryRevenueTarget - totalRevenueThisMonth > 0 
-                      ? `Faltam R$ ${(primaryRevenueTarget - totalRevenueThisMonth).toLocaleString('pt-BR', { minimumFractionDigits: 2 })} para atingir a meta premium.`
-                      : "Meta Premium atingida com sucesso!"}
+                      ? `Faltam R$ ${(primaryRevenueTarget - totalRevenueThisMonth).toLocaleString('pt-BR', { minimumFractionDigits: 2 })} para atingir a meta.`
+                      : "Meta atingida com sucesso!"}
                   </p>
                 </div>
-                <div className="mt-6 space-y-1.5">
+                <div className="mt-4 space-y-3">
                   <div className="w-full bg-white-pure/20 h-2 rounded-full overflow-hidden">
                     <div className="bg-white-pure h-full" style={{ width: `${currentRevenuePercent}%` }}></div>
                   </div>
                   <div className="flex justify-between text-[10px] font-bold uppercase tracking-wider text-primary-fixed-dim">
                     <span>R$ 0</span>
-                    <span>R$ 170K META</span>
+                    <span>R$ {(primaryRevenueTarget / 1000).toFixed(0)}K META</span>
+                  </div>
+
+                  {/* Input de meta para administrador */}
+                  <div className="pt-2 border-t border-white/20 flex gap-2 items-center">
+                    <input 
+                      type="number"
+                      placeholder="Nova Meta (R$)"
+                      defaultValue={primaryRevenueTarget}
+                      id="input_revenue_target"
+                      className="bg-white/10 text-white-pure placeholder:text-white/40 border border-white/20 rounded-lg px-2 py-1 text-[11px] font-bold w-full focus:outline-none focus:bg-white/20"
+                    />
+                    <button 
+                      type="button"
+                      onClick={() => {
+                        const val = parseFloat((document.getElementById('input_revenue_target') as HTMLInputElement)?.value);
+                        if (!isNaN(val) && val > 0) {
+                          setPrimaryRevenueTarget(val);
+                          localStorage.setItem('primaryRevenueTarget', val.toString());
+                          showAlert('Meta de faturamento atualizada com sucesso!');
+                        }
+                      }}
+                      className="px-3 py-1 bg-white-pure text-[#79542e] rounded-lg text-[10px] font-black hover:opacity-90 transition-opacity border-none cursor-pointer"
+                    >
+                      Definir
+                    </button>
                   </div>
                 </div>
               </div>
@@ -3483,7 +3518,7 @@ export default function CRMPage() {
 
         {/* 6.1. Serviços e Tratamentos Module */}
         {currentTab === 'servicos' && (
-          <section className="flex-1 overflow-y-auto custom-scrollbar bg-[#f7f3f0] p-4 sm:p-8 xl:p-12 relative animate-fade-in">
+          <section className="flex-1 overflow-y-auto custom-scrollbar bg-[#f7f3f0] p-6 md:p-8 relative animate-fade-in">
             <div className="max-w-7xl mx-auto space-y-8">
               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4">
                 <div>
@@ -3536,7 +3571,7 @@ export default function CRMPage() {
 
         {/* 6.2. Estoque Module */}
         {currentTab === 'estoque' && (
-          <section className="flex-1 overflow-y-auto custom-scrollbar bg-[#f7f3f0] p-4 sm:p-8 xl:p-12 relative animate-fade-in">
+          <section className="flex-1 overflow-y-auto custom-scrollbar bg-[#f7f3f0] p-6 md:p-8 relative animate-fade-in">
             <div className="max-w-7xl mx-auto space-y-8">
               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4">
                 <div>
@@ -3607,14 +3642,14 @@ export default function CRMPage() {
 
         {/* 6. Cadastro e Gestão de Clientes (CRUD) */}
         {currentTab === 'cadastro-cliente' && (
-          <section className="flex-1 overflow-y-auto custom-scrollbar bg-[#f7f3f0] p-4 sm:p-8 xl:p-12 relative animate-fade-in">
+          <section className="flex-1 overflow-y-auto custom-scrollbar bg-[#f7f3f0] p-6 md:p-8 relative animate-fade-in">
             <div className="max-w-7xl mx-auto space-y-8">
               
               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4">
                 <div>
                   <h2 className="font-manrope text-headline-lg text-primary font-bold text-[32px] md:text-[40px] leading-tight">Cadastro de Clientes</h2>
                   <p className="font-sans text-[14px] text-on-surface-variant max-w-2xl mt-2">
-                    Gerencie a base de clientes da clínica. Adicione, edite ou inative cadastros facilmente.
+                    Gerencie a base de clientes da studio. Adicione, edite ou inative cadastros facilmente.
                   </p>
                 </div>
                 
@@ -3726,7 +3761,7 @@ export default function CRMPage() {
 
         {/* 6. Gestão de Usuários (Apenas Admin) */}
         {currentTab === 'usuarios' && currentUser?.role === 'admin' && (
-          <section className="flex-1 overflow-y-auto custom-scrollbar bg-[#f7f3f0] p-4 sm:p-8 xl:p-12 relative animate-fade-in">
+          <section className="flex-1 overflow-y-auto custom-scrollbar bg-[#f7f3f0] p-6 md:p-8 relative animate-fade-in">
             <div className="max-w-7xl mx-auto space-y-8">
               
               {/* Header metrics panel */}
@@ -4223,7 +4258,7 @@ export default function CRMPage() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block mb-1">Nome Completo</label>
-                  <input type="text" id="new_user_name" defaultValue={editingUser?.name || ''} placeholder="Ex: Dr. Luciano Santos" required className="w-full bg-surface border border-outline-variant rounded-xl p-2.5 focus:outline-none focus:border-primary font-medium" />
+                  <input type="text" id="new_user_name" defaultValue={editingUser?.name || ''} placeholder="Ex: Luciano Santos" required className="w-full bg-surface border border-outline-variant rounded-xl p-2.5 focus:outline-none focus:border-primary font-medium" />
                 </div>
                 <div>
                   <label className="block mb-1">Login (Username)</label>
@@ -4447,8 +4482,8 @@ export default function CRMPage() {
                       <option value="">Nenhum</option>
                       <option value="Sr.">Sr.</option>
                       <option value="Sra.">Sra.</option>
-                      <option value="Dr.">Dr.</option>
-                      <option value="Dra.">Dra.</option>
+                      <option value=""></option>
+                      <option value=""></option>
                     </select>
                   </div>
                   <div className="col-span-3">
@@ -4592,7 +4627,7 @@ export default function CRMPage() {
                    <label className="block text-[11px] font-bold text-on-surface-variant uppercase tracking-wider mb-2">Categoria</label>
                    <select required name="category" defaultValue={editingService?.category || 'Estética'} className="w-full bg-surface-container px-4 py-3 rounded-xl border border-outline-variant focus:outline-primary appearance-none custom-select-arrow">
                      <option value="Estética">Estética</option>
-                     <option value="Injetáveis">Injetáveis</option>
+                     
                      <option value="Consulta">Consulta</option>
                    </select>
                  </div>
@@ -4868,10 +4903,10 @@ export default function CRMPage() {
                     onChange={(e) => setNewApptProfessional(e.target.value)}
                     className="w-full p-2.5 bg-surface rounded-xl border border-outline-variant/60 focus:outline-none focus:ring-1 focus:ring-primary/40 font-medium font-sans text-[13px]"
                   >
-                    <option value="Dra. Gabi Almeida">Dra. Gabi Almeida</option>
-                    <option value="Dra. Isabella Rose">Dra. Isabella Rose</option>
-                    <option value="Dr. Ricardo Silva">Dr. Ricardo Silva</option>
-                    <option value="Dr. Fabio">Dr. Fabio Responsável</option>
+                    <option value="Gabi Almeida">Gabi Almeida</option>
+                    <option value="Isabella Rose">Isabella Rose</option>
+                    <option value="Ricardo Silva">Ricardo Silva</option>
+                    <option value="Fabio">Fabio Responsável</option>
                   </select>
                 </div>
 
@@ -4934,6 +4969,13 @@ export default function CRMPage() {
             </form>
           </div>
         </div>
+      )}
+
+      {viewingDocument && (
+        <DocumentViewerModal 
+          document={viewingDocument} 
+          onClose={() => setViewingDocument(null)} 
+        />
       )}
 
       {activeLightboxImage && (
