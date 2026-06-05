@@ -1,0 +1,127 @@
+@import "tailwindcss";
+
+@theme {
+  --color-on-surface: #1c1b1a;
+  --color-on-secondary: #ffffff;
+  --color-error: #ba1a1a;
+  --color-surface-container-lowest: #ffffff;
+  --color-surface-container-low: #f7f3f0;
+  --color-inverse-on-surface: #f4f0ed;
+  --color-surface-tint: #7c5730;
+  --color-secondary-fixed: #ffe088;
+  --color-on-secondary-fixed-variant: #574500;
+  --color-primary: #79542e;
+  --color-tertiary-container: #916c5b;
+  --color-primary-fixed-dim: #eebd8e;
+  --color-surface-dim: #ddd9d6;
+  --color-on-error: #ffffff;
+  --color-on-surface-variant: #50453b;
+  --color-surface-bright: #fdf9f6;
+  --color-secondary: #735c00;
+  --color-tertiary-fixed: #ffdbcc;
+  --color-surface-container: #f1edea;
+  --color-surface: #fdf9f6;
+  --color-surface-variant: #e5e2df;
+  --color-on-tertiary-fixed-variant: #5f3f30;
+  --color-background: #fdf9f6;
+  --color-secondary-container: #fed65b;
+  --color-on-primary: #ffffff;
+  --color-on-secondary-container: #745c00;
+  --color-outline-variant: #d4c4b7;
+  --color-surface-container-highest: #e5e2df;
+  --color-outline: #82756a;
+  --color-tertiary: #765444;
+  --color-on-secondary-fixed: #241a00;
+  --color-primary-container: #956c44;
+  --color-tertiary-fixed-dim: #eabda9;
+  --color-on-tertiary-container: #fffbff;
+  --color-on-error-container: #93000a;
+  --color-on-tertiary-fixed: #2d1509;
+  --color-error-container: #ffdad6;
+  --color-on-primary-fixed-variant: #61401b;
+  --color-surface-container-high: #ebe7e4;
+  --color-on-tertiary: #ffffff;
+  --color-on-primary-fixed: #2c1600;
+  --color-on-background: #1c1b1a;
+  --color-secondary-fixed-dim: #e9c349;
+  --color-inverse-primary: #eebd8e;
+  --color-on-primary-container: #fffbff;
+  --color-inverse-surface: #31302f;
+  --color-primary-fixed: #ffdcbd;
+  --color-gray-light: #e5e2df;
+  --color-white-pure: #ffffff;
+  --color-nude-soft: #f7f3f0;
+
+  --font-sans: "Plus Jakarta Sans", "Inter", sans-serif;
+  --font-manrope: "Manrope", sans-serif;
+}
+
+/* Custom CSS utilities from the design mockup */
+.material-symbols-outlined {
+  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+  vertical-align: middle;
+}
+.glass-panel {
+  background: rgba(253, 249, 246, 0.6);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(130, 117, 106, 0.2);
+}
+.glass-sidebar {
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+.earthy-gradient {
+  background: linear-gradient(135deg, #79542e 0%, #956c44 100%);
+}
+.chart-gradient {
+  background: linear-gradient(180deg, rgba(121, 84, 46, 0.1) 0%, rgba(253, 249, 246, 0) 100%);
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.custom-scrollbar::-webkit-scrollbar {
+  width: 4px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #d4c4b7;
+  border-radius: 10px;
+}
+.tab-active {
+  position: relative;
+}
+.tab-active::after {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background-color: #79542e;
+}
+
+@media print {
+  body { background-color: white; }
+  /* Hide navigation sidebar and unnecessary UI elements on print */
+  aside, nav, #navigation-sidebar, .print-hidden, button, header {
+    display: none !important;
+  }
+  /* Show only the main content */
+  main, section {
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: visible !important;
+  }
+  /* Ensure backgrounds and shadows don't break page flow */
+  * {
+    box-shadow: none !important;
+  }
+}
