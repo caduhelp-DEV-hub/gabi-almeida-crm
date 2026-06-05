@@ -628,10 +628,29 @@ export default function CRMPage() {
           .update(mapAppointmentToBackend(apptData))
           .eq('id', editingAppointment.id);
         if (error) throw error;
+        
+        const updatedAppt = {
+          ...editingAppointment,
+          time: newApptTime,
+          patientName: newApptPatient,
+          patientAvatar: selectedPat?.avatar || '',
+          procedure: newApptProcedure,
+          professional: newApptProfessional,
+          category: newApptCategory,
+          date: newApptDate,
+          patientId: selectedPat?.id
+        };
+        setAppointments(prev => prev.map(a => a.id === editingAppointment.id ? updatedAppt : a));
         showAlert('Agendamento atualizado com sucesso!');
       } else {
-        const { error } = await supabase.from('appointments').insert([mapAppointmentToBackend(apptData)]);
+        const { data, error } = await supabase
+          .from('appointments')
+          .insert([mapAppointmentToBackend(apptData)])
+          .select('*, patients(id, name, avatar)');
         if (error) throw error;
+        if (data && data[0]) {
+          setAppointments(prev => [...prev, mapAppointmentToFrontend(data[0])]);
+        }
         // Dynamic AI insight triggering when an appointment is added
         setAiAdvice(`Dica Gabi Almeida AI: Agendamento agendado às ${newApptTime}. Com isso, sua jornada de ocupação de hoje subiu para ${Math.min(98, 92 + 2)}%. Excelente trabalho de otimização de horário!`);
       }
@@ -722,6 +741,7 @@ export default function CRMPage() {
         .update({ timeline: updatedTimeline })
         .eq('id', selectedPatient.id);
       if (error) throw error;
+      setPatients(prev => prev.map(p => p.id === selectedPatient.id ? { ...p, timeline: updatedTimeline } : p));
     } catch (err: any) {
       console.error('Error updating patient timeline:', err);
       showAlert(`Erro ao salvar assinatura: ${err.message || err}`);
@@ -1646,6 +1666,7 @@ export default function CRMPage() {
                                         try {
                                           const { error } = await supabase.from('appointments').delete().eq('id', appt.id);
                                           if (error) throw error;
+                                          setAppointments(prev => prev.filter(a => a.id !== appt.id));
                                           showAlert('Agendamento removido.');
                                         } catch (err: any) {
                                           console.error('Delete appt error:', err);
@@ -2001,7 +2022,7 @@ export default function CRMPage() {
                       <p className="font-manrope text-[13px] font-extrabold text-on-surface truncate">{patient.name}</p>
                       <p className="text-[10px] text-on-surface-variant truncate mt-0.5">Última consulta: {patient.lastVisit}</p>
                     </div>
-                    {patient.status === 'Em Tratamento' && (
+                    {patient.status !== 'Inativo' && patient.status !== 'inactive' && (
                       <span className="w-2 h-2 rounded-full bg-tertiary"></span>
                     )}
                   </div>
@@ -2139,9 +2160,37 @@ export default function CRMPage() {
                             <label className="p-2 mr-2 border border-primary/30 rounded-lg bg-primary/10 text-primary cursor-pointer flex items-center justify-center hover:bg-primary hover:text-white-pure transition-colors" title="Enviar Nova Foto de Evolução">
                               <span className="material-symbols-outlined text-[18px]">add_a_photo</span>
                               <span className="ml-1 text-[11px] font-bold uppercase">Nova Foto</span>
-                              <input type="file" className="hidden" accept="image/*" onChange={(e) => {
-                                if (e.target.files && e.target.files[0]) {
-                                  showAlert('Foto de evolução carregada e anexada ao prontuário com sucesso!');
+                              <input type="file" className="hidden" accept="image/*" onChange={async (e) => {
+                                if (e.target.files && e.target.files[0] && selectedPatient.id) {
+                                  const file = e.target.files[0];
+                                  const isBefore = confirm("Deseja salvar esta foto como 'Antes'? Clique em 'Cancelar' para salvar como 'Depois'.");
+                                  const reader = new FileReader();
+                                  reader.onloadend = async () => {
+                                    const base64String = reader.result as string;
+                                    try {
+                                      const updateField = isBefore ? { before_photo: base64String } : { after_photo: base64String };
+                                      const { error } = await supabase
+                                        .from('patients')
+                                        .update(updateField)
+                                        .eq('id', selectedPatient.id);
+                                      if (error) throw error;
+                                      setPatients(prev => prev.map(p => {
+                                        if (p.id === selectedPatient.id) {
+                                          return {
+                                            ...p,
+                                            beforePhoto: isBefore ? base64String : p.beforePhoto,
+                                            afterPhoto: !isBefore ? base64String : p.afterPhoto
+                                          };
+                                        }
+                                        return p;
+                                      }));
+                                      showAlert('Foto de evolução salva com sucesso!');
+                                    } catch (err: any) {
+                                      console.error('Error saving photo:', err);
+                                      showAlert(`Erro ao salvar foto: ${err.message}`);
+                                    }
+                                  };
+                                  reader.readAsDataURL(file);
                                 }
                               }} />
                             </label>
@@ -2153,14 +2202,28 @@ export default function CRMPage() {
                         {/* Rendering exact comparison pictures from medical aesthetic sheet */}
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           <div className="relative rounded-2xl overflow-hidden shadow-inner group bg-surface">
-                            <img className="w-full aspect-[4/5] object-cover" src={selectedPatient.beforePhoto} alt="Evolução Antes" />
+                            {selectedPatient.beforePhoto ? (
+                              <img className="w-full aspect-[4/5] object-cover" src={selectedPatient.beforePhoto} alt="Evolução Antes" />
+                            ) : (
+                              <div className="w-full aspect-[4/5] bg-surface-container-highest/30 flex flex-col items-center justify-center text-outline gap-2 border border-dashed border-outline-variant/60 rounded-2xl">
+                                <span className="material-symbols-outlined text-4xl opacity-40">photo_camera</span>
+                                <span className="text-[11px] font-bold">Sem foto 'Antes'</span>
+                              </div>
+                            )}
                             <div className="absolute bottom-3 left-3 bg-[#1c1b1af0] backdrop-blur-md text-white px-3 py-1 rounded-full text-[11px] font-medium font-manrope uppercase">
                               Antes: 12/03/2023
                             </div>
                           </div>
                           
                           <div className="relative rounded-2xl overflow-hidden shadow-inner group bg-surface">
-                            <img className="w-full aspect-[4/5] object-cover" src={selectedPatient.afterPhoto} alt="Evolução Depois" />
+                            {selectedPatient.afterPhoto ? (
+                              <img className="w-full aspect-[4/5] object-cover" src={selectedPatient.afterPhoto} alt="Evolução Depois" />
+                            ) : (
+                              <div className="w-full aspect-[4/5] bg-surface-container-highest/30 flex flex-col items-center justify-center text-outline gap-2 border border-dashed border-outline-variant/60 rounded-2xl">
+                                <span className="material-symbols-outlined text-4xl opacity-40">photo_camera</span>
+                                <span className="text-[11px] font-bold">Sem foto 'Depois'</span>
+                              </div>
+                            )}
                             <div className="absolute bottom-3 left-3 bg-primary text-white-pure px-3 py-1 rounded-full text-[11px] font-medium font-manrope uppercase">
                               Depois: 15/10/2023 (Pós-3ª Sessão)
                             </div>
@@ -2285,11 +2348,37 @@ export default function CRMPage() {
                         <div className="flex justify-end mt-1">
                           <button 
                             className="px-5 py-2 bg-[#79542e] text-white-pure font-bold font-manrope text-[12px] rounded-xl hover:bg-[#634425] transition-colors shadow-md" 
-                            onClick={() => {
+                            onClick={async () => {
                               const el = document.getElementById('novoProtocolo') as HTMLTextAreaElement;
                               if (el && el.value.trim() !== '') {
-                                showAlert('Protocolo adicionado ao prontuário do cliente!');
-                                el.value = '';
+                                if (!selectedPatient.id) {
+                                  showAlert('Selecione um cliente para adicionar o protocolo.');
+                                  return;
+                                }
+                                const text = el.value.trim();
+                                const newTimelineItem = {
+                                  id: Date.now().toString(),
+                                  date: new Date().toLocaleDateString('pt-BR'),
+                                  title: 'Procedimento Clínico',
+                                  description: text,
+                                  category: 'Procedimento',
+                                  status: 'Concluído'
+                                };
+                                const updatedTimeline = [newTimelineItem, ...(selectedPatient.timeline || [])];
+                                try {
+                                  const { error } = await supabase
+                                    .from('patients')
+                                    .update({ timeline: updatedTimeline })
+                                    .eq('id', selectedPatient.id);
+                                  if (error) throw error;
+                                  
+                                  setPatients(prev => prev.map(p => p.id === selectedPatient.id ? { ...p, timeline: updatedTimeline } : p));
+                                  showAlert('Protocolo adicionado ao prontuário do cliente!');
+                                  el.value = '';
+                                } catch (err: any) {
+                                  console.error('Error adding protocol:', err);
+                                  showAlert(`Erro ao salvar protocolo: ${err.message}`);
+                                }
                               } else {
                                 showAlert('Por favor, descreva o protocolo antes de adicionar.');
                               }
@@ -2935,6 +3024,7 @@ export default function CRMPage() {
                             try {
                               const { error } = await supabase.from('transactions').delete().eq('id', tr.id);
                               if (error) throw error;
+                              setTransactions(prev => prev.filter(t => t.id !== tr.id));
                             } catch (err: any) {
                               console.error('Error deleting transaction:', err);
                               showAlert(`Erro ao excluir transação: ${err.message}`);
@@ -2992,7 +3082,7 @@ export default function CRMPage() {
                           <td className="px-4 py-4 font-bold text-primary">R$ {s.price.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</td>
                           <td className="px-4 py-4 text-center">
                             <button onClick={() => { setEditingService(s); setIsServiceModalOpen(true); }} className="p-1.5 text-on-surface-variant hover:text-primary transition-colors text-[16px] material-symbols-outlined">edit</button>
-                            <button onClick={() => { showConfirm(`Remover o serviço ${s.name}?`, async () => { try { const { error } = await supabase.from('services').delete().eq('id', s.id); if (error) throw error; } catch (err: any) { console.error('Error deleting service:', err); showAlert(`Erro ao remover serviço: ${err.message}`); } }) }} className="p-1.5 text-on-surface-variant hover:text-error transition-colors text-[16px] material-symbols-outlined">delete</button>
+                            <button onClick={() => { showConfirm(`Remover o serviço ${s.name}?`, async () => { try { const { error } = await supabase.from('services').delete().eq('id', s.id); if (error) throw error; setServices(prev => prev.filter(service => service.id !== s.id)); } catch (err: any) { console.error('Error deleting service:', err); showAlert(`Erro ao remover serviço: ${err.message}`); } }) }} className="p-1.5 text-on-surface-variant hover:text-error transition-colors text-[16px] material-symbols-outlined">delete</button>
                           </td>
                         </tr>
                       ))}
@@ -3057,6 +3147,7 @@ export default function CRMPage() {
                                 try {
                                   const { error } = await supabase.from('inventory').delete().eq('id', i.id);
                                   if (error) throw error;
+                                  setInventory(prev => prev.filter(item => item.id !== i.id));
                                 } catch (err: any) {
                                   console.error('Error deleting inventory item:', err);
                                   showAlert(`Erro ao remover material: ${err.message}`);
@@ -3123,7 +3214,7 @@ export default function CRMPage() {
                             </div>
                           </td>
                           <td className="px-4 py-4 text-center">
-                            {p.status === 'Em Tratamento' ? (
+                            {p.status !== 'Inativo' && p.status !== 'inactive' ? (
                               <span className="bg-tertiary/10 text-tertiary px-2.5 py-1 rounded-md text-[10px] font-bold">Ativo</span>
                             ) : (
                               <span className="bg-outline-variant/20 text-on-surface-variant px-2.5 py-1 rounded-md text-[10px] font-bold">Inativo</span>
@@ -3163,6 +3254,11 @@ export default function CRMPage() {
                                     try {
                                       const { error } = await supabase.from('patients').delete().eq('id', p.id);
                                       if (error) throw error;
+                                      setPatients(prev => prev.filter(patient => patient.id !== p.id));
+                                      if (selectedPatientId === p.id) {
+                                        setSelectedPatientId('');
+                                      }
+                                      showAlert('Cliente excluído com sucesso.');
                                     } catch (err: any) {
                                       console.error('Error deleting patient:', err);
                                       showAlert(`Erro ao excluir paciente: ${err.message}`);
@@ -3315,11 +3411,13 @@ export default function CRMPage() {
                             <button 
                               onClick={async () => {
                                 try {
+                                  const newStatus = u.status === 'active' ? 'inactive' : 'active';
                                   const { error } = await supabase
                                     .from('users')
-                                    .update({ status: u.status === 'active' ? 'inactive' : 'active' })
+                                    .update({ status: newStatus })
                                     .eq('id', u.id);
                                   if (error) throw error;
+                                  setAppUsers(prev => prev.map(usr => usr.id === u.id ? { ...usr, status: newStatus } : usr));
                                 } catch (err: any) {
                                   console.error('Error updating status:', err);
                                   showAlert(`Erro ao atualizar status: ${err.message}`);
@@ -3342,6 +3440,7 @@ export default function CRMPage() {
                                         .update({ commission_rate: parsed })
                                         .eq('id', u.id);
                                       if (error) throw error;
+                                      setAppUsers(prev => prev.map(usr => usr.id === u.id ? { ...usr, commissionRate: parsed } : usr));
                                       showAlert('Taxa de comissão atualizada com sucesso!');
                                     } catch (err: any) {
                                       console.error('Error updating commission rate:', err);
@@ -3361,6 +3460,7 @@ export default function CRMPage() {
                                   try {
                                     const { error } = await supabase.from('users').delete().eq('id', u.id);
                                     if (error) throw error;
+                                    setAppUsers(prev => prev.filter(usr => usr.id !== u.id));
                                   } catch (err: any) {
                                     console.error('Error deleting user profile:', err);
                                     showAlert(`Erro ao excluir usuário: ${err.message}`);
@@ -3806,11 +3906,15 @@ export default function CRMPage() {
 
               try {
                 if (editingPatientId) {
-                  const { error } = await supabase
+                  const { data, error } = await supabase
                     .from('patients')
                     .update(mapPatientToBackend({ name, phone, cpf }))
-                    .eq('id', editingPatientId);
+                    .eq('id', editingPatientId)
+                    .select();
                   if (error) throw error;
+                  if (data && data[0]) {
+                    setPatients(prev => prev.map(p => p.id === editingPatientId ? mapPatientToFrontend(data[0]) : p));
+                  }
                   showAlert('Cliente atualizado com sucesso!');
                 } else {
                   const newPatient = {
@@ -3836,10 +3940,16 @@ export default function CRMPage() {
                     ltv: 'R$ 0,00',
                     timeline: []
                   };
-                  const { error } = await supabase
+                  const { data, error } = await supabase
                     .from('patients')
-                    .insert([mapPatientToBackend(newPatient)]);
+                    .insert([mapPatientToBackend(newPatient)])
+                    .select();
                   if (error) throw error;
+                  if (data && data[0]) {
+                    const frontendPat = mapPatientToFrontend(data[0]);
+                    setPatients(prev => [...prev, frontendPat]);
+                    setSelectedPatientId(frontendPat.id);
+                  }
                   showAlert('Cliente cadastrado com sucesso!');
                 }
               } catch (err: any) {
@@ -3955,16 +4065,24 @@ export default function CRMPage() {
               const price = parseFloat(priceStr.replace(/[^0-9,.-]/g, '').replace(',', '.'));
               try {
                 if(editingService) {
-                  const { error } = await supabase
+                  const { data, error } = await supabase
                     .from('services')
                     .update({ name, category, duration, price })
-                    .eq('id', editingService.id);
+                    .eq('id', editingService.id)
+                    .select();
                   if (error) throw error;
+                  if (data && data[0]) {
+                    setServices(prev => prev.map(s => s.id === editingService.id ? data[0] : s));
+                  }
                 } else {
-                  const { error } = await supabase
+                  const { data, error } = await supabase
                     .from('services')
-                    .insert([{ name, category, duration, price }]);
+                    .insert([{ name, category, duration, price }])
+                    .select();
                   if (error) throw error;
+                  if (data && data[0]) {
+                    setServices(prev => [...prev, data[0]]);
+                  }
                 }
                 setIsServiceModalOpen(false);
               } catch (err: any) {
@@ -4026,16 +4144,24 @@ export default function CRMPage() {
               
               try {
                 if(editingInventory) {
-                  const { error } = await supabase
+                  const { data, error } = await supabase
                     .from('inventory')
                     .update(mapInventoryToBackend({ name, unit, quantity, minQuantity }))
-                    .eq('id', editingInventory.id);
+                    .eq('id', editingInventory.id)
+                    .select();
                   if (error) throw error;
+                  if (data && data[0]) {
+                    setInventory(prev => prev.map(i => i.id === editingInventory.id ? mapInventoryToFrontend(data[0]) : i));
+                  }
                 } else {
-                  const { error } = await supabase
+                  const { data, error } = await supabase
                     .from('inventory')
-                    .insert([mapInventoryToBackend({ name, unit, quantity, minQuantity })]);
+                    .insert([mapInventoryToBackend({ name, unit, quantity, minQuantity })])
+                    .select();
                   if (error) throw error;
+                  if (data && data[0]) {
+                    setInventory(prev => [...prev, mapInventoryToFrontend(data[0])]);
+                  }
                 }
                 setIsInventoryModalOpen(false);
               } catch (err: any) {
@@ -4095,16 +4221,24 @@ export default function CRMPage() {
               
               try {
                 if(editingTransaction) {
-                  const { error } = await supabase
+                  const { data, error } = await supabase
                     .from('transactions')
                     .update({ description, date, category, status, value })
-                    .eq('id', editingTransaction.id);
+                    .eq('id', editingTransaction.id)
+                    .select();
                   if (error) throw error;
+                  if (data && data[0]) {
+                    setTransactions(prev => prev.map(t => t.id === editingTransaction.id ? data[0] : t));
+                  }
                 } else {
-                  const { error } = await supabase
+                  const { data, error } = await supabase
                     .from('transactions')
-                    .insert([{ description, date, category, status, value }]);
+                    .insert([{ description, date, category, status, value }])
+                    .select();
                   if (error) throw error;
+                  if (data && data[0]) {
+                    setTransactions(prev => [...prev, data[0]]);
+                  }
                 }
                 setIsTransactionModalOpen(false);
               } catch (err: any) {
