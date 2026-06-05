@@ -121,20 +121,38 @@ export default function AnamneseLimpeza({ patientName, patientPhone = '(11) 9743
             <span className="bg-secondary p-1.5 px-3 rounded-full text-on-secondary font-bold text-[11px]">20 Toggles</span>
           </div>
           <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-y-4 gap-x-12">
-            {questions.map(q => (
-              <div key={q} className="flex justify-between items-center border-b border-outline-variant/20 pb-3">
-                <span className="text-[13px] text-on-surface font-medium">{q}</span>
-                <button
-                  onClick={() => toggleHealth(q)}
-                  className={`relative inline-flex h-6 w-12 items-center rounded-full transition-colors ${healthToggles[q] ? 'bg-primary' : 'bg-surface-container-highest'} cursor-pointer focus:outline-none`}
-                >
-                  <span className={`inline-block h-4 w-4 transform rounded-full bg-white-pure transition-transform ${healthToggles[q] ? 'translate-x-7' : 'translate-x-1'}`} />
-                  <span className={`absolute right-9 text-[10px] font-extrabold ${healthToggles[q] ? 'text-primary' : 'text-on-surface-variant'}`}>
-                    {healthToggles[q] ? 'Sim' : 'Não'}
-                  </span>
-                </button>
-              </div>
-            ))}
+            {questions.map(q => {
+              const isYes = !!healthToggles[q];
+              return (
+                <div key={q} className="flex items-center justify-between border-b border-outline-variant/20 pb-3">
+                  <span className="text-[13px] text-on-surface font-medium pr-2">{q}</span>
+                  <div className="flex gap-1.5 shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => setHealthToggles(prev => ({ ...prev, [q]: true }))}
+                      className={`px-3 py-1 rounded-lg text-[10px] font-bold border transition-all duration-300 cursor-pointer ${
+                        isYes 
+                          ? 'bg-emerald-50 border-emerald-600 text-emerald-700 scale-105 shadow-sm' 
+                          : 'border-outline-variant/50 text-on-surface-variant hover:bg-surface'
+                      }`}
+                    >
+                      SIM
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setHealthToggles(prev => ({ ...prev, [q]: false }))}
+                      className={`px-3 py-1 rounded-lg text-[10px] font-bold border transition-all duration-300 cursor-pointer ${
+                        !isYes 
+                          ? 'bg-[#ba1a1a]/10 border-[#ba1a1a] text-[#ba1a1a] scale-105 shadow-sm' 
+                          : 'border-outline-variant/50 text-on-surface-variant hover:bg-surface'
+                      }`}
+                    >
+                      NÃO
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </div>
 
@@ -218,15 +236,30 @@ export default function AnamneseLimpeza({ patientName, patientPhone = '(11) 9743
                   <span className="text-[13px] text-on-surface font-medium leading-relaxed">
                     Autoriza o registro e uso de fotos do antes/depois para prontuário clínico e divulgação em portfolio?
                   </span>
-                  <button
-                    onClick={() => toggleHealth('fotos')}
-                    className={`relative shrink-0 inline-flex h-6 w-12 items-center rounded-full transition-colors ${healthToggles['fotos'] ? 'bg-primary' : 'bg-surface-container-highest'} cursor-pointer focus:outline-none`}
-                  >
-                    <span className={`inline-block h-4 w-4 transform rounded-full bg-white-pure transition-transform ${healthToggles['fotos'] ? 'translate-x-7' : 'translate-x-1'}`} />
-                    <span className={`absolute right-9 text-[10px] font-extrabold ${healthToggles['fotos'] ? 'text-primary' : 'text-on-surface-variant'}`}>
-                      {healthToggles['fotos'] ? 'Sim' : 'Não'}
-                    </span>
-                  </button>
+                  <div className="flex gap-1.5 shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => setHealthToggles(prev => ({ ...prev, fotos: true }))}
+                      className={`px-3 py-1 rounded-lg text-[10px] font-bold border transition-all duration-300 cursor-pointer ${
+                        healthToggles['fotos'] 
+                          ? 'bg-emerald-50 border-emerald-600 text-emerald-700 scale-105 shadow-sm' 
+                          : 'border-outline-variant/50 text-on-surface-variant hover:bg-surface'
+                      }`}
+                    >
+                      SIM
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setHealthToggles(prev => ({ ...prev, fotos: false }))}
+                      className={`px-3 py-1 rounded-lg text-[10px] font-bold border transition-all duration-300 cursor-pointer ${
+                        !healthToggles['fotos'] 
+                          ? 'bg-[#ba1a1a]/10 border-[#ba1a1a] text-[#ba1a1a] scale-105 shadow-sm' 
+                          : 'border-outline-variant/50 text-on-surface-variant hover:bg-surface'
+                      }`}
+                    >
+                      NÃO
+                    </button>
+                  </div>
                 </div>
                 
                 <div>

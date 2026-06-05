@@ -108,9 +108,13 @@
 }
 
 @media print {
-  body { background-color: white; }
+  body { 
+    background-color: white !important; 
+    color: #1c1b1a !important;
+    font-size: 12px !important;
+  }
   /* Hide navigation sidebar and unnecessary UI elements on print */
-  aside, nav, #navigation-sidebar, .print-hidden, button, header {
+  aside, nav, #navigation-sidebar, .print-hidden, button, header, label, input, select, textarea {
     display: none !important;
   }
   /* Show only the main content */
@@ -123,5 +127,25 @@
   /* Ensure backgrounds and shadows don't break page flow */
   * {
     box-shadow: none !important;
+  }
+  .print-card {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+    margin-bottom: 20px !important;
+    border: 1px solid #d4c4b7 !important;
+    border-radius: 16px !important;
+    padding: 16px !important;
+    background-color: white !important;
+  }
+  .print-photo {
+    max-height: 220px !important;
+    object-fit: cover !important;
+    border-radius: 12px !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+  @page {
+    size: A4;
+    margin: 1.5cm;
   }
 }

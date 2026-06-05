@@ -54,6 +54,7 @@ CREATE TABLE IF NOT EXISTS public.patients (
     evolution_notes TEXT DEFAULT '',
     before_photo TEXT,
     after_photo TEXT,
+    evolution_photos JSONB DEFAULT '[]'::jsonb,
     timeline JSONB DEFAULT '[]'::jsonb,
     financials JSONB DEFAULT '[]'::jsonb,
     documents JSONB DEFAULT '[]'::jsonb,

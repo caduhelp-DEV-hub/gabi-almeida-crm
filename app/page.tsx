@@ -50,6 +50,7 @@ const mapPatientToFrontend = (p: any): Patient => ({
   evolutionNotes: p.evolution_notes,
   beforePhoto: p.before_photo,
   afterPhoto: p.after_photo,
+  evolutionPhotos: p.evolution_photos || [],
   timeline: p.timeline || [],
   phone: p.phone,
   cpf: p.cpf
@@ -74,6 +75,7 @@ const mapPatientToBackend = (p: Partial<Patient>) => {
   if (p.evolutionNotes !== undefined) res.evolution_notes = p.evolutionNotes;
   if (p.beforePhoto !== undefined) res.before_photo = p.beforePhoto;
   if (p.afterPhoto !== undefined) res.after_photo = p.afterPhoto;
+  if (p.evolutionPhotos !== undefined) res.evolution_photos = p.evolutionPhotos;
   if (p.timeline !== undefined) res.timeline = p.timeline;
   if (p.phone !== undefined) res.phone = p.phone;
   if (p.cpf !== undefined) res.cpf = p.cpf;
@@ -140,6 +142,13 @@ interface TimelineItem {
   status: string;
 }
 
+interface EvolutionPhoto {
+  id: string;
+  url: string;
+  date: string;
+  type: 'Antes' | 'Depois' | 'Evolução';
+}
+
 interface Patient {
   id: string;
   name: string;
@@ -160,6 +169,7 @@ interface Patient {
   evolutionNotes: string;
   beforePhoto: string;
   afterPhoto: string;
+  evolutionPhotos: EvolutionPhoto[];
   timeline: TimelineItem[];
   phone?: string;
   cpf?: string;
@@ -370,6 +380,9 @@ export default function CRMPage() {
 
   // Clientes Module Detail Tab
   const [activePatientSubTab, setActivePatientSubTab] = useState<'evolution' | 'anamnese' | 'financeiro' | 'documentos'>('evolution');
+  const [activeLightboxImage, setActiveLightboxImage] = useState<string>('');
+  const [isComparing, setIsComparing] = useState<boolean>(false);
+  const [compareSelectedIds, setCompareSelectedIds] = useState<string[]>([]);
 
   // Financeiro module detailed view timeframe
   const [financialTimeframe, setFinancialTimeframe] = useState<'semanal' | 'mensal'>('mensal');
@@ -397,6 +410,7 @@ export default function CRMPage() {
     evolutionNotes: '',
     beforePhoto: '',
     afterPhoto: '',
+    evolutionPhotos: [],
     timeline: []
   };
 
@@ -1998,7 +2012,7 @@ export default function CRMPage() {
           <section className="flex-1 overflow-hidden flex flex-col lg:flex-row bg-[#f7f3f0]">
             
             {/* Master Patient List Column */}
-            <div className={`w-full lg:w-80 lg:flex-shrink-0 border-b lg:border-b-0 lg:border-r border-outline-variant bg-white-pure flex-col overflow-hidden z-10 transition-all ${selectedPatientId ? 'hidden lg:flex flex-1 lg:h-auto' : 'flex flex-1 lg:h-auto'}`}>
+            <div className={`w-full lg:w-80 lg:flex-shrink-0 border-b lg:border-b-0 lg:border-r border-outline-variant bg-white-pure flex-col overflow-hidden z-10 transition-all print-hidden ${selectedPatientId ? 'hidden lg:flex flex-1 lg:h-auto' : 'flex flex-1 lg:h-auto'}`}>
               <div className="p-4 lg:p-6 flex justify-between items-center border-b border-outline-variant/60">
                 <h2 className="font-manrope text-headline-md text-primary font-bold text-[18px]" id="patients-module-title">Clientes</h2>
                 <span className="bg-surface-container text-primary px-3 py-1 rounded-full text-[11px] font-bold font-manrope">
@@ -2077,7 +2091,7 @@ export default function CRMPage() {
                           }}
                           className="w-full sm:w-auto px-4 py-2 border border-primary text-primary rounded-xl font-manrope text-[12px] font-extrabold hover:bg-primary hover:text-white-pure transition-all cursor-pointer"
                         >
-                          Prontuário PDF
+                          Prontuário de Atendimento PDF
                         </button>
                         <button 
                           onClick={() => {
@@ -2152,9 +2166,9 @@ export default function CRMPage() {
                   <div className="grid grid-cols-12 gap-6">
                     
                     {/* Visual evolution card - Before & After comparisons */}
-                    <div className="col-span-12 lg:col-span-8 bg-white-pure rounded-3xl p-6 border border-outline-variant shadow-sm flex flex-col justify-between">
+                    <div className="col-span-12 lg:col-span-8 bg-white-pure rounded-3xl p-6 border border-outline-variant shadow-sm flex flex-col justify-between print-card">
                       <div>
-                        <div className="flex justify-between items-center mb-6">
+                        <div className="flex justify-between items-center mb-6 print-hidden">
                           <h3 className="font-manrope text-[16px] font-bold text-primary">Comparativo de Tratamento (Evolução Visual)</h3>
                           <div className="flex gap-2">
                             <label className="p-2 mr-2 border border-primary/30 rounded-lg bg-primary/10 text-primary cursor-pointer flex items-center justify-center hover:bg-primary hover:text-white-pure transition-colors" title="Enviar Nova Foto de Evolução">
@@ -2163,23 +2177,39 @@ export default function CRMPage() {
                               <input type="file" className="hidden" accept="image/*" onChange={async (e) => {
                                 if (e.target.files && e.target.files[0] && selectedPatient.id) {
                                   const file = e.target.files[0];
-                                  const isBefore = confirm("Deseja salvar esta foto como 'Antes'? Clique em 'Cancelar' para salvar como 'Depois'.");
+                                  const typeInput = prompt("Digite o tipo da foto ('Antes', 'Depois' ou 'Evolução'):", "Evolução");
+                                  if (typeInput === null) return;
+                                  const photoType = ((typeInput.trim() === 'Antes' || typeInput.trim() === 'antes') ? 'Antes' : ((typeInput.trim() === 'Depois' || typeInput.trim() === 'depois') ? 'Depois' : 'Evolução')) as 'Antes' | 'Depois' | 'Evolução';
+                                  
                                   const reader = new FileReader();
                                   reader.onloadend = async () => {
                                     const base64String = reader.result as string;
+                                    const newPhoto = {
+                                      id: Date.now().toString(),
+                                      url: base64String,
+                                      date: new Date().toLocaleDateString('pt-BR'),
+                                      type: photoType
+                                    };
+                                    
                                     try {
-                                      const updateField = isBefore ? { before_photo: base64String } : { after_photo: base64String };
+                                      const updatedPhotos = [...(selectedPatient.evolutionPhotos || []), newPhoto];
+                                      const updateField: any = { evolution_photos: updatedPhotos };
+                                      if (photoType === 'Antes') updateField.before_photo = base64String;
+                                      if (photoType === 'Depois') updateField.after_photo = base64String;
+                                      
                                       const { error } = await supabase
                                         .from('patients')
                                         .update(updateField)
                                         .eq('id', selectedPatient.id);
                                       if (error) throw error;
+                                      
                                       setPatients(prev => prev.map(p => {
                                         if (p.id === selectedPatient.id) {
                                           return {
                                             ...p,
-                                            beforePhoto: isBefore ? base64String : p.beforePhoto,
-                                            afterPhoto: !isBefore ? base64String : p.afterPhoto
+                                            beforePhoto: photoType === 'Antes' ? base64String : p.beforePhoto,
+                                            afterPhoto: photoType === 'Depois' ? base64String : p.afterPhoto,
+                                            evolutionPhotos: updatedPhotos
                                           };
                                         }
                                         return p;
@@ -2194,40 +2224,151 @@ export default function CRMPage() {
                                 }
                               }} />
                             </label>
-                            <span className="p-2 rounded-lg bg-surface text-primary cursor-pointer hover:bg-surface-container" title="Grade de Evolução"><span className="material-symbols-outlined text-[18px]">grid_view</span></span>
-                            <span className="p-2 rounded-lg bg-surface text-primary cursor-pointer hover:bg-surface-container" title="Modo Comparar"><span className="material-symbols-outlined text-[18px]">compare</span></span>
+                            <button 
+                              onClick={() => {
+                                setIsComparing(prev => !prev);
+                                setCompareSelectedIds([]);
+                              }}
+                              className={`p-2 rounded-lg border transition-colors flex items-center justify-center gap-1 text-[11px] font-bold ${isComparing ? 'bg-primary text-white-pure border-primary' : 'bg-surface text-primary border-primary/20 hover:bg-surface-container'}`} 
+                              title="Toggled Modo Comparar"
+                            >
+                              <span className="material-symbols-outlined text-[18px]">compare</span>
+                              <span>{isComparing ? 'Cancelar Comparação' : 'Comparar Fotos'}</span>
+                            </button>
                           </div>
                         </div>
 
-                        {/* Rendering exact comparison pictures from medical aesthetic sheet */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          <div className="relative rounded-2xl overflow-hidden shadow-inner group bg-surface">
-                            {selectedPatient.beforePhoto ? (
-                              <img className="w-full aspect-[4/5] object-cover" src={selectedPatient.beforePhoto} alt="Evolução Antes" />
+                        {/* Rendering comparison side-by-side view */}
+                        {isComparing ? (
+                          <div className="bg-surface/50 border border-dashed border-outline-variant rounded-2xl p-4 mb-6">
+                            <h4 className="font-manrope text-[12px] font-bold text-on-surface-variant mb-3 print-hidden">Modo Comparativo Ativo (Selecione 2 fotos na galeria abaixo)</h4>
+                            {compareSelectedIds.length < 2 ? (
+                              <div className="h-48 flex flex-col items-center justify-center text-outline gap-2 border border-dashed border-outline-variant/60 rounded-xl bg-white-pure print-hidden">
+                                <span className="material-symbols-outlined text-3xl opacity-40">compare</span>
+                                <p className="text-[11px] font-bold">Selecione {2 - compareSelectedIds.length} foto(s) da galeria para comparar</p>
+                              </div>
                             ) : (
-                              <div className="w-full aspect-[4/5] bg-surface-container-highest/30 flex flex-col items-center justify-center text-outline gap-2 border border-dashed border-outline-variant/60 rounded-2xl">
-                                <span className="material-symbols-outlined text-4xl opacity-40">photo_camera</span>
-                                <span className="text-[11px] font-bold">Sem foto 'Antes'</span>
+                              <div className="grid grid-cols-2 gap-4">
+                                {compareSelectedIds.map(id => {
+                                  const photo = (selectedPatient.evolutionPhotos || []).find(p => p.id === id);
+                                  if (!photo) return null;
+                                  return (
+                                    <div key={photo.id} className="relative rounded-2xl overflow-hidden shadow-inner group bg-surface border border-outline-variant/40">
+                                      <img className="w-full h-48 sm:h-56 md:h-60 object-cover print-photo" src={photo.url} alt={`Comparativo ${photo.type}`} />
+                                      <div className="absolute top-2 right-2 bg-black/60 text-white-pure px-2.5 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider">
+                                        {photo.type}
+                                      </div>
+                                      <div className="absolute bottom-2 left-2 bg-[#1c1b1af0] backdrop-blur-md text-white-pure px-3 py-1 rounded-full text-[10px] font-semibold">
+                                        {photo.date}
+                                      </div>
+                                    </div>
+                                  );
+                                })}
                               </div>
                             )}
-                            <div className="absolute bottom-3 left-3 bg-[#1c1b1af0] backdrop-blur-md text-white px-3 py-1 rounded-full text-[11px] font-medium font-manrope uppercase">
-                              Antes: 12/03/2023
-                            </div>
                           </div>
-                          
-                          <div className="relative rounded-2xl overflow-hidden shadow-inner group bg-surface">
-                            {selectedPatient.afterPhoto ? (
-                              <img className="w-full aspect-[4/5] object-cover" src={selectedPatient.afterPhoto} alt="Evolução Depois" />
-                            ) : (
-                              <div className="w-full aspect-[4/5] bg-surface-container-highest/30 flex flex-col items-center justify-center text-outline gap-2 border border-dashed border-outline-variant/60 rounded-2xl">
-                                <span className="material-symbols-outlined text-4xl opacity-40">photo_camera</span>
-                                <span className="text-[11px] font-bold">Sem foto 'Depois'</span>
+                        ) : (
+                          /* Standard default layout with reduced photo heights */
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                            <div className="relative rounded-2xl overflow-hidden shadow-inner group bg-surface border border-outline-variant/30">
+                              {selectedPatient.beforePhoto ? (
+                                <img className="w-full h-48 sm:h-56 md:h-60 object-cover print-photo" src={selectedPatient.beforePhoto} alt="Evolução Antes" />
+                              ) : (
+                                <div className="w-full h-48 sm:h-56 md:h-60 bg-surface-container-highest/30 flex flex-col items-center justify-center text-outline gap-2 border border-dashed border-outline-variant/60 rounded-2xl">
+                                  <span className="material-symbols-outlined text-4xl opacity-40">photo_camera</span>
+                                  <span className="text-[11px] font-bold">Sem foto 'Antes'</span>
+                                </div>
+                              )}
+                              <div className="absolute bottom-3 left-3 bg-[#1c1b1af0] backdrop-blur-md text-white px-3 py-1 rounded-full text-[10px] font-medium font-manrope uppercase">
+                                Antes {selectedPatient.evolutionPhotos?.find(p => p.type === 'Antes')?.date ? `(${selectedPatient.evolutionPhotos.find(p => p.type === 'Antes')?.date})` : ''}
                               </div>
-                            )}
-                            <div className="absolute bottom-3 left-3 bg-primary text-white-pure px-3 py-1 rounded-full text-[11px] font-medium font-manrope uppercase">
-                              Depois: 15/10/2023 (Pós-3ª Sessão)
+                              {selectedPatient.beforePhoto && (
+                                <button 
+                                  onClick={() => setActiveLightboxImage(selectedPatient.beforePhoto)}
+                                  className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white-pure font-bold text-[12px] gap-1 cursor-pointer print-hidden"
+                                >
+                                  <span className="material-symbols-outlined">zoom_in</span> Abrir / Visualizar
+                                </button>
+                              )}
+                            </div>
+                            
+                            <div className="relative rounded-2xl overflow-hidden shadow-inner group bg-surface border border-outline-variant/30">
+                              {selectedPatient.afterPhoto ? (
+                                <img className="w-full h-48 sm:h-56 md:h-60 object-cover print-photo" src={selectedPatient.afterPhoto} alt="Evolução Depois" />
+                              ) : (
+                                <div className="w-full h-48 sm:h-56 md:h-60 bg-surface-container-highest/30 flex flex-col items-center justify-center text-outline gap-2 border border-dashed border-outline-variant/60 rounded-2xl">
+                                  <span className="material-symbols-outlined text-4xl opacity-40">photo_camera</span>
+                                  <span className="text-[11px] font-bold">Sem foto 'Depois'</span>
+                                </div>
+                              )}
+                              <div className="absolute bottom-3 left-3 bg-primary text-white-pure px-3 py-1 rounded-full text-[10px] font-medium font-manrope uppercase">
+                                Depois {selectedPatient.evolutionPhotos?.find(p => p.type === 'Depois')?.date ? `(${selectedPatient.evolutionPhotos.find(p => p.type === 'Depois')?.date})` : ''}
+                              </div>
+                              {selectedPatient.afterPhoto && (
+                                <button 
+                                  onClick={() => setActiveLightboxImage(selectedPatient.afterPhoto)}
+                                  className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white-pure font-bold text-[12px] gap-1 cursor-pointer print-hidden"
+                                >
+                                  <span className="material-symbols-outlined">zoom_in</span> Abrir / Visualizar
+                                </button>
+                              )}
                             </div>
                           </div>
+                        )}
+
+                        {/* Chronological Photo Gallery */}
+                        <div className="border-t border-outline-variant/40 pt-6 print-hidden">
+                          <h4 className="font-manrope text-[14px] font-bold text-primary mb-4">Galeria de Acompanhamento Cronológico</h4>
+                          {(!selectedPatient.evolutionPhotos || selectedPatient.evolutionPhotos.length === 0) ? (
+                            <p className="text-[11px] text-on-surface-variant italic">Nenhuma foto carregada na galeria. Clique em "Nova Foto" para começar o histórico do paciente.</p>
+                          ) : (
+                            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+                              {selectedPatient.evolutionPhotos.map(photo => {
+                                const isSelected = compareSelectedIds.includes(photo.id);
+                                return (
+                                  <div key={photo.id} className={`relative rounded-xl overflow-hidden group border transition-all ${isSelected ? 'border-primary ring-2 ring-primary/20 scale-[0.98]' : 'border-outline-variant/40 bg-surface'}`}>
+                                    <img src={photo.url} className="w-full h-24 object-cover" alt="Histórico" />
+                                    
+                                    <div className="p-1.5 text-center">
+                                      <p className="text-[9px] font-bold text-on-surface truncate">{photo.date}</p>
+                                      <span className={`inline-block mt-0.5 px-2 py-0.2 rounded text-[7px] font-extrabold uppercase ${photo.type === 'Antes' ? 'bg-[#735c00]/10 text-[#735c00]' : (photo.type === 'Depois' ? 'bg-[#79542e]/10 text-[#79542e]' : 'bg-surface-container-highest text-on-surface-variant')}`}>
+                                        {photo.type}
+                                      </span>
+                                    </div>
+
+                                    {/* Action Hover Overlay */}
+                                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-1.5 p-1 text-white-pure">
+                                      <button 
+                                        onClick={() => setActiveLightboxImage(photo.url)}
+                                        className="p-1 rounded-full bg-white-pure/20 hover:bg-white-pure/40 transition-colors flex items-center justify-center cursor-pointer"
+                                        title="Abrir Foto"
+                                      >
+                                        <span className="material-symbols-outlined text-[16px] text-white-pure">zoom_in</span>
+                                      </button>
+                                      {isComparing && (
+                                        <button
+                                          onClick={() => {
+                                            if (isSelected) {
+                                              setCompareSelectedIds(prev => prev.filter(id => id !== photo.id));
+                                            } else {
+                                              if (compareSelectedIds.length >= 2) {
+                                                showAlert('Você pode selecionar no máximo 2 fotos para comparação.');
+                                                return;
+                                              }
+                                              setCompareSelectedIds(prev => [...prev, photo.id]);
+                                            }
+                                          }}
+                                          className={`px-2 py-0.5 rounded text-[8px] font-black uppercase cursor-pointer ${isSelected ? 'bg-primary text-white-pure' : 'bg-white-pure text-on-surface'}`}
+                                        >
+                                          {isSelected ? 'Selecionada' : 'Comparar'}
+                                        </button>
+                                      )}
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          )}
                         </div>
                       </div>
 
@@ -2590,7 +2731,7 @@ export default function CRMPage() {
                                   }]);
                                 if (txErr) throw txErr;
 
-                                showAlert('Lançamento registrado e integrado ao prontuário médico com sucesso!');
+                                showAlert('Lançamento registrado e integrado ao prontuário de atendimento com sucesso!');
                                 ((document.getElementById('new_proc_name') as HTMLInputElement).value = '');
                                 ((document.getElementById('new_proc_val') as HTMLInputElement).value = '');
                               } catch (err: any) {
@@ -3234,7 +3375,7 @@ export default function CRMPage() {
                                   setCurrentTab('clientes');
                                 }}
                                 className="p-1.5 text-primary hover:bg-primary/10 transition-colors text-[16px] material-symbols-outlined rounded-md"
-                                title="Acessar Prontuário CRM"
+                                title="Acessar Prontuário de Atendimento CRM"
                               >
                                 open_in_new
                               </button>
@@ -4426,6 +4567,20 @@ export default function CRMPage() {
               </div>
 
             </form>
+          </div>
+        </div>
+      )}
+
+      {activeLightboxImage && (
+        <div className="fixed inset-0 bg-[#000000e0] backdrop-blur-md flex items-center justify-center z-50 p-4" onClick={() => setActiveLightboxImage('')}>
+          <div className="relative max-w-4xl max-h-[90vh]">
+            <button 
+              onClick={() => setActiveLightboxImage('')}
+              className="absolute -top-12 right-0 text-white-pure hover:text-primary transition-all p-2 font-black flex items-center gap-1 cursor-pointer bg-black/40 rounded-full"
+            >
+              <span className="material-symbols-outlined text-3xl">close</span>
+            </button>
+            <img src={activeLightboxImage} className="max-w-full max-h-[80vh] rounded-2xl object-contain shadow-2xl border border-white/10" alt="Visualização ampliada" onClick={(e) => e.stopPropagation()} />
           </div>
         </div>
       )}
