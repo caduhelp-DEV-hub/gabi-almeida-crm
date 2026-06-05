@@ -623,7 +623,7 @@ export default function CRMPage() {
     } catch (err: any) {
       console.error('Login error:', err);
       // Fallback for initial seeding of admin / admin or admin123
-      if ((loginUsername === 'admin' && loginPassword === 'admin') || (loginUsername === 'admin@gabialmeida.com.br' && loginPassword === 'admin123')) {
+      if ((loginUsername === 'admin' || loginUsername === 'admin@gabialmeida.com.br') && (loginPassword === 'admin' || loginPassword === 'admin123')) {
         try {
           const credential = await createUserWithEmailAndPassword(auth, 'admin@gabialmeida.com.br', 'admin123');
           const defaultAdmin: AppUser = {
