@@ -645,11 +645,13 @@ export default function CRMPage() {
           console.error('Seeding failed:', seedErr);
           if (seedErr.code === 'auth/email-already-in-use') {
             setLoginError('Senha incorreta para o administrador.');
-            return;
+          } else {
+            setLoginError(`Erro ao cadastrar administrador inicial: ${seedErr.message || seedErr.code}`);
           }
+          return;
         }
       }
-      setLoginError('Credenciais inválidas ou erro ao conectar ao servidor.');
+      setLoginError(`Erro ao autenticar: ${err.message || err.code}`);
     }
   };
 
