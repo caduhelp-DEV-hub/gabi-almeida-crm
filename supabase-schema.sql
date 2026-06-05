@@ -75,6 +75,8 @@ CREATE POLICY "Allow anon full access to patients" ON public.patients
 -- 3. Tabela de Agenda/Compromissos
 CREATE TABLE IF NOT EXISTS public.appointments (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    patient_id UUID REFERENCES public.patients(id) ON DELETE CASCADE,
+    date TEXT NOT NULL DEFAULT (CURRENT_DATE)::text,
     time TEXT NOT NULL,
     patient_name TEXT NOT NULL,
     patient_avatar TEXT,

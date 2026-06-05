@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
 import { supabase } from '../../../../../lib/supabase';
 
+export const dynamic = 'force-dynamic';
+
 const SALT_ROUNDS = 10;
 
 export async function POST(request: NextRequest) {
@@ -37,8 +39,8 @@ export async function POST(request: NextRequest) {
       role,
       status,
       phone,
-      specialty: role === 'prestador' ? specialty : null,
-      commission_rate: role === 'prestador' ? commissionRate : 0,
+      specialty: specialty || null,
+      commission_rate: commissionRate || 0,
       permissions: permissions || {}
     };
 

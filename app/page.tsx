@@ -82,19 +82,22 @@ const mapPatientToBackend = (p: Partial<Patient>) => {
 
 const mapAppointmentToFrontend = (a: any): Appointment => ({
   id: a.id,
+  patientId: a.patient_id,
   time: a.time,
-  patientName: a.patient_name,
-  patientAvatar: a.patient_avatar,
+  patientName: a.patients?.name || a.patient_name,
+  patientAvatar: a.patients?.avatar || a.patient_avatar,
   procedure: a.procedure,
   status: a.status,
   professional: a.professional,
   category: a.category,
-  notes: a.notes
+  notes: a.notes,
+  date: a.date || new Date().toISOString().split('T')[0]
 });
 
 const mapAppointmentToBackend = (a: Partial<Appointment>) => {
   const res: any = {};
   if (a.id !== undefined) res.id = a.id;
+  if (a.patientId !== undefined) res.patient_id = a.patientId;
   if (a.time !== undefined) res.time = a.time;
   if (a.patientName !== undefined) res.patient_name = a.patientName;
   if (a.patientAvatar !== undefined) res.patient_avatar = a.patientAvatar;
@@ -103,6 +106,7 @@ const mapAppointmentToBackend = (a: Partial<Appointment>) => {
   if (a.professional !== undefined) res.professional = a.professional;
   if (a.category !== undefined) res.category = a.category;
   if (a.notes !== undefined) res.notes = a.notes;
+  if (a.date !== undefined) res.date = a.date;
   return res;
 };
 
@@ -163,6 +167,7 @@ interface Patient {
 
 interface Appointment {
   id: string;
+  patientId?: string;
   time: string;
   patientName: string;
   patientAvatar?: string;
@@ -171,6 +176,7 @@ interface Appointment {
   professional: string;
   category: 'Estética' | 'Injetáveis' | 'Consulta';
   notes?: string;
+  date: string;
 }
 
 interface ServiceObj {
@@ -355,10 +361,11 @@ export default function CRMPage() {
 
   // New appointment dialog options
   const [isNewAppointmentOpen, setIsNewAppointmentOpen] = useState(false);
-  const [newApptPatient, setNewApptPatient] = useState('Mariana Silveira');
+  const [newApptPatient, setNewApptPatient] = useState('');
   const [newApptProcedure, setNewApptProcedure] = useState('Limpeza de Pele Profunda');
   const [newApptProfessional, setNewApptProfessional] = useState('Dra. Gabi Almeida');
   const [newApptTime, setNewApptTime] = useState('09:00');
+  const [newApptDate, setNewApptDate] = useState(new Date().toISOString().split('T')[0]);
   const [newApptCategory, setNewApptCategory] = useState<'Estética' | 'Injetáveis' | 'Consulta'>('Estética');
 
   // Clientes Module Detail Tab
@@ -412,19 +419,59 @@ export default function CRMPage() {
   const commissionLeaders: CommissionLeader[] = [];
 
   // Dynamic metrics helpers
-  const totalFinancialRevenue = transactions.filter(t => t.value > 0).reduce((acc, t) => acc + t.value, 0);
-  const totalRevenueThisMonth = totalFinancialRevenue;
-  
-  const dailyFinancialRevenue = transactions.filter(t => t.value > 0).reduce((acc, t) => acc + t.value, 0);
-  const totalDailyRevenueDisplay = dailyFinancialRevenue;
-  
-  const appointmentsToConsider = appointments;
-  const appointmentsToday = appointmentsToConsider.length;
+  const todayDate = new Date();
+  const todayDateStr = todayDate.toISOString().split('T')[0]; // YYYY-MM-DD
+  const todayStr = todayDate.toLocaleDateString('pt-BR'); // DD/MM/YYYY
+  const [,, todayYear] = todayStr.split('/');
+  const [, todayMonth] = todayStr.split('/');
+
+  const dailyFinancialRevenue = transactions
+    .filter(t => !(t as any).deleted_at && t.date === todayStr && t.value > 0)
+    .reduce((acc, t) => acc + t.value, 0);
+
+  const totalRevenueThisMonth = transactions
+    .filter(t => {
+      if ((t as any).deleted_at) return false;
+      const parts = t.date.split('/');
+      if (parts.length === 3) {
+        const [, m, y] = parts;
+        return m === todayMonth && y === todayYear && t.value > 0;
+      }
+      return false;
+    })
+    .reduce((acc, t) => acc + t.value, 0);
+
+  const appointmentsToConsider = appointments.filter(a => !(a as any).deleted_at);
+  const appointmentsToday = appointmentsToConsider.filter(a => a.date === todayDateStr).length;
   const totalAtendimentosDisplay = appointmentsToday;
+  const totalDailyRevenueDisplay = dailyFinancialRevenue;
   const ticketMedio = totalAtendimentosDisplay > 0 ? (totalDailyRevenueDisplay / totalAtendimentosDisplay) : 0;
-  const leadsAtivos = patients.length;
-  const conversoes = appointmentsToConsider.filter(a => a.status === 'Confirmado').length;
+  const leadsAtivos = patients.filter(p => !(p as any).deleted_at).length;
+  const conversoes = appointmentsToConsider.filter(a => a.status === 'Confirmado' && a.date === todayDateStr).length;
   const taxaConversao = appointmentsToday > 0 ? Math.round((conversoes / appointmentsToday) * 100) : 0;
+
+  const getWeekDays = () => {
+    const today = new Date();
+    const currentDay = today.getDay();
+    const distance = currentDay === 0 ? -6 : 1 - currentDay;
+    const monday = new Date(today);
+    monday.setDate(today.getDate() + distance);
+    
+    const days = [];
+    const labels = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'];
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(monday);
+      d.setDate(monday.getDate() + i);
+      days.push({
+        label: labels[i],
+        date: d.toLocaleDateString('pt-BR', { day: 'numeric', month: 'short' }).replace('.', ''),
+        dateString: d.toISOString().split('T')[0],
+        active: d.toDateString() === today.toDateString()
+      });
+    }
+    return days;
+  };
+  const weekDays = getWeekDays();
 
   const commissionsToPay = Math.round(totalRevenueThisMonth * 0.25); // estimate
   const primaryRevenueTarget = 170000;
@@ -490,8 +537,11 @@ export default function CRMPage() {
         setPatientDocuments(documentsMap);
       }
 
-      const { data: appts } = await supabase.from('appointments').select('*');
-      if (appts) setAppointments(appts.map(mapAppointmentToFrontend));
+      const { data: appts } = await supabase.from('appointments').select('*, patients(id, name, avatar)');
+      if (appts) {
+        const validAppts = appts.filter((a: any) => a.patient_id && a.patients);
+        setAppointments(validAppts.map(mapAppointmentToFrontend));
+      }
 
       const { data: trans } = await supabase.from('transactions').select('*');
       if (trans) setTransactions(trans as Transaction[]);
@@ -528,7 +578,13 @@ export default function CRMPage() {
         });
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'appointments' }, () => {
-        supabase.from('appointments').select('*').then((res: any) => { const data = res.data; if (data) setAppointments(data.map(mapAppointmentToFrontend)); });
+        supabase.from('appointments').select('*, patients(id, name, avatar)').then((res: any) => {
+          const data = res.data;
+          if (data) {
+            const validAppts = data.filter((a: any) => a.patient_id && a.patients);
+            setAppointments(validAppts.map(mapAppointmentToFrontend));
+          }
+        });
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'transactions' }, () => {
         supabase.from('transactions').select('*').then((res: any) => { const data = res.data; if (data) setTransactions(data as Transaction[]); });
@@ -552,13 +608,17 @@ export default function CRMPage() {
   // Handle new appointment submission
   const handleAddNewAppointment = async (e: React.FormEvent) => {
     e.preventDefault();
+    const selectedPat = patients.find(p => p.name === newApptPatient);
     const apptData = {
       time: newApptTime,
+      patientId: selectedPat?.id,
       patientName: newApptPatient,
+      patientAvatar: selectedPat?.avatar || '',
       procedure: newApptProcedure,
       status: editingAppointment ? editingAppointment.status : ('Confirmado' as const),
       professional: newApptProfessional,
-      category: newApptCategory
+      category: newApptCategory,
+      date: newApptDate
     };
     
     try {
@@ -926,7 +986,15 @@ export default function CRMPage() {
         <div className="p-4 mx-4 mb-4 bg-surface-container-lowest/40 rounded-2xl border border-outline-variant shadow-sm space-y-4">
           <button 
             id="sidebar-new-appointment"
-            onClick={() => { setIsNewAppointmentOpen(true); setIsMobileMenuOpen(false); }}
+            onClick={() => {
+              setEditingAppointment(null);
+              setNewApptPatient(patients[0]?.name || '');
+              setNewApptProcedure(services[0]?.name || '');
+              setNewApptTime('09:00');
+              setNewApptDate(new Date().toISOString().split('T')[0]);
+              setIsNewAppointmentOpen(true);
+              setIsMobileMenuOpen(false);
+            }}
             className="w-full bg-primary text-on-primary py-3 rounded-xl font-manrope font-bold text-[14px] flex items-center justify-center gap-2 hover:opacity-90 transition-all cursor-pointer active:scale-95"
           >
             <span className="material-symbols-outlined text-[18px]">add</span>
@@ -1563,6 +1631,7 @@ export default function CRMPage() {
                                       setNewApptProcedure(appt.procedure);
                                       setNewApptProfessional(appt.professional);
                                       setNewApptTime(appt.time);
+                                      setNewApptDate(appt.date);
                                       setNewApptCategory(appt.category);
                                       setIsNewAppointmentOpen(true);
                                     }}
@@ -1601,7 +1670,11 @@ export default function CRMPage() {
                             <p className="text-[12px] font-bold">Nenhum agendamento para este dia.</p>
                             <button 
                               onClick={() => {
+                                setEditingAppointment(null);
+                                setNewApptPatient(patients[0]?.name || '');
+                                setNewApptProcedure(services[0]?.name || '');
                                 setNewApptTime('09:00');
+                                setNewApptDate(new Date().toISOString().split('T')[0]);
                                 setIsNewAppointmentOpen(true);
                               }}
                               className="mt-2 text-[11px] bg-primary text-white-pure px-4 py-1.5 rounded-xl font-bold hover:opacity-90 shadow-sm"
@@ -1622,106 +1695,51 @@ export default function CRMPage() {
                     <div className="flex flex-col min-w-[800px] h-full overflow-hidden">
                       {/* Header: Weekdays */}
                       <div className="grid grid-cols-7 border-b border-outline-variant bg-surface-container/30">
-                      {[
-                        { label: 'Seg', date: '23 Out' },
-                        { label: 'Ter', date: '24 Out', active: true },
-                        { label: 'Qua', date: '25 Out' },
-                        { label: 'Qui', date: '26 Out' },
-                        { label: 'Sex', date: '27 Out' },
-                        { label: 'Sáb', date: '28 Out' },
-                        { label: 'Dom', date: '29 Out' }
-                      ].map((day, idx) => (
-                        <div key={idx} className={`p-3 text-center border-r border-outline-variant/60 relative ${day.active ? 'bg-primary/5' : ''}`}>
-                          <p className="text-[10px] text-outline font-extrabold uppercase tracking-wider">{day.label}</p>
-                          <p className={`font-manrope text-[14px] font-bold mt-1 ${day.active ? 'text-primary' : 'text-on-surface'}`}>{day.date}</p>
-                          {day.active && <span className="absolute bottom-0 inset-x-0 h-1 bg-primary"></span>}
-                        </div>
-                      ))}
-                    </div>
-
-                    {/* Columns grid body */}
-                    <div className="grid grid-cols-7 flex-1 divide-x divide-outline-variant/40 overflow-y-auto custom-scrollbar p-2 bg-[#fbfaf8]">
-                      {/* Monday Column */}
-                      <div className="p-1.5 space-y-3">
-                        <div className="bg-secondary-container/10 border-l-2 border-secondary-container p-2 rounded-lg relative hover:shadow-sm transition-all cursor-pointer">
-                          <p className="text-[8px] text-outline font-bold">09:00 - 10:00</p>
-                          <p className="font-manrope text-[11px] font-extrabold text-on-surface truncate">Mariana Silveira</p>
-                          <p className="text-[9px] text-on-surface-variant truncate">Procedimento Geral</p>
-                        </div>
-                        <div className="bg-primary-container/10 border-l-2 border-primary-container p-2 rounded-lg relative hover:shadow-sm transition-all cursor-pointer">
-                          <p className="text-[8px] text-outline font-bold">14:00 - 15:30</p>
-                          <p className="font-manrope text-[11px] font-extrabold text-on-surface truncate">Beatriz Ramos</p>
-                          <p className="text-[9px] text-on-surface-variant truncate">Peeling Químico</p>
-                        </div>
+                        {weekDays.map((day, idx) => (
+                          <div key={idx} className={`p-3 text-center border-r border-outline-variant/60 relative ${day.active ? 'bg-primary/5' : ''}`}>
+                            <p className="text-[10px] text-outline font-extrabold uppercase tracking-wider">{day.label}</p>
+                            <p className={`font-manrope text-[14px] font-bold mt-1 ${day.active ? 'text-primary' : 'text-on-surface'}`}>{day.date}</p>
+                            {day.active && <span className="absolute bottom-0 inset-x-0 h-1 bg-primary"></span>}
+                          </div>
+                        ))}
                       </div>
 
-                      {/* Tuesday Column */}
-                      <div className="p-1.5 space-y-3 bg-primary/[0.01]">
-                        <div className="bg-secondary-container/20 border-l-2 border-secondary-container p-2 rounded-lg relative cursor-pointer hover:shadow-sm transition-all" onClick={() => setAgendaView('diaria')}>
-                          <p className="text-[8px] text-outline font-bold">08:15 - 09:00</p>
-                          <p className="font-manrope text-[11px] font-extrabold text-on-surface truncate">Isabella Albuquerque</p>
-                        </div>
-                        <div className="bg-primary-container/20 border-l-2 border-primary-container p-2 rounded-lg relative cursor-pointer hover:shadow-sm transition-all" onClick={() => setAgendaView('diaria')}>
-                          <p className="text-[8px] text-outline font-bold">09:30 - 11:00</p>
-                          <p className="font-manrope text-[11px] font-extrabold text-on-surface truncate">Juliana Silveira</p>
-                        </div>
-                        <div className="bg-tertiary-container/20 border-l-2 border-tertiary-container p-2 rounded-lg relative cursor-pointer hover:shadow-sm transition-all" onClick={() => setAgendaView('diaria')}>
-                          <p className="text-[8px] text-outline font-bold">11:15 - 12:00</p>
-                          <p className="font-manrope text-[11px] font-extrabold text-on-surface truncate">Roberto Mendes</p>
-                        </div>
+                      {/* Columns grid body */}
+                      <div className="grid grid-cols-7 flex-1 divide-x divide-outline-variant/40 overflow-y-auto custom-scrollbar p-2 bg-[#fbfaf8]">
+                        {weekDays.map((day, idx) => {
+                          const dayAppts = appointments.filter(appt => appt.date === day.dateString);
+                          return (
+                            <div key={idx} className={`p-1.5 space-y-3 ${day.active ? 'bg-primary/[0.01]' : ''}`}>
+                              {dayAppts.map(appt => {
+                                const isInjectable = appt.category === 'Injetáveis';
+                                const isConsult = appt.category === 'Consulta';
+                                const cardClass = isInjectable
+                                  ? 'bg-primary-container/10 border-primary-container text-primary'
+                                  : isConsult
+                                    ? 'bg-tertiary-container/10 border-tertiary-container text-tertiary'
+                                    : 'bg-secondary-container/10 border-secondary-container text-[#745c00]';
+                                return (
+                                  <div 
+                                    key={appt.id} 
+                                    onClick={() => {
+                                      setNewApptDate(day.dateString);
+                                      setAgendaView('diaria');
+                                    }}
+                                    className={`border-l-2 p-2 rounded-lg relative hover:shadow-sm transition-all cursor-pointer ${cardClass}`}
+                                  >
+                                    <p className="text-[8px] text-outline font-bold">{appt.time}</p>
+                                    <p className="font-manrope text-[11px] font-extrabold text-on-surface truncate">{appt.patientName}</p>
+                                    <p className="text-[9px] text-on-surface-variant truncate">{appt.procedure}</p>
+                                  </div>
+                                );
+                              })}
+                              {dayAppts.length === 0 && (
+                                <div className="text-center py-8 text-outline text-[9px] italic">Sem agendamentos</div>
+                              )}
+                            </div>
+                          );
+                        })}
                       </div>
-
-                      {/* Wednesday Column */}
-                      <div className="p-1.5 space-y-3">
-                        <div className="bg-tertiary-container/10 border-l-2 border-tertiary-container p-2 rounded-lg relative hover:shadow-sm transition-all cursor-pointer">
-                          <p className="text-[8px] text-outline font-bold">14:00 - 15:00</p>
-                          <p className="font-manrope text-[11px] font-extrabold text-on-surface truncate">Ana Clara Vaz</p>
-                          <p className="text-[9px] text-on-surface-variant truncate">Avaliação Estética</p>
-                        </div>
-                      </div>
-
-                      {/* Thursday Column */}
-                      <div className="p-1.5 space-y-3">
-                        <div className="bg-primary-container/10 border-l-2 border-primary-container p-2 rounded-lg relative hover:shadow-sm transition-all cursor-pointer">
-                          <p className="text-[8px] text-outline font-bold">10:00 - 11:30</p>
-                          <p className="font-manrope text-[11px] font-extrabold text-on-surface truncate">Sandra Souza</p>
-                          <p className="text-[9px] text-on-surface-variant truncate">Radiesse Botox</p>
-                        </div>
-                        <div className="bg-secondary-container/10 border-l-2 border-secondary-container p-2 rounded-lg relative hover:shadow-sm transition-all cursor-pointer">
-                          <p className="text-[8px] text-outline font-bold">15:00 - 16:00</p>
-                          <p className="font-manrope text-[11px] font-extrabold text-on-surface truncate">Ricardo Mendes</p>
-                          <p className="text-[9px] text-on-surface-variant truncate">Limpeza Profunda</p>
-                        </div>
-                      </div>
-
-                      {/* Friday Column */}
-                      <div className="p-1.5 space-y-3">
-                        <div className="bg-primary-container/10 border-l-2 border-primary-container p-2 rounded-lg relative hover:shadow-sm transition-all cursor-pointer">
-                          <p className="text-[8px] text-outline font-bold">11:00 - 12:00</p>
-                          <p className="font-manrope text-[11px] font-extrabold text-on-surface truncate">Mariana Silveira</p>
-                          <p className="text-[9px] text-on-surface-variant truncate">Bioestimulador</p>
-                        </div>
-                        <div className="bg-secondary-container/10 border-l-2 border-secondary-container p-2 rounded-lg relative hover:shadow-sm transition-all cursor-pointer">
-                          <p className="text-[8px] text-outline font-bold">15:30 - 16:30</p>
-                          <p className="font-manrope text-[11px] font-extrabold text-on-surface truncate">Marcos Vinícius</p>
-                          <p className="text-[9px] text-on-surface-variant truncate">Sessão Peeling</p>
-                        </div>
-                      </div>
-
-                      {/* Saturday Column */}
-                      <div className="p-1.5 space-y-3">
-                        <div className="bg-[#f0ece9] border-l-2 border-outline-variant p-2 rounded-lg relative hover:shadow-sm transition-all cursor-pointer">
-                          <p className="text-[8px] text-outline font-bold">09:00 - 10:00</p>
-                          <p className="font-manrope text-[11px] font-extrabold text-on-surface truncate">Beatriz Ramos</p>
-                          <p className="text-[9px] text-on-surface-variant truncate">Limpeza Básica</p>
-                        </div>
-                      </div>
-
-                      {/* Sunday Column */}
-                      <div className="p-3 text-center text-outline flex items-center justify-center text-[10px] italic">
-                        Dom (Folga)
-                      </div>
-                    </div>
                     </div>
                   </div>
                 )}
@@ -1729,11 +1747,13 @@ export default function CRMPage() {
                 {/* 4.3 Monthly View Layout */}
                 {agendaView === 'mensal' && (
                   <div className="w-full h-full flex flex-col md:flex-row overflow-hidden bg-white-pure">
-                    {/* Left: 31 day October calendar grid */}
+                    {/* Left: Dynamic month calendar grid */}
                     <div className="flex-1 p-6 border-b md:border-b-0 md:border-r border-outline-variant overflow-y-auto">
                       <div className="flex justify-between items-center mb-6 select-none font-manrope">
-                        <h4 className="font-black text-primary text-[15px] uppercase tracking-wider">Outubro 2023</h4>
-                        <span className="text-[12px] text-on-surface-variant font-bold">Clinica Activa</span>
+                        <h4 className="font-black text-primary text-[15px] uppercase tracking-wider">
+                          {todayDate.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' }).toUpperCase()}
+                        </h4>
+                        <span className="text-[12px] text-on-surface-variant font-bold">Clínica Activa</span>
                       </div>
 
                       {/* Calendar grid headers */}
@@ -1749,13 +1769,14 @@ export default function CRMPage() {
 
                       {/* Calendar day keys */}
                       <div className="grid grid-cols-7 gap-2">
-                        {/* 31 days starting with October 1st as Sunday */}
-                        {Array.from({ length: 31 }).map((_, index) => {
+                        {Array.from({ length: new Date(todayDate.getFullYear(), todayDate.getMonth() + 1, 0).getDate() }).map((_, index) => {
                           const dayNum = index + 1;
                           const isSelected = dayNum === selectedCalendarDay;
-                          
-                          // Days with appointments: 23, 24, 25, 26, 27, 28
-                          const hasAppt = [23, 24, 25, 26, 27, 28].includes(dayNum);
+                          const formattedDay = String(dayNum).padStart(2, '0');
+                          const formattedMonth = String(todayDate.getMonth() + 1).padStart(2, '0');
+                          const dateStr = `${todayDate.getFullYear()}-${formattedMonth}-${formattedDay}`;
+                          const dayAppts = appointments.filter(appt => appt.date === dateStr);
+                          const hasAppt = dayAppts.length > 0;
                           
                           return (
                             <button 
@@ -1768,9 +1789,7 @@ export default function CRMPage() {
                               <span className="text-[12px]">{dayNum}</span>
                               {hasAppt && (
                                 <div className="absolute bottom-1 w-full flex justify-center items-center">
-                                  <span className={`material-symbols-outlined text-[12px] animate-bounce ${isSelected ? 'text-white-pure' : 'text-primary'}`}>spa</span>
-                                  {dayNum === 24 && <span className={`material-symbols-outlined text-[12px] animate-[bounce_1.5s_infinite] ${isSelected ? 'text-white-pure' : 'text-secondary'}`}>face</span>}
-                                  {dayNum === 26 && <span className={`material-symbols-outlined text-[12px] animate-pulse ${isSelected ? 'text-white-pure' : 'text-tertiary'}`}>water_drop</span>}
+                                  <span className={`material-symbols-outlined text-[10px] ${isSelected ? 'text-white-pure' : 'text-primary'}`}>circle</span>
                                 </div>
                               )}
                             </button>
@@ -1784,69 +1803,70 @@ export default function CRMPage() {
                       <div className="space-y-4">
                         <div className="border-b border-outline-variant pb-3">
                           <p className="text-[10px] text-outline font-extrabold uppercase tracking-widest font-manrope">Agenda do Dia Selecionado</p>
-                          <h5 className="font-manrope text-[15px] font-black text-on-surface mt-1">{selectedCalendarDay} de Outubro, Terça</h5>
+                          <h5 className="font-manrope text-[15px] font-black text-on-surface mt-1">
+                            {selectedCalendarDay} de {todayDate.toLocaleDateString('pt-BR', { month: 'long' })}
+                          </h5>
                         </div>
 
-                        {/* Event conditional lists of selected calendar day */}
-                        {selectedCalendarDay === 23 && (
-                          <div className="space-y-3 animate-fade-in">
-                            <div className="p-3 bg-white-pure border border-outline-variant/50 rounded-xl hover:border-primary/40 transition-colors">
-                              <p className="text-[9px] text-[#956c44] font-bold">09:00 - Injetáveis</p>
-                              <p className="font-manrope text-[12px] font-bold text-on-surface mt-0.5">Mariana Silveira</p>
-                              <p className="text-[10px] text-on-surface-variant">Preenchimento Labial</p>
-                            </div>
-                            <div className="p-3 bg-white-pure border border-outline-variant/50 rounded-xl hover:border-primary/40 transition-colors">
-                              <p className="text-[9px] text-primary font-bold">14:00 - Estética</p>
-                              <p className="font-manrope text-[12px] font-bold text-on-surface mt-0.5">Beatriz Ramos</p>
-                              <p className="text-[10px] text-on-surface-variant">Peeling Químico</p>
-                            </div>
-                          </div>
-                        )}
+                        {/* Event list of selected calendar day */}
+                        <div className="space-y-3 animate-fade-in">
+                          {appointments
+                            .filter(appt => {
+                              const formattedDay = String(selectedCalendarDay).padStart(2, '0');
+                              const formattedMonth = String(todayDate.getMonth() + 1).padStart(2, '0');
+                              const dateStr = `${todayDate.getFullYear()}-${formattedMonth}-${formattedDay}`;
+                              return appt.date === dateStr;
+                            })
+                            .map(appt => {
+                              const isInjectable = appt.category === 'Injetáveis';
+                              const isConsult = appt.category === 'Consulta';
+                              const categoryColorClass = isInjectable 
+                                ? 'bg-primary-container/10 border-primary-container text-primary' 
+                                : isConsult 
+                                  ? 'bg-tertiary-container/10 border-tertiary-container text-tertiary' 
+                                  : 'bg-secondary-container/10 border-secondary-container text-[#745c00]';
+                              return (
+                                <div 
+                                  key={appt.id}
+                                  onClick={() => setAgendaView('diaria')}
+                                  className={`p-3 bg-white-pure border border-outline-variant/50 rounded-xl hover:border-primary/40 transition-colors cursor-pointer ${categoryColorClass}`}
+                                >
+                                  <p className="text-[9px] font-bold">{appt.time} - {appt.category}</p>
+                                  <p className="font-manrope text-[12px] font-bold text-on-surface mt-0.5">{appt.patientName}</p>
+                                  <p className="text-[10px] text-on-surface-variant">{appt.procedure}</p>
+                                </div>
+                              );
+                            })
+                          }
 
-                        {selectedCalendarDay === 24 && (
-                          <div className="space-y-3 animate-fade-in">
-                            <div className="p-3 bg-white-pure border border-[#fed65b] rounded-xl">
-                              <p className="text-[9px] text-[#745c00] font-bold">08:15 - Estética</p>
-                              <p className="font-manrope text-[12px] font-bold text-on-surface mt-0.5">Isabella Albuquerque</p>
-                              <p className="text-[10px] text-on-surface-variant">Limpeza de Pele Profunda</p>
+                          {appointments.filter(appt => {
+                            const formattedDay = String(selectedCalendarDay).padStart(2, '0');
+                            const formattedMonth = String(todayDate.getMonth() + 1).padStart(2, '0');
+                            const dateStr = `${todayDate.getFullYear()}-${formattedMonth}-${formattedDay}`;
+                            return appt.date === dateStr;
+                          }).length === 0 && (
+                            <div className="text-center py-10 text-outline space-y-2 select-none">
+                              <span className="material-symbols-outlined text-4xl opacity-35">event_busy</span>
+                              <p className="text-[11px]">Nenhum agendamento ativo ou faturado para este dia.</p>
+                              <button 
+                                onClick={() => {
+                                  const formattedDay = String(selectedCalendarDay).padStart(2, '0');
+                                  const formattedMonth = String(todayDate.getMonth() + 1).padStart(2, '0');
+                                  const dateStr = `${todayDate.getFullYear()}-${formattedMonth}-${formattedDay}`;
+                                  setEditingAppointment(null);
+                                  setNewApptPatient(patients[0]?.name || '');
+                                  setNewApptProcedure(services[0]?.name || '');
+                                  setNewApptTime('10:00');
+                                  setNewApptDate(dateStr);
+                                  setIsNewAppointmentOpen(true);
+                                }}
+                                className="text-[10px] bg-primary/10 text-primary px-3 py-1.5 rounded-xl font-bold hover:bg-primary/20 transition-all select-none mt-2"
+                              >
+                                Agendar Procedimento
+                              </button>
                             </div>
-                            <div className="p-3 bg-primary/5 border border-primary/25 rounded-xl">
-                              <p className="text-[9px] text-primary font-bold">09:30 - Injetáveis</p>
-                              <p className="font-manrope text-[12px] font-bold text-on-surface mt-0.5">Juliana Silveira</p>
-                              <p className="text-[10px] text-on-surface-variant">Aplicação Botulínica (3 áreas)</p>
-                            </div>
-                            <div className="p-3 bg-white-pure border border-outline-variant/60 rounded-xl">
-                              <p className="text-[9px] text-tertiary font-bold font-manrope">11:15 - Consulta</p>
-                              <p className="font-manrope text-[12px] font-bold text-on-surface mt-0.5">Roberto Mendes</p>
-                              <p className="text-[10px] text-on-surface-variant">Consulta Dermatológica</p>
-                            </div>
-                          </div>
-                        )}
-
-                        {selectedCalendarDay === 25 && (
-                          <div className="p-4 bg-white-pure border border-outline-variant/50 rounded-2xl animate-fade-in">
-                            <p className="text-[9px] text-tertiary font-bold font-manrope">14:00 - Consulta</p>
-                            <p className="font-manrope text-[13px] font-bold text-on-surface mt-1">Ana Clara Vaz</p>
-                            <p className="text-[11px] text-on-surface-variant">Primeira Avaliação Estética</p>
-                            <button onClick={()=>setCurrentTab('clientes')} className="text-primary font-bold text-[11px] underline mt-3 block">Ver Prontuário</button>
-                          </div>
-                        )}
-
-                        {![23, 24, 25].includes(selectedCalendarDay) && (
-                          <div className="text-center py-10 text-outline space-y-2 select-none">
-                            <span className="material-symbols-outlined text-4xl opacity-35">event_busy</span>
-                            <p className="text-[11px]">Nenhum agendamento ativo ou faturado para este dia.</p>
-                            <button 
-                              onClick={() => {
-                                setNewApptTime('10:00');
-                                setIsNewAppointmentOpen(true);
-                              }}
-                              className="text-[10px] bg-primary/10 text-primary px-3 py-1.5 rounded-xl font-bold hover:bg-primary/20 transition-all select-none mt-2"
-                            >
-                              Agendar Procedimento
-                            </button>
-                          </div>
-                        )}
+                          )}
+                        </div>
                       </div>
 
                       <div className="pt-4 border-t border-outline-variant/20">
@@ -3451,8 +3471,25 @@ export default function CRMPage() {
               }
               
               try {
-                const { error: authErr } = await supabase.auth.updateUser({ password: newPass });
-                if (authErr) throw authErr;
+                const res = await fetch('/api/auth/users/update', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    id: currentUser.id,
+                    name: currentUser.name,
+                    username: currentUser.username,
+                    role: currentUser.role,
+                    status: currentUser.status,
+                    phone: currentUser.phone,
+                    specialty: currentUser.specialty,
+                    commissionRate: currentUser.commissionRate,
+                    permissions: currentUser.permissions,
+                    password: newPass
+                  })
+                });
+
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error || 'Erro ao alterar senha.');
 
                 const upd = { ...currentUser, password: newPass };
                 setCurrentUser(upd);
@@ -3595,6 +3632,11 @@ export default function CRMPage() {
                   if (!res.ok) {
                     throw new Error(data.error || 'Erro ao editar integrante.');
                   }
+                  const updatedUser = mapUserToFrontend(data.user);
+                  setAppUsers(prev => prev.map(u => u.id === updatedUser.id ? updatedUser : u));
+                  if (currentUser && currentUser.id === updatedUser.id) {
+                    setCurrentUser(updatedUser);
+                  }
                   showAlert(`Cadastro de ${name} atualizado com sucesso!`);
                 } else {
                   // Cadastrar novo usuário
@@ -3608,6 +3650,7 @@ export default function CRMPage() {
                       specialty,
                       phone,
                       commissionRate,
+                      password,
                       permissions: {
                         accessCRM: canAccessCRM,
                         accessAgenda: canAccessAgenda,
@@ -3622,7 +3665,9 @@ export default function CRMPage() {
                   if (!res.ok) {
                     throw new Error(data.error || 'Erro ao cadastrar integrante.');
                   }
-                  showAlert(`Cadastrado com sucesso! ${name} agora possui acesso ao sistema com senha padrão "123".`);
+                  const newUser = mapUserToFrontend(data.user);
+                  setAppUsers(prev => [...prev, newUser]);
+                  showAlert(`Cadastrado com sucesso! ${name} agora possui acesso ao sistema.`);
                 }
 
                 setIsNewUserModalOpen(false);
@@ -4147,14 +4192,12 @@ export default function CRMPage() {
                     value={newApptPatient}
                     onChange={(e) => setNewApptPatient(e.target.value)}
                     className="w-full p-2.5 bg-surface rounded-xl border border-outline-variant/60 focus:outline-none focus:ring-1 focus:ring-primary/40 font-medium flex-1"
+                    required
                   >
-                    <option value="Cliente Importado">Cliente Importado</option>
-                    <option value="Mariana Silveira">Mariana Silveira</option>
-                    <option value="Isabella Albuquerque">Isabella Albuquerque</option>
-                    <option value="Rodrigo Cavalcanti">Rodrigo Cavalcanti</option>
-                    <option value="Beatriz Menezes">Beatriz Menezes</option>
-                    <option value="Lucas Ferraro">Lucas Ferraro</option>
-                    <option value="Ana Clara Vaz">Ana Clara Vaz</option>
+                    <option value="" disabled>Selecione um cliente</option>
+                    {patients.map(p => (
+                      <option key={p.id} value={p.name}>{p.name}</option>
+                    ))}
                   </select>
                   <button type="button" onClick={() => {
                     setNewApptPatient("Cliente Importado");
@@ -4188,11 +4231,11 @@ export default function CRMPage() {
                 </select>
               </div>
 
-              {/* Professional and Time grid */}
-              <div className="grid grid-cols-2 gap-4">
+              {/* Professional, Date and Time grid */}
+              <div className="grid grid-cols-3 gap-4">
                 
                 <div className="space-y-1.5">
-                  <label className="font-bold text-on-surface-variant">Profissional Responsável</label>
+                  <label className="font-bold text-on-surface-variant">Profissional</label>
                   <select
                     value={newApptProfessional}
                     onChange={(e) => setNewApptProfessional(e.target.value)}
@@ -4203,6 +4246,17 @@ export default function CRMPage() {
                     <option value="Dr. Ricardo Silva">Dr. Ricardo Silva</option>
                     <option value="Dr. Fabio">Dr. Fabio Responsável</option>
                   </select>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="font-bold text-on-surface-variant">Data</label>
+                  <input 
+                    type="date"
+                    value={newApptDate}
+                    onChange={(e)=>setNewApptDate(e.target.value)}
+                    className="w-full p-2.5 bg-surface rounded-xl border border-outline-variant/60 focus:outline-none focus:ring-1 focus:ring-primary/40 font-medium"
+                    required
+                  />
                 </div>
 
                 <div className="space-y-1.5">

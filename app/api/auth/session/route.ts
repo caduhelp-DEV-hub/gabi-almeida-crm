@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import jwt from 'jsonwebtoken';
 import { supabase } from '../../../../lib/supabase';
 
+export const dynamic = 'force-dynamic';
+
 const JWT_SECRET = process.env.JWT_SECRET || 'fallback-dev-secret-change-me';
 const COOKIE_NAME = 'crm_session';
 

@@ -2,11 +2,13 @@ import { NextRequest, NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
 import { supabase } from '../../../../lib/supabase';
 
+export const dynamic = 'force-dynamic';
+
 const SALT_ROUNDS = 10;
 
 export async function POST(request: NextRequest) {
   try {
-    const { name, username, role, specialty, phone, commissionRate, permissions } = await request.json();
+    const { name, username, role, specialty, phone, commissionRate, permissions, password } = await request.json();
 
     if (!name || !username || !role) {
       return NextResponse.json(
@@ -30,8 +32,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Senha padrão inicial é '123'
-    const passwordHash = await bcrypt.hash('123', SALT_ROUNDS);
+    const passwordHash = await bcrypt.hash(password && password.trim() !== '' ? password : '123', SALT_ROUNDS);
 
     const newUser = {
       name,
@@ -39,10 +40,10 @@ export async function POST(request: NextRequest) {
       password_hash: passwordHash,
       role,
       status: 'active',
-      specialty: role === 'prestador' ? specialty : undefined,
+      specialty: specialty || undefined,
       phone,
       avatar: `https://api.dicebear.com/7.x/notionists/svg?seed=${encodeURIComponent(username)}`,
-      commission_rate: role === 'prestador' ? commissionRate : undefined,
+      commission_rate: commissionRate || undefined,
       permissions: permissions || {}
     };
 
