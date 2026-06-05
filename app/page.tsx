@@ -451,6 +451,11 @@ export default function CRMPage() {
         setCurrentUser(null);
         setIsAuthenticated(false);
       }
+    }).catch((err) => {
+      console.error('Error getting session:', err);
+      // Network error during getSession - Supabase may be unreachable
+      setCurrentUser(null);
+      setIsAuthenticated(false);
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
@@ -757,65 +762,90 @@ export default function CRMPage() {
     }
   };
 
+  const ADMIN_EMAIL = 'caduhelp@gmail.com';
+  const ADMIN_PASSWORD = 'admin123';
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoginError('');
-    const email = loginUsername.includes('@') ? loginUsername : `${loginUsername}@gabialmeida.com.br`;
+    const email = loginUsername.includes('@') ? loginUsername : (loginUsername === 'admin' ? ADMIN_EMAIL : `${loginUsername}@gmail.com`);
+    
     try {
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password: loginPassword
       });
-      if (error) throw error;
+      if (error) {
+        // If invalid credentials AND user is trying the admin login, try to seed
+        if (error.code === 'invalid_credentials' && 
+            (loginUsername === 'admin' || email === ADMIN_EMAIL) && 
+            (loginPassword === 'admin' || loginPassword === ADMIN_PASSWORD)) {
+          await seedAdminUser();
+          return;
+        }
+        throw error;
+      }
       setLoginError('');
     } catch (err: any) {
       console.error('Login error:', err);
-      // Fallback for initial seeding of admin / admin or admin123
-      if ((loginUsername === 'admin' || loginUsername === 'admin@gabialmeida.com.br') && (loginPassword === 'admin' || loginPassword === 'admin123')) {
-        try {
-          const { data: signUpData, error: signUpErr } = await supabase.auth.signUp({
-            email: 'admin@gabialmeida.com.br',
-            password: 'admin123'
-          });
-          if (signUpErr) throw signUpErr;
-
-          if (signUpData.user) {
-            const defaultAdmin: AppUser = {
-              id: signUpData.user.id,
-              name: 'Dra. Gabi Almeida',
-              username: 'admin',
-              role: 'admin',
-              status: 'active',
-              specialty: 'Fundadora & Biomédica Esteta',
-              phone: '(11) 99876-5432',
-              avatar: 'https://api.dicebear.com/7.x/notionists/svg?seed=GabiAlmeida',
-              commissionRate: 40,
-              permissions: { accessCRM: true, accessAgenda: true, accessFinanceiro: true, canSchedule: true, editPatients: true }
-            };
-            const { error: insertErr } = await supabase
-              .from('users')
-              .insert([defaultAdmin]);
-            if (insertErr) throw insertErr;
-
-            // Log in after successful registration
-            await supabase.auth.signInWithPassword({
-              email: 'admin@gabialmeida.com.br',
-              password: 'admin123'
-            });
-            showAlert('Administrador padrão inicial cadastrado! Login realizado com sucesso.');
-          }
-          return;
-        } catch (seedErr: any) {
-          console.error('Seeding failed:', seedErr);
-          if (seedErr.message?.includes('already registered') || seedErr.code === 'user_already_exists') {
-            setLoginError('Senha incorreta para o administrador.');
-          } else {
-            setLoginError(`Erro ao cadastrar administrador inicial: ${seedErr.message || seedErr.code}`);
-          }
-          return;
-        }
+      if (err.message === 'Failed to fetch' || err.name === 'TypeError') {
+        setLoginError('Erro de conexão: Não foi possível conectar ao servidor. Verifique sua internet e tente novamente.');
+      } else {
+        setLoginError(`Erro ao autenticar: ${err.message || err.code}`);
       }
-      setLoginError(`Erro ao autenticar: ${err.message || err.code}`);
+    }
+  };
+
+  const seedAdminUser = async () => {
+    try {
+      const { data: signUpData, error: signUpErr } = await supabase.auth.signUp({
+        email: ADMIN_EMAIL,
+        password: ADMIN_PASSWORD
+      });
+      if (signUpErr) throw signUpErr;
+
+      if (signUpData.user) {
+        const defaultAdmin: AppUser = {
+          id: signUpData.user.id,
+          name: 'Dra. Gabi Almeida',
+          username: 'admin',
+          role: 'admin',
+          status: 'active',
+          specialty: 'Fundadora & Biomédica Esteta',
+          phone: '(11) 99876-5432',
+          avatar: 'https://api.dicebear.com/7.x/notionists/svg?seed=GabiAlmeida',
+          commissionRate: 40,
+          permissions: { accessCRM: true, accessAgenda: true, accessFinanceiro: true, canSchedule: true, editPatients: true }
+        };
+        const { error: insertErr } = await supabase
+          .from('users')
+          .insert([mapUserToBackend(defaultAdmin)]);
+        if (insertErr) console.error('Profile insert error (non-blocking):', insertErr);
+
+        // Auto login after registration
+        const { error: loginErr } = await supabase.auth.signInWithPassword({
+          email: ADMIN_EMAIL,
+          password: ADMIN_PASSWORD
+        });
+        if (loginErr) throw loginErr;
+        showAlert('Administrador padrão cadastrado com sucesso! Bem-vinda, Dra. Gabi!');
+      } else {
+        // signUp returned no user and no error - email confirmation might be required
+        setLoginError('Conta criada! Verifique o email para confirmar o cadastro, ou desative a confirmação de email no painel do Supabase (Authentication > Settings).');
+      }
+    } catch (seedErr: any) {
+      console.error('Seeding failed:', seedErr);
+      if (seedErr.message === 'Failed to fetch' || seedErr.name === 'TypeError') {
+        setLoginError('Erro de conexão: Não foi possível conectar ao servidor. Verifique sua internet.');
+      } else if (seedErr.message?.includes('already registered') || seedErr.code === 'user_already_exists') {
+        setLoginError('Senha incorreta para o administrador. Use a senha: admin123');
+      } else if (seedErr.code === 'email_address_invalid') {
+        setLoginError('Email inválido. Tente fazer login com um email real (ex: seuemail@gmail.com).');
+      } else if (seedErr.code === 'over_email_send_rate_limit') {
+        setLoginError('Limite de emails atingido. Aguarde alguns minutos e tente novamente.');
+      } else {
+        setLoginError(`Erro ao cadastrar: ${seedErr.message || seedErr.code}`);
+      }
     }
   };
 
