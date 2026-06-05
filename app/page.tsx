@@ -53,7 +53,8 @@ const mapPatientToFrontend = (p: any): Patient => ({
   evolutionPhotos: p.evolution_photos || [],
   timeline: p.timeline || [],
   phone: p.phone,
-  cpf: p.cpf
+  cpf: p.cpf,
+  pronoun: p.pronoun
 });
 
 const mapPatientToBackend = (p: Partial<Patient>) => {
@@ -79,6 +80,7 @@ const mapPatientToBackend = (p: Partial<Patient>) => {
   if (p.timeline !== undefined) res.timeline = p.timeline;
   if (p.phone !== undefined) res.phone = p.phone;
   if (p.cpf !== undefined) res.cpf = p.cpf;
+  if (p.pronoun !== undefined) res.pronoun = p.pronoun;
   return res;
 };
 
@@ -110,6 +112,20 @@ const mapAppointmentToBackend = (a: Partial<Appointment>) => {
   if (a.notes !== undefined) res.notes = a.notes;
   if (a.date !== undefined) res.date = a.date;
   return res;
+};
+
+const getAppointmentColorClass = (status: string) => {
+  switch (status) {
+    case 'Finalizado':
+      return 'bg-emerald-50/90 border-emerald-500 text-emerald-800 hover:bg-emerald-100/90';
+    case 'Em Atendimento':
+      return 'bg-cyan-50/90 border-cyan-500 text-cyan-800 hover:bg-cyan-100/90';
+    case 'Confirmado':
+      return 'bg-amber-50/90 border-amber-500 text-amber-800 hover:bg-amber-100/90';
+    case 'Pendente':
+    default:
+      return 'bg-slate-50/90 border-slate-400 text-slate-700 hover:bg-slate-100/90';
+  }
 };
 
 const mapInventoryToFrontend = (i: any): InventoryItem => ({
@@ -173,6 +189,7 @@ interface Patient {
   timeline: TimelineItem[];
   phone?: string;
   cpf?: string;
+  pronoun?: string;
 }
 
 interface Appointment {
@@ -291,6 +308,8 @@ export default function CRMPage() {
 
   const [isPatientModalOpen, setIsPatientModalOpen] = useState<boolean>(false);
   const [editingPatientId, setEditingPatientId] = useState<string | null>(null);
+  const [newPatAvatar, setNewPatAvatar] = useState<string>('');
+  const [newApptStatus, setNewApptStatus] = useState<'Confirmado' | 'Em Atendimento' | 'Finalizado' | 'Pendente'>('Confirmado');
 
   const [isServiceModalOpen, setIsServiceModalOpen] = useState(false);
   const [editingService, setEditingService] = useState<ServiceObj | null>(null);
@@ -429,8 +448,7 @@ export default function CRMPage() {
   // Inventory Database
   const [inventory, setInventory] = useState<InventoryItem[]>([]);
 
-  // Commissions Leaders database
-  const commissionLeaders: CommissionLeader[] = [];
+  // Commissions Leaders database will be computed dynamically below
 
   // Dynamic metrics helpers
   const todayDate = new Date();
@@ -487,7 +505,57 @@ export default function CRMPage() {
   };
   const weekDays = getWeekDays();
 
-  const commissionsToPay = Math.round(totalRevenueThisMonth * 0.25); // estimate
+  // Dynamic calculation of commissions and revenue
+  const getDynamicCommissions = () => {
+    const monthlyTransactions = transactions.filter(t => {
+      if ((t as any).deleted_at) return false;
+      const parts = t.date.split('/');
+      if (parts.length === 3) {
+        const [, m, y] = parts;
+        return m === todayMonth && y === todayYear && t.value > 0;
+      }
+      return false;
+    });
+
+    const professionalCommissions: { [name: string]: { revenue: number; commission: number; avatar: string } } = {};
+
+    monthlyTransactions.forEach(t => {
+      const descLower = t.description.toLowerCase();
+      // Match appointment by name
+      const matchedAppt = appointments.find(a => {
+        if (!a.patientName) return false;
+        const patNameLower = a.patientName.toLowerCase();
+        return descLower.includes(patNameLower) || patNameLower.includes(descLower);
+      });
+
+      const profName = matchedAppt ? matchedAppt.professional : 'Dra. Gabi Almeida';
+      const profUser = appUsers.find(u => u.name === profName);
+      const rate = profUser && profUser.commissionRate !== undefined ? profUser.commissionRate : 25;
+      const commVal = t.value * (rate / 100);
+
+      if (!professionalCommissions[profName]) {
+        professionalCommissions[profName] = {
+          revenue: 0,
+          commission: 0,
+          avatar: profUser?.avatar || `https://api.dicebear.com/7.x/notionists/svg?seed=${profName.replace(/\s+/g, '')}`
+        };
+      }
+      professionalCommissions[profName].revenue += t.value;
+      professionalCommissions[profName].commission += commVal;
+    });
+
+    const leaders: CommissionLeader[] = Object.entries(professionalCommissions).map(([name, info]) => ({
+      name,
+      avatar: info.avatar,
+      revenue: Math.round(info.revenue),
+      commission: Math.round(info.commission)
+    })).sort((a, b) => b.commission - a.commission);
+
+    const total = leaders.reduce((acc, lead) => acc + lead.commission, 0);
+    return { leaders, total };
+  };
+
+  const { leaders: commissionLeaders, total: commissionsToPay } = getDynamicCommissions();
   const primaryRevenueTarget = 170000;
   const currentRevenuePercent = Math.min(100, Math.round((totalRevenueThisMonth / primaryRevenueTarget) * 100));
 
@@ -503,6 +571,18 @@ export default function CRMPage() {
     })),
     { id: 'al2', type: 'followup', title: 'Retorno Pendente', text: 'Cliente Luísa Costa atingiu D+15 do pós-procedimento.', icon: 'assignment_late', alertClass: 'bg-secondary/5 border-secondary text-on-surface' }
   ];
+
+  // Handle patient avatar initialization in edit mode
+  useEffect(() => {
+    if (editingPatientId) {
+      const pat = patients.find(p => p.id === editingPatientId);
+      if (pat) {
+        setNewPatAvatar(pat.avatar || '');
+      }
+    } else {
+      setNewPatAvatar('');
+    }
+  }, [editingPatientId, isPatientModalOpen, patients]);
 
   // 1. Session check on mount
   useEffect(() => {
@@ -629,7 +709,7 @@ export default function CRMPage() {
       patientName: newApptPatient,
       patientAvatar: selectedPat?.avatar || '',
       procedure: newApptProcedure,
-      status: editingAppointment ? editingAppointment.status : ('Confirmado' as const),
+      status: newApptStatus,
       professional: newApptProfessional,
       category: newApptCategory,
       date: newApptDate
@@ -652,7 +732,8 @@ export default function CRMPage() {
           professional: newApptProfessional,
           category: newApptCategory,
           date: newApptDate,
-          patientId: selectedPat?.id
+          patientId: selectedPat?.id,
+          status: newApptStatus
         };
         setAppointments(prev => prev.map(a => a.id === editingAppointment.id ? updatedAppt : a));
         showAlert('Agendamento atualizado com sucesso!');
@@ -1547,19 +1628,42 @@ export default function CRMPage() {
               </div>
 
               {/* Legend Indicator labels exactly matching layout of Image 3 */}
-              <div className="flex gap-4">
-                <div className="flex items-center gap-6 px-6 py-3 bg-white-pure border border-outline-variant/60 rounded-2xl shadow-sm">
+              <div className="flex flex-wrap gap-4 select-none">
+                {/* Categorias Legend */}
+                <div className="flex items-center gap-4 px-5 py-2.5 bg-white-pure border border-outline-variant/60 rounded-2xl shadow-sm">
+                  <span className="text-[9px] uppercase font-bold text-outline tracking-wider border-r border-outline-variant/50 pr-3">Categorias</span>
                   <div className="flex items-center gap-2">
                     <span className="w-2.5 h-2.5 rounded-full bg-secondary-container"></span>
-                    <span className="text-label-md text-[12px] font-semibold text-on-surface-variant">Estética</span>
+                    <span className="text-label-md text-[11px] font-semibold text-on-surface-variant">Estética</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <span className="w-2.5 h-2.5 rounded-full bg-primary-container"></span>
-                    <span className="text-label-md text-[12px] font-semibold text-on-surface-variant">Injetáveis</span>
+                    <span className="text-label-md text-[11px] font-semibold text-on-surface-variant">Injetáveis</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <span className="w-2.5 h-2.5 rounded-full bg-tertiary-container"></span>
-                    <span className="text-label-md text-[12px] font-semibold text-on-surface-variant">Consulta</span>
+                    <span className="text-label-md text-[11px] font-semibold text-on-surface-variant">Consulta</span>
+                  </div>
+                </div>
+
+                {/* Status Legend */}
+                <div className="flex items-center gap-4 px-5 py-2.5 bg-white-pure border border-outline-variant/60 rounded-2xl shadow-sm">
+                  <span className="text-[9px] uppercase font-bold text-outline tracking-wider border-r border-outline-variant/50 pr-3">Status</span>
+                  <div className="flex items-center gap-2">
+                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
+                    <span className="text-label-md text-[11px] font-semibold text-on-surface-variant">Finalizado</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="w-2.5 h-2.5 rounded-full bg-cyan-500"></span>
+                    <span className="text-label-md text-[11px] font-semibold text-on-surface-variant">Em Atendimento</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="w-2.5 h-2.5 rounded-full bg-amber-500"></span>
+                    <span className="text-label-md text-[11px] font-semibold text-on-surface-variant">Confirmado</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="w-2.5 h-2.5 rounded-full bg-slate-400"></span>
+                    <span className="text-label-md text-[11px] font-semibold text-on-surface-variant">Pendente</span>
                   </div>
                 </div>
               </div>
@@ -1591,10 +1695,22 @@ export default function CRMPage() {
                       {/* Calendar Column Day title */}
                       <div className="sticky top-0 z-10 bg-white-pure/95 backdrop-blur-md border-b border-outline-variant h-14 flex items-center px-6 justify-between select-none">
                         <div className="flex items-center gap-3">
-                          <span className="w-9 h-9 bg-primary text-on-primary rounded-full flex items-center justify-center font-bold font-manrope text-[14px]">24</span>
-                          <span className="font-manrope text-[14px] font-bold text-on-surface">Terça-feira (Dia Ativo)</span>
+                          <span className="w-9 h-9 bg-primary text-on-primary rounded-full flex items-center justify-center font-bold font-manrope text-[14px]">{selectedCalendarDay}</span>
+                          <span className="font-manrope text-[14px] font-bold text-on-surface">
+                            {(() => {
+                              const activeDate = new Date(todayDate.getFullYear(), todayDate.getMonth(), selectedCalendarDay);
+                              const weekdayName = activeDate.toLocaleDateString('pt-BR', { weekday: 'long' });
+                              return weekdayName.charAt(0).toUpperCase() + weekdayName.slice(1) + ' (Dia Ativo)';
+                            })()}
+                          </span>
                         </div>
-                        <span className="text-[11px] bg-tertiary/10 text-tertiary px-3 py-1 rounded-full font-bold">Hoje</span>
+                        {(() => {
+                          const activeDate = new Date(todayDate.getFullYear(), todayDate.getMonth(), selectedCalendarDay);
+                          const isToday = activeDate.toDateString() === new Date().toDateString();
+                          return isToday ? (
+                            <span className="text-[11px] bg-tertiary/10 text-tertiary px-3 py-1 rounded-full font-bold">Hoje</span>
+                          ) : null;
+                        })()}
                       </div>
 
                       {/* Operational appointment slots */}
@@ -1608,7 +1724,14 @@ export default function CRMPage() {
                           <div className="border-b border-outline-variant/10 w-full h-0"></div>
                         </div>
 
-                        {appointments.map((appt) => {
+                        {appointments
+                          .filter(appt => {
+                            const formattedDay = String(selectedCalendarDay).padStart(2, '0');
+                            const formattedMonth = String(todayDate.getMonth() + 1).padStart(2, '0');
+                            const dateStr = `${todayDate.getFullYear()}-${formattedMonth}-${formattedDay}`;
+                            return appt.date === dateStr;
+                          })
+                          .map((appt) => {
                           // Calcular posicionamento aproximado na agenda baseando-se no horário
                           // 08:00 é top=0, e cada hora tem aproximadamente 80px
                           const [hour, minute] = appt.time.split(':').map(Number);
@@ -1618,19 +1741,21 @@ export default function CRMPage() {
 
                           const isInjectable = appt.category === 'Injetáveis';
                           const isConsult = appt.category === 'Consulta';
-                          const categoryColorClass = isInjectable 
-                            ? 'bg-primary-container/10 border-primary-container text-primary' 
-                            : isConsult 
-                              ? 'bg-tertiary-container/10 border-tertiary-container text-tertiary' 
-                              : 'bg-secondary-container/10 border-secondary-container text-[#745c00]';
+                          const appointmentColorClass = getAppointmentColorClass(appt.status);
 
-                          const labelBg = isInjectable ? 'bg-primary' : isConsult ? 'bg-tertiary' : 'bg-[#fed65b]/30 text-[#745c00]';
+                          const labelBg = appt.status === 'Finalizado' 
+                             ? 'bg-emerald-600 text-white-pure' 
+                             : appt.status === 'Em Atendimento' 
+                               ? 'bg-cyan-600 text-white-pure' 
+                               : appt.status === 'Confirmado' 
+                                 ? 'bg-amber-500 text-white-pure' 
+                                 : 'bg-slate-400 text-white-pure';
 
                           return (
                             <div 
                               key={appt.id} 
                               style={{ top: `${topPos}px` }} 
-                              className={`absolute left-4 right-4 h-20 border-l-4 rounded-r-xl p-3 flex items-center justify-between group hover:shadow-md transition-all ${categoryColorClass}`}
+                              className={`absolute left-4 right-4 h-20 border-l-4 rounded-r-xl p-3 flex items-center justify-between group hover:shadow-md transition-all ${appointmentColorClass}`}
                             >
                               <div className="flex items-center gap-3">
                                 {appt.patientAvatar ? (
@@ -1667,6 +1792,7 @@ export default function CRMPage() {
                                       setNewApptTime(appt.time);
                                       setNewApptDate(appt.date);
                                       setNewApptCategory(appt.category);
+                                      setNewApptStatus(appt.status);
                                       setIsNewAppointmentOpen(true);
                                     }}
                                     className="p-1 hover:text-primary transition-colors material-symbols-outlined text-[16px]"
@@ -2033,7 +2159,9 @@ export default function CRMPage() {
                     )}
                     <img className="h-10 w-10 rounded-full object-cover" src={patient.avatar} alt={patient.name} />
                     <div className="flex-1 min-w-0">
-                      <p className="font-manrope text-[13px] font-extrabold text-on-surface truncate">{patient.name}</p>
+                      <p className="font-manrope text-[13px] font-extrabold text-on-surface truncate">
+                        {patient.pronoun ? patient.pronoun + ' ' : ''}{patient.name}
+                      </p>
                       <p className="text-[10px] text-on-surface-variant truncate mt-0.5">Última consulta: {patient.lastVisit}</p>
                     </div>
                     {patient.status !== 'Inativo' && patient.status !== 'inactive' && (
@@ -2067,17 +2195,51 @@ export default function CRMPage() {
                       alt={selectedPatient.name} 
                     />
                     <button 
-                      onClick={() => showAlert(`Envie uma nova foto de perfil para Dr(a). ${selectedPatient.name}`)}
+                      onClick={() => document.getElementById('patient_details_avatar_upload')?.click()}
                       className="absolute -bottom-2 -right-2 bg-primary text-on-primary p-2 rounded-full shadow-lg hover:scale-110 transition-transform cursor-pointer"
                     >
                       <span className="material-symbols-outlined text-[16px] text-white-pure">edit</span>
                     </button>
+                    <input
+                      type="file"
+                      id="patient_details_avatar_upload"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={async (e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          const reader = new FileReader();
+                          reader.onloadend = async () => {
+                            const base64 = reader.result as string;
+                            try {
+                              const { data, error } = await supabase
+                                .from('patients')
+                                .update({ avatar: base64, details_avatar: base64 })
+                                .eq('id', selectedPatient.id)
+                                .select();
+                              if (error) throw error;
+                              if (data && data[0]) {
+                                const updated = mapPatientToFrontend(data[0]);
+                                setPatients(prev => prev.map(p => p.id === selectedPatient.id ? updated : p));
+                              }
+                              showAlert('Foto de perfil atualizada com sucesso!');
+                            } catch (err: any) {
+                              console.error(err);
+                              showAlert(`Erro ao atualizar foto de perfil: ${err.message}`);
+                            }
+                          };
+                          reader.readAsDataURL(file);
+                        }
+                      }}
+                    />
                   </div>
 
                   <div className="flex-1 w-full">
                     <div className="flex flex-col lg:flex-row justify-between items-center lg:items-start gap-4">
                       <div className="flex flex-col items-center lg:items-start">
-                        <h1 className="font-manrope text-[24px] font-bold text-on-surface leading-snug">{selectedPatient.name}</h1>
+                        <h1 className="font-manrope text-[24px] font-bold text-on-surface leading-snug">
+                          {selectedPatient.pronoun ? selectedPatient.pronoun + ' ' : ''}{selectedPatient.name}
+                        </h1>
                         <p className="text-on-surface-variant text-[13px] mt-1 font-semibold flex items-center gap-1.5">
                           <span className="w-2 h-2 rounded-full bg-primary"></span>
                           Cliente {selectedPatient.tier} • Desde {selectedPatient.since}
@@ -2905,7 +3067,9 @@ export default function CRMPage() {
                   <span className="text-[#745c00] font-bold text-[11px] bg-[#fed65b] px-3 py-1 rounded-full">+12.5%</span>
                 </div>
                 <p className="font-manrope text-[11px] text-on-surface-variant uppercase tracking-widest font-bold">Entradas Mensais</p>
-                <h2 className="font-manrope text-[28px] font-extrabold text-on-surface tracking-tight mt-1">R$ 142.580,00</h2>
+                <h2 className="font-manrope text-[28px] font-extrabold text-on-surface tracking-tight mt-1">
+                  R$ {totalRevenueThisMonth.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                </h2>
                 <div className="mt-6 h-12 w-full flex items-end gap-1 px-1">
                   <div className="flex-1 bg-primary/25 h-[40%] rounded-t-sm"></div>
                   <div className="flex-1 bg-primary/25 h-[60%] rounded-t-sm"></div>
@@ -2925,16 +3089,29 @@ export default function CRMPage() {
                   <span className="text-on-surface-variant font-bold text-[11px] bg-surface-container px-3 py-1 rounded-full">Projetado</span>
                 </div>
                 <p className="font-manrope text-[11px] text-on-surface-variant uppercase tracking-widest font-bold">Comissões a Pagar</p>
-                <h2 className="font-manrope text-[28px] font-extrabold text-on-surface tracking-tight mt-1">R$ 38.420,00</h2>
+                <h2 className="font-manrope text-[28px] font-extrabold text-on-surface tracking-tight mt-1">
+                  R$ {commissionsToPay.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                </h2>
                 
-                <div className="mt-4 space-y-2">
-                  <div className="flex justify-between items-center text-[11px] font-medium text-on-surface-variant">
-                    <span>Dr. André (Dermato)</span>
-                    <span className="font-extrabold">R$ 12.200</span>
-                  </div>
-                  <div className="w-full bg-surface-container h-1 rounded-full overflow-hidden">
-                    <div className="bg-[#eebd8e] h-full w-[65%]"></div>
-                  </div>
+                <div className="mt-4 space-y-2 max-h-[100px] overflow-y-auto custom-scrollbar">
+                  {commissionLeaders.length === 0 ? (
+                    <div className="text-[11px] text-on-surface-variant/75 font-medium">Nenhum repasse projetado.</div>
+                  ) : (
+                    commissionLeaders.slice(0, 2).map((lead, idx) => {
+                      const percentage = Math.min(100, Math.round((lead.commission / (commissionsToPay || 1)) * 100));
+                      return (
+                        <div key={idx} className="space-y-1">
+                          <div className="flex justify-between items-center text-[11px] font-medium text-on-surface-variant">
+                            <span>{lead.name}</span>
+                            <span className="font-extrabold">R$ {lead.commission.toLocaleString('pt-BR')}</span>
+                          </div>
+                          <div className="w-full bg-surface-container h-1 rounded-full overflow-hidden">
+                            <div className="bg-[#eebd8e] h-full" style={{ width: `${percentage}%` }}></div>
+                          </div>
+                        </div>
+                      );
+                    })
+                  )}
                 </div>
               </div>
 
@@ -2945,12 +3122,18 @@ export default function CRMPage() {
                     <p className="font-manrope text-[11px] text-primary-fixed uppercase tracking-widest font-bold">Meta de Faturamento</p>
                     <span className="material-symbols-outlined text-primary-fixed">ads_click</span>
                   </div>
-                  <h2 className="font-manrope text-[40px] font-black leading-tight">82%</h2>
-                  <p className="text-[12px] opacity-95 text-primary-fixed mt-1.5">Faltam R$ 27.420,00 para atingir a meta premium.</p>
+                  <h2 className="font-manrope text-[40px] font-black leading-tight">
+                    {currentRevenuePercent}%
+                  </h2>
+                  <p className="text-[12px] opacity-95 text-primary-fixed mt-1.5">
+                    {primaryRevenueTarget - totalRevenueThisMonth > 0 
+                      ? `Faltam R$ ${(primaryRevenueTarget - totalRevenueThisMonth).toLocaleString('pt-BR', { minimumFractionDigits: 2 })} para atingir a meta premium.`
+                      : "Meta Premium atingida com sucesso!"}
+                  </p>
                 </div>
                 <div className="mt-6 space-y-1.5">
                   <div className="w-full bg-white-pure/20 h-2 rounded-full overflow-hidden">
-                    <div className="bg-white-pure h-full" style={{width: '82%'}}></div>
+                    <div className="bg-white-pure h-full" style={{ width: `${currentRevenuePercent}%` }}></div>
                   </div>
                   <div className="flex justify-between text-[10px] font-bold uppercase tracking-wider text-primary-fixed-dim">
                     <span>R$ 0</span>
@@ -2958,6 +3141,7 @@ export default function CRMPage() {
                   </div>
                 </div>
               </div>
+
 
             </div>
 
@@ -3349,7 +3533,9 @@ export default function CRMPage() {
                             <div className="flex items-center gap-3">
                               <img src={p.avatar} alt="avatar" className="w-10 h-10 rounded-full border border-primary/20 object-cover" />
                               <div className="flex flex-col">
-                                <span className="font-extrabold text-on-surface text-[14px] font-manrope">{p.name}</span>
+                                <span className="font-extrabold text-on-surface text-[14px] font-manrope">
+                                  {p.pronoun ? p.pronoun + ' ' : ''}{p.name}
+                                </span>
                                 <span className="text-[11px] text-on-surface-variant">{p.birthdate || 'Cadastrado Dez 2023'}</span>
                               </div>
                             </div>
@@ -4036,6 +4222,7 @@ export default function CRMPage() {
 
             <form onSubmit={async (e) => {
               e.preventDefault();
+              const pronoun = (document.getElementById('new_pat_pronoun') as HTMLSelectElement).value;
               const name = (document.getElementById('new_pat_name') as HTMLInputElement).value;
               const phone = (document.getElementById('new_pat_phone') as HTMLInputElement).value;
               const cpf = (document.getElementById('new_pat_cpf') as HTMLInputElement).value;
@@ -4049,7 +4236,7 @@ export default function CRMPage() {
                 if (editingPatientId) {
                   const { data, error } = await supabase
                     .from('patients')
-                    .update(mapPatientToBackend({ name, phone, cpf }))
+                    .update(mapPatientToBackend({ name, phone, cpf, pronoun, avatar: newPatAvatar || undefined, detailsAvatar: newPatAvatar || undefined }))
                     .eq('id', editingPatientId)
                     .select();
                   if (error) throw error;
@@ -4062,8 +4249,9 @@ export default function CRMPage() {
                     name,
                     phone,
                     cpf,
-                    avatar: 'https://api.dicebear.com/7.x/notionists/svg?seed=' + name.replace(/\s+/g, ''),
-                    detailsAvatar: 'https://api.dicebear.com/7.x/notionists/svg?seed=' + name.replace(/\s+/g, ''),
+                    pronoun,
+                    avatar: newPatAvatar || ('https://api.dicebear.com/7.x/notionists/svg?seed=' + name.replace(/\s+/g, '')),
+                    detailsAvatar: newPatAvatar || ('https://api.dicebear.com/7.x/notionists/svg?seed=' + name.replace(/\s+/g, '')),
                     status: 'Standard',
                     tier: 'Cliente Avaliação',
                     since: 'Hoje',
@@ -4102,17 +4290,64 @@ export default function CRMPage() {
               
               <div className="space-y-4 font-sans text-[13px]">
                 
-                <div>
-                  <label className="block text-on-surface-variant font-bold mb-1 ml-1 text-[11px] uppercase tracking-wider">Nome Completo</label>
-                  <div className="relative">
-                    <span className="material-symbols-outlined absolute left-3 top-3.5 text-on-surface-variant text-[18px]">person</span>
-                    <input 
-                      id="new_pat_name"
-                      type="text" 
-                      placeholder="Ex: Maria Carolina da Silva" 
-                      defaultValue={editingPatientId ? patients.find(p => p.id === editingPatientId)?.name : ''}
-                      className="w-full bg-[#f7f3f0] text-on-surface pl-10 pr-4 py-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20 border border-transparent focus:border-primary transition-all"
+                {/* Avatar upload section */}
+                <div className="flex flex-col items-center mb-4">
+                  <div className="relative group cursor-pointer" onClick={() => document.getElementById('new_pat_avatar_file')?.click()}>
+                    <img 
+                      className="h-20 w-20 rounded-2xl object-cover border-2 border-primary/20 hover:opacity-85 transition-opacity"
+                      src={newPatAvatar || (editingPatientId ? patients.find(p => p.id === editingPatientId)?.avatar : '') || 'https://api.dicebear.com/7.x/notionists/svg?seed=placeholder'} 
+                      alt="Preview Avatar"
                     />
+                    <div className="absolute inset-0 bg-black/40 rounded-2xl opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
+                      <span className="material-symbols-outlined text-white-pure text-[20px]">photo_camera</span>
+                    </div>
+                  </div>
+                  <input 
+                    type="file" 
+                    id="new_pat_avatar_file" 
+                    accept="image/*" 
+                    className="hidden" 
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        const reader = new FileReader();
+                        reader.onloadend = () => {
+                          setNewPatAvatar(reader.result as string);
+                        };
+                        reader.readAsDataURL(file);
+                      }
+                    }}
+                  />
+                  <p className="text-[10px] text-on-surface-variant/75 mt-1 font-semibold">Clique para carregar foto de perfil</p>
+                </div>
+
+                <div className="grid grid-cols-4 gap-4">
+                  <div className="col-span-1">
+                    <label className="block text-on-surface-variant font-bold mb-1 ml-1 text-[11px] uppercase tracking-wider">Pronome</label>
+                    <select
+                      id="new_pat_pronoun"
+                      defaultValue={editingPatientId ? patients.find(p => p.id === editingPatientId)?.pronoun || '' : ''}
+                      className="w-full bg-[#f7f3f0] text-on-surface px-3 py-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20 border border-transparent focus:border-primary transition-all font-medium"
+                    >
+                      <option value="">Nenhum</option>
+                      <option value="Sr.">Sr.</option>
+                      <option value="Sra.">Sra.</option>
+                      <option value="Dr.">Dr.</option>
+                      <option value="Dra.">Dra.</option>
+                    </select>
+                  </div>
+                  <div className="col-span-3">
+                    <label className="block text-on-surface-variant font-bold mb-1 ml-1 text-[11px] uppercase tracking-wider">Nome Completo</label>
+                    <div className="relative">
+                      <span className="material-symbols-outlined absolute left-3 top-3.5 text-on-surface-variant text-[18px]">person</span>
+                      <input 
+                        id="new_pat_name"
+                        type="text" 
+                        placeholder="Ex: Maria Carolina da Silva" 
+                        defaultValue={editingPatientId ? patients.find(p => p.id === editingPatientId)?.name : ''}
+                        className="w-full bg-[#f7f3f0] text-on-surface pl-10 pr-4 py-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20 border border-transparent focus:border-primary transition-all font-medium"
+                      />
+                    </div>
                   </div>
                 </div>
 
@@ -4126,6 +4361,7 @@ export default function CRMPage() {
                           id="new_pat_phone"
                           type="text" 
                           placeholder="(11) 90000-0000" 
+                          defaultValue={editingPatientId ? patients.find(p => p.id === editingPatientId)?.phone || '' : ''}
                           className="w-full bg-[#f7f3f0] text-on-surface pl-10 pr-4 py-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20 border border-transparent focus:border-primary transition-all"
                         />
                       </div>
@@ -4154,6 +4390,7 @@ export default function CRMPage() {
                         id="new_pat_cpf"
                         type="text" 
                         placeholder="000.000.000-00" 
+                        defaultValue={editingPatientId ? patients.find(p => p.id === editingPatientId)?.cpf || '' : ''}
                         className="w-full bg-[#f7f3f0] text-on-surface pl-10 pr-4 py-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20 border border-transparent focus:border-primary transition-all"
                       />
                     </div>
@@ -4507,14 +4744,14 @@ export default function CRMPage() {
               </div>
 
               {/* Professional, Date and Time grid */}
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-2 gap-4">
                 
                 <div className="space-y-1.5">
                   <label className="font-bold text-on-surface-variant">Profissional</label>
                   <select
                     value={newApptProfessional}
                     onChange={(e) => setNewApptProfessional(e.target.value)}
-                    className="w-full p-2.5 bg-surface rounded-xl border border-outline-variant/60 focus:outline-none focus:ring-1 focus:ring-primary/40 font-medium"
+                    className="w-full p-2.5 bg-surface rounded-xl border border-outline-variant/60 focus:outline-none focus:ring-1 focus:ring-primary/40 font-medium font-sans text-[13px]"
                   >
                     <option value="Dra. Gabi Almeida">Dra. Gabi Almeida</option>
                     <option value="Dra. Isabella Rose">Dra. Isabella Rose</option>
@@ -4524,12 +4761,26 @@ export default function CRMPage() {
                 </div>
 
                 <div className="space-y-1.5">
+                  <label className="font-bold text-on-surface-variant">Status</label>
+                  <select
+                    value={newApptStatus}
+                    onChange={(e) => setNewApptStatus(e.target.value as any)}
+                    className="w-full p-2.5 bg-surface rounded-xl border border-outline-variant/60 focus:outline-none focus:ring-1 focus:ring-primary/40 font-medium font-sans text-[13px]"
+                  >
+                    <option value="Confirmado">Confirmado</option>
+                    <option value="Em Atendimento">Em Atendimento</option>
+                    <option value="Finalizado">Finalizado</option>
+                    <option value="Pendente">Pendente</option>
+                  </select>
+                </div>
+
+                <div className="space-y-1.5">
                   <label className="font-bold text-on-surface-variant">Data</label>
                   <input 
                     type="date"
                     value={newApptDate}
                     onChange={(e)=>setNewApptDate(e.target.value)}
-                    className="w-full p-2.5 bg-surface rounded-xl border border-outline-variant/60 focus:outline-none focus:ring-1 focus:ring-primary/40 font-medium"
+                    className="w-full p-2.5 bg-surface rounded-xl border border-outline-variant/60 focus:outline-none focus:ring-1 focus:ring-primary/40 font-medium font-sans text-[13px]"
                     required
                   />
                 </div>
@@ -4540,11 +4791,10 @@ export default function CRMPage() {
                     type="time"
                     value={newApptTime}
                     onChange={(e)=>setNewApptTime(e.target.value)}
-                    className="w-full p-2.5 bg-surface rounded-xl border border-outline-variant/60 focus:outline-none"
+                    className="w-full p-2.5 bg-surface rounded-xl border border-outline-variant/60 focus:outline-none font-sans text-[13px]"
                     required
                   />
                 </div>
-
               </div>
 
               <div className="pt-4 flex gap-3">

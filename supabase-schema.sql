@@ -60,6 +60,7 @@ CREATE TABLE IF NOT EXISTS public.patients (
     documents JSONB DEFAULT '[]'::jsonb,
     phone TEXT,
     cpf TEXT,
+    pronoun TEXT,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
