@@ -2,27 +2,128 @@
 
 import React, {useState, useEffect, useRef} from 'react';
 import AnamneseLimpezaDePele from '../components/AnamneseLimpezaDePele';
-import { auth, db } from '../lib/firebase';
-import { 
-  collection, 
-  doc, 
-  setDoc, 
-  getDocs, 
-  getDoc,
-  addDoc, 
-  updateDoc, 
-  deleteDoc, 
-  onSnapshot, 
-  query, 
-  orderBy, 
-  limit 
-} from 'firebase/firestore';
-import { 
-  signInWithEmailAndPassword, 
-  signOut, 
-  onAuthStateChanged,
-  createUserWithEmailAndPassword
-} from 'firebase/auth';
+import { supabase, createTempClient } from '../lib/supabase';
+
+const mapUserToFrontend = (u: any): AppUser => ({
+  id: u.id,
+  name: u.name,
+  username: u.username,
+  role: u.role,
+  status: u.status,
+  specialty: u.specialty,
+  phone: u.phone,
+  avatar: u.avatar,
+  commissionRate: u.commission_rate,
+  permissions: u.permissions
+});
+
+const mapUserToBackend = (u: Partial<AppUser>) => {
+  const res: any = {};
+  if (u.id !== undefined) res.id = u.id;
+  if (u.name !== undefined) res.name = u.name;
+  if (u.username !== undefined) res.username = u.username;
+  if (u.role !== undefined) res.role = u.role;
+  if (u.status !== undefined) res.status = u.status;
+  if (u.specialty !== undefined) res.specialty = u.specialty;
+  if (u.phone !== undefined) res.phone = u.phone;
+  if (u.avatar !== undefined) res.avatar = u.avatar;
+  if (u.commissionRate !== undefined) res.commission_rate = u.commissionRate;
+  if (u.permissions !== undefined) res.permissions = u.permissions;
+  return res;
+};
+
+const mapPatientToFrontend = (p: any): Patient => ({
+  id: p.id,
+  name: p.name,
+  avatar: p.avatar,
+  detailsAvatar: p.details_avatar,
+  lastVisit: p.last_visit,
+  tier: p.tier,
+  since: p.since,
+  totalSpent: Number(p.total_spent || 0),
+  proceduresCount: Number(p.procedures_count || 0),
+  lastPhotoDate: p.last_photo_date,
+  status: p.status,
+  allergies: p.allergies,
+  medications: p.medications,
+  previousProcedures: p.previous_procedures,
+  evolutionNotes: p.evolution_notes,
+  beforePhoto: p.before_photo,
+  afterPhoto: p.after_photo,
+  timeline: p.timeline || [],
+  phone: p.phone,
+  cpf: p.cpf
+});
+
+const mapPatientToBackend = (p: Partial<Patient>) => {
+  const res: any = {};
+  if (p.id !== undefined) res.id = p.id;
+  if (p.name !== undefined) res.name = p.name;
+  if (p.avatar !== undefined) res.avatar = p.avatar;
+  if (p.detailsAvatar !== undefined) res.details_avatar = p.detailsAvatar;
+  if (p.lastVisit !== undefined) res.last_visit = p.lastVisit;
+  if (p.tier !== undefined) res.tier = p.tier;
+  if (p.since !== undefined) res.since = p.since;
+  if (p.totalSpent !== undefined) res.total_spent = p.totalSpent;
+  if (p.proceduresCount !== undefined) res.procedures_count = p.proceduresCount;
+  if (p.lastPhotoDate !== undefined) res.last_photo_date = p.lastPhotoDate;
+  if (p.status !== undefined) res.status = p.status;
+  if (p.allergies !== undefined) res.allergies = p.allergies;
+  if (p.medications !== undefined) res.medications = p.medications;
+  if (p.previousProcedures !== undefined) res.previous_procedures = p.previousProcedures;
+  if (p.evolutionNotes !== undefined) res.evolution_notes = p.evolutionNotes;
+  if (p.beforePhoto !== undefined) res.before_photo = p.beforePhoto;
+  if (p.afterPhoto !== undefined) res.after_photo = p.afterPhoto;
+  if (p.timeline !== undefined) res.timeline = p.timeline;
+  if (p.phone !== undefined) res.phone = p.phone;
+  if (p.cpf !== undefined) res.cpf = p.cpf;
+  return res;
+};
+
+const mapAppointmentToFrontend = (a: any): Appointment => ({
+  id: a.id,
+  time: a.time,
+  patientName: a.patient_name,
+  patientAvatar: a.patient_avatar,
+  procedure: a.procedure,
+  status: a.status,
+  professional: a.professional,
+  category: a.category,
+  notes: a.notes
+});
+
+const mapAppointmentToBackend = (a: Partial<Appointment>) => {
+  const res: any = {};
+  if (a.id !== undefined) res.id = a.id;
+  if (a.time !== undefined) res.time = a.time;
+  if (a.patientName !== undefined) res.patient_name = a.patientName;
+  if (a.patientAvatar !== undefined) res.patient_avatar = a.patientAvatar;
+  if (a.procedure !== undefined) res.procedure = a.procedure;
+  if (a.status !== undefined) res.status = a.status;
+  if (a.professional !== undefined) res.professional = a.professional;
+  if (a.category !== undefined) res.category = a.category;
+  if (a.notes !== undefined) res.notes = a.notes;
+  return res;
+};
+
+const mapInventoryToFrontend = (i: any): InventoryItem => ({
+  id: i.id,
+  name: i.name,
+  quantity: Number(i.quantity || 0),
+  minQuantity: Number(i.min_quantity || 0),
+  unit: i.unit
+});
+
+const mapInventoryToBackend = (i: Partial<InventoryItem>) => {
+  const res: any = {};
+  if (i.id !== undefined) res.id = i.id;
+  if (i.name !== undefined) res.name = i.name;
+  if (i.quantity !== undefined) res.quantity = i.quantity;
+  if (i.minQuantity !== undefined) res.min_quantity = i.minQuantity;
+  if (i.unit !== undefined) res.unit = i.unit;
+  return res;
+};
+
 
 
 // Interfaces for our state engine
@@ -56,6 +157,8 @@ interface Patient {
   beforePhoto: string;
   afterPhoto: string;
   timeline: TimelineItem[];
+  phone?: string;
+  cpf?: string;
 }
 
 interface Appointment {
@@ -338,144 +441,173 @@ export default function CRMPage() {
     { id: 'al2', type: 'followup', title: 'Retorno Pendente', text: 'Cliente Luísa Costa atingiu D+15 do pós-procedimento.', icon: 'assignment_late', alertClass: 'bg-secondary/5 border-secondary text-on-surface' }
   ];
 
-  // 1. Firebase Auth listener
+  // 1. Supabase Auth listener
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      try {
-        if (user) {
-          // Fetch user data from Firestore
-          const userDocRef = doc(db, 'users', user.uid);
-          const userDoc = await getDoc(userDocRef);
-          if (userDoc.exists()) {
-            const userData = userDoc.data() as AppUser;
-            setCurrentUser({ ...userData, id: user.uid });
-            setIsAuthenticated(true);
-          } else {
-            // If auth user exists but no Firestore doc, create it as admin
-            const defaultAdmin: AppUser = {
-              id: user.uid,
-              name: 'Dra. Gabi Almeida',
-              username: 'admin',
-              role: 'admin',
-              status: 'active',
-              specialty: 'Fundadora & Biomédica Esteta',
-              phone: '(11) 99876-5432',
-              avatar: 'https://api.dicebear.com/7.x/notionists/svg?seed=GabiAlmeida',
-              commissionRate: 40,
-              permissions: { accessCRM: true, accessAgenda: true, accessFinanceiro: true, canSchedule: true, editPatients: true }
-            };
-            await setDoc(userDocRef, defaultAdmin);
-            setCurrentUser(defaultAdmin);
-            setIsAuthenticated(true);
-          }
-        } else {
-          setCurrentUser(null);
-          setIsAuthenticated(false);
-        }
-      } catch (authListenerErr: any) {
-        console.error('Auth listener error:', authListenerErr);
-        setLoginError(`Erro de inicialização do banco: ${authListenerErr.message || authListenerErr.code}`);
+    // Check initial session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) {
+        loadUserProfile(session.user.id);
+      } else {
+        setCurrentUser(null);
+        setIsAuthenticated(false);
       }
     });
-    return () => unsubscribe();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (session) {
+        loadUserProfile(session.user.id);
+      } else {
+        setCurrentUser(null);
+        setIsAuthenticated(false);
+      }
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
 
-  // 2. Sync Firebase collections
+  const loadUserProfile = async (userId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('users')
+        .select('*')
+        .eq('id', userId)
+        .single();
+
+      if (error && error.code !== 'PGRST116') {
+        throw error;
+      }
+
+      if (data) {
+        setCurrentUser(mapUserToFrontend(data));
+        setIsAuthenticated(true);
+      } else {
+        // Create profile if authenticated but profile doc does not exist
+        const defaultAdmin: AppUser = {
+          id: userId,
+          name: 'Dra. Gabi Almeida',
+          username: 'admin',
+          role: 'admin',
+          status: 'active',
+          specialty: 'Fundadora & Biomédica Esteta',
+          phone: '(11) 99876-5432',
+          avatar: 'https://api.dicebear.com/7.x/notionists/svg?seed=GabiAlmeida',
+          commissionRate: 40,
+          permissions: { accessCRM: true, accessAgenda: true, accessFinanceiro: true, canSchedule: true, editPatients: true }
+        };
+        const { error: insertErr } = await supabase
+          .from('users')
+          .insert([mapUserToBackend(defaultAdmin)]);
+
+        if (insertErr) throw insertErr;
+        setCurrentUser(defaultAdmin);
+        setIsAuthenticated(true);
+      }
+    } catch (err: any) {
+      console.error('Error loading user profile:', err);
+      setLoginError(`Erro de inicialização do banco: ${err.message || err.code}`);
+    }
+  };
+
+  // 2. Sync Supabase collections
   useEffect(() => {
     if (!isAuthenticated) return;
 
-    // Sync Patients
-    const unsubscribePatients = onSnapshot(collection(db, 'patients'), (snapshot) => {
-      const list: Patient[] = [];
-      const financialsMap: Record<string, PatientFinancialItem[]> = {};
-      const documentsMap: Record<string, PatientDocument[]> = {};
-      snapshot.forEach((doc) => {
-        const data = doc.data();
-        list.push({ id: doc.id, ...data } as Patient);
-        if (data.financials) {
-          financialsMap[doc.id] = data.financials;
-        }
-        if (data.documents) {
-          documentsMap[doc.id] = data.documents;
-        }
-      });
-      setPatients(list);
-      setPatientFinancials(financialsMap);
-      setPatientDocuments(documentsMap);
-    });
+    // Fetch initial data
+    const fetchInitial = async () => {
+      const { data: pats } = await supabase.from('patients').select('*');
+      if (pats) {
+        setPatients(pats.map(mapPatientToFrontend));
+        const financialsMap: Record<string, PatientFinancialItem[]> = {};
+        const documentsMap: Record<string, PatientDocument[]> = {};
+        pats.forEach((p: any) => {
+          if (p.financials) financialsMap[p.id] = p.financials;
+          if (p.documents) documentsMap[p.id] = p.documents;
+        });
+        setPatientFinancials(financialsMap);
+        setPatientDocuments(documentsMap);
+      }
 
-    // Sync Appointments
-    const unsubscribeAppointments = onSnapshot(collection(db, 'appointments'), (snapshot) => {
-      const list: Appointment[] = [];
-      snapshot.forEach((doc) => {
-        list.push({ id: doc.id, ...doc.data() } as Appointment);
-      });
-      setAppointments(list);
-    });
+      const { data: appts } = await supabase.from('appointments').select('*');
+      if (appts) setAppointments(appts.map(mapAppointmentToFrontend));
 
-    // Sync Transactions
-    const unsubscribeTransactions = onSnapshot(collection(db, 'transactions'), (snapshot) => {
-      const list: Transaction[] = [];
-      snapshot.forEach((doc) => {
-        list.push({ id: doc.id, ...doc.data() } as Transaction);
-      });
-      setTransactions(list);
-    });
+      const { data: trans } = await supabase.from('transactions').select('*');
+      if (trans) setTransactions(trans as Transaction[]);
 
-    // Sync Services
-    const unsubscribeServices = onSnapshot(collection(db, 'services'), (snapshot) => {
-      const list: ServiceObj[] = [];
-      snapshot.forEach((doc) => {
-        list.push({ id: doc.id, ...doc.data() } as ServiceObj);
-      });
-      setServices(list);
-    });
+      const { data: servs } = await supabase.from('services').select('*');
+      if (servs) setServices(servs as ServiceObj[]);
 
-    // Sync Inventory
-    const unsubscribeInventory = onSnapshot(collection(db, 'inventory'), (snapshot) => {
-      const list: InventoryItem[] = [];
-      snapshot.forEach((doc) => {
-        list.push({ id: doc.id, ...doc.data() } as InventoryItem);
-      });
-      setInventory(list);
-    });
+      const { data: inv } = await supabase.from('inventory').select('*');
+      if (inv) setInventory(inv.map(mapInventoryToFrontend));
 
-    // Sync AppUsers
-    const unsubscribeUsers = onSnapshot(collection(db, 'users'), (snapshot) => {
-      const list: AppUser[] = [];
-      snapshot.forEach((doc) => {
-        list.push({ id: doc.id, ...doc.data() } as AppUser);
-      });
-      setAppUsers(list);
-    });
+      const { data: usrs } = await supabase.from('users').select('*');
+      if (usrs) setAppUsers(usrs.map(mapUserToFrontend));
+    };
+
+    fetchInitial();
+
+    // Setup Realtime subscriptions for auto-sync
+    const dbChangesChannel = supabase
+      .channel('schema-db-changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'patients' }, () => {
+        supabase.from('patients').select('*').then(({ data }) => {
+          if (data) {
+            setPatients(data.map(mapPatientToFrontend));
+            const financialsMap: Record<string, PatientFinancialItem[]> = {};
+            const documentsMap: Record<string, PatientDocument[]> = {};
+            data.forEach((p: any) => {
+              if (p.financials) financialsMap[p.id] = p.financials;
+              if (p.documents) documentsMap[p.id] = p.documents;
+            });
+            setPatientFinancials(financialsMap);
+            setPatientDocuments(documentsMap);
+          }
+        });
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'appointments' }, () => {
+        supabase.from('appointments').select('*').then(({ data }) => { if (data) setAppointments(data.map(mapAppointmentToFrontend)); });
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'transactions' }, () => {
+        supabase.from('transactions').select('*').then(({ data }) => { if (data) setTransactions(data as Transaction[]); });
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'services' }, () => {
+        supabase.from('services').select('*').then(({ data }) => { if (data) setServices(data as ServiceObj[]); });
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'inventory' }, () => {
+        supabase.from('inventory').select('*').then(({ data }) => { if (data) setInventory(data.map(mapInventoryToFrontend)); });
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'users' }, () => {
+        supabase.from('users').select('*').then(({ data }) => { if (data) setAppUsers(data.map(mapUserToFrontend)); });
+      })
+      .subscribe();
 
     return () => {
-      unsubscribePatients();
-      unsubscribeAppointments();
-      unsubscribeTransactions();
-      unsubscribeServices();
-      unsubscribeInventory();
-      unsubscribeUsers();
+      supabase.removeChannel(dbChangesChannel);
     };
   }, [isAuthenticated]);
 
   // Handle new appointment submission
-  const handleAddNewAppointment = (e: React.FormEvent) => {
+  const handleAddNewAppointment = async (e: React.FormEvent) => {
     e.preventDefault();
     const newRecord = {
       time: newApptTime,
       patientName: newApptPatient,
       procedure: newApptProcedure,
-      status: 'Confirmado',
+      status: 'Confirmado' as const,
       professional: newApptProfessional,
       category: newApptCategory
     };
     
-    addDoc(collection(db, 'appointments'), newRecord);
-    setIsNewAppointmentOpen(false);
+    try {
+      const { error } = await supabase.from('appointments').insert([mapAppointmentToBackend(newRecord)]);
+      if (error) throw error;
+      setIsNewAppointmentOpen(false);
 
-    // Dynamic AI insight triggering when an appointment is added
-    setAiAdvice(`Dica Gabi Almeida AI: Agendamento agendado às ${newApptTime}. Com isso, sua jornada de ocupação de hoje subiu para ${Math.min(98, 92 + 2)}%. Excelente trabalho de otimização de horário!`);
+      // Dynamic AI insight triggering when an appointment is added
+      setAiAdvice(`Dica Gabi Almeida AI: Agendamento agendado às ${newApptTime}. Com isso, sua jornada de ocupação de hoje subiu para ${Math.min(98, 92 + 2)}%. Excelente trabalho de otimização de horário!`);
+    } catch (err: any) {
+      console.error('Error adding appointment:', err);
+      showAlert(`Erro ao salvar na agenda: ${err.message || err}`);
+    }
   };
 
   // Canvas drawing handler for signature pad
@@ -533,7 +665,7 @@ export default function CRMPage() {
     setSignatureSaved(false);
   };
 
-  const confirmSignature = () => {
+  const confirmSignature = async () => {
     if (!selectedPatient.id) {
       showAlert('Selecione um paciente para assinar o termo.');
       return;
@@ -551,9 +683,16 @@ export default function CRMPage() {
 
     const updatedTimeline = [newTimelineItem, ...(selectedPatient.timeline || [])];
 
-    updateDoc(doc(db, 'patients', selectedPatient.id), {
-      timeline: updatedTimeline
-    });
+    try {
+      const { error } = await supabase
+        .from('patients')
+        .update({ timeline: updatedTimeline })
+        .eq('id', selectedPatient.id);
+      if (error) throw error;
+    } catch (err: any) {
+      console.error('Error updating patient timeline:', err);
+      showAlert(`Erro ao salvar assinatura: ${err.message || err}`);
+    }
 
     // Scroll down to Protocols to show it was added
     setTimeout(() => {
@@ -623,32 +762,52 @@ export default function CRMPage() {
     setLoginError('');
     const email = loginUsername.includes('@') ? loginUsername : `${loginUsername}@gabialmeida.com.br`;
     try {
-      await signInWithEmailAndPassword(auth, email, loginPassword);
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password: loginPassword
+      });
+      if (error) throw error;
       setLoginError('');
     } catch (err: any) {
       console.error('Login error:', err);
       // Fallback for initial seeding of admin / admin or admin123
       if ((loginUsername === 'admin' || loginUsername === 'admin@gabialmeida.com.br') && (loginPassword === 'admin' || loginPassword === 'admin123')) {
         try {
-          const credential = await createUserWithEmailAndPassword(auth, 'admin@gabialmeida.com.br', 'admin123');
-          const defaultAdmin: AppUser = {
-            id: credential.user.uid,
-            name: 'Dra. Gabi Almeida',
-            username: 'admin',
-            role: 'admin',
-            status: 'active',
-            specialty: 'Fundadora & Biomédica Esteta',
-            phone: '(11) 99876-5432',
-            avatar: 'https://api.dicebear.com/7.x/notionists/svg?seed=GabiAlmeida',
-            commissionRate: 40,
-            permissions: { accessCRM: true, accessAgenda: true, accessFinanceiro: true, canSchedule: true, editPatients: true }
-          };
-          await setDoc(doc(db, 'users', credential.user.uid), defaultAdmin);
-          showAlert('Administrador padrão inicial cadastrado! Login realizado com sucesso.');
+          const { data: signUpData, error: signUpErr } = await supabase.auth.signUp({
+            email: 'admin@gabialmeida.com.br',
+            password: 'admin123'
+          });
+          if (signUpErr) throw signUpErr;
+
+          if (signUpData.user) {
+            const defaultAdmin: AppUser = {
+              id: signUpData.user.id,
+              name: 'Dra. Gabi Almeida',
+              username: 'admin',
+              role: 'admin',
+              status: 'active',
+              specialty: 'Fundadora & Biomédica Esteta',
+              phone: '(11) 99876-5432',
+              avatar: 'https://api.dicebear.com/7.x/notionists/svg?seed=GabiAlmeida',
+              commissionRate: 40,
+              permissions: { accessCRM: true, accessAgenda: true, accessFinanceiro: true, canSchedule: true, editPatients: true }
+            };
+            const { error: insertErr } = await supabase
+              .from('users')
+              .insert([defaultAdmin]);
+            if (insertErr) throw insertErr;
+
+            // Log in after successful registration
+            await supabase.auth.signInWithPassword({
+              email: 'admin@gabialmeida.com.br',
+              password: 'admin123'
+            });
+            showAlert('Administrador padrão inicial cadastrado! Login realizado com sucesso.');
+          }
           return;
         } catch (seedErr: any) {
           console.error('Seeding failed:', seedErr);
-          if (seedErr.code === 'auth/email-already-in-use') {
+          if (seedErr.message?.includes('already registered') || seedErr.code === 'user_already_exists') {
             setLoginError('Senha incorreta para o administrador.');
           } else {
             setLoginError(`Erro ao cadastrar administrador inicial: ${seedErr.message || seedErr.code}`);
@@ -840,8 +999,8 @@ export default function CRMPage() {
             <span className="material-symbols-outlined">settings</span>
             <span className="font-manrope">Configurações</span>
           </button>
-          <button onClick={() => {
-            signOut(auth);
+           <button onClick={() => {
+            supabase.auth.signOut();
             setCurrentTab('dashboard');
           }} className="w-full flex items-center gap-4 px-4 py-2.5 rounded-xl text-error/80 hover:text-error transition-colors text-left text-[14px]">
             <span className="material-symbols-outlined">logout</span>
@@ -990,7 +1149,7 @@ export default function CRMPage() {
                   <button 
                     onClick={() => {
                        setIsProfileMenuOpen(false);
-                       signOut(auth);
+                       supabase.auth.signOut();
                     }}
                     className="w-full text-left px-4 py-2.5 hover:bg-error/10 flex items-center gap-3 text-error transition-colors"
                   >
@@ -2304,7 +2463,7 @@ export default function CRMPage() {
                           </div>
                           
                           <button 
-                            onClick={() => {
+                            onClick={async () => {
                               const proc = (document.getElementById('new_proc_name') as HTMLInputElement)?.value;
                               const val = parseFloat((document.getElementById('new_proc_val') as HTMLInputElement)?.value);
                               const method = (document.getElementById('new_proc_method') as HTMLSelectElement)?.value;
@@ -2326,23 +2485,36 @@ export default function CRMPage() {
                               };
 
                               const updatedFinancials = [newItem, ...(patientFinancials[selectedPatient.id] || [])];
-                              updateDoc(doc(db, 'patients', selectedPatient.id), {
-                                totalSpent: (selectedPatient.totalSpent || 0) + val,
-                                proceduresCount: (selectedPatient.proceduresCount || 0) + 1,
-                                financials: updatedFinancials
-                              });
+                              
+                              try {
+                                const { error: patErr } = await supabase
+                                  .from('patients')
+                                  .update({
+                                    total_spent: (selectedPatient.totalSpent || 0) + val,
+                                    procedures_count: (selectedPatient.proceduresCount || 0) + 1,
+                                    financials: updatedFinancials
+                                  })
+                                  .eq('id', selectedPatient.id);
+                                if (patErr) throw patErr;
 
-                              addDoc(collection(db, 'transactions'), {
-                                description: `${proc} - ${selectedPatient.name}`,
-                                date: new Date().toLocaleDateString('pt-BR'),
-                                category: 'Procedimento',
-                                status: status === 'Pago' ? 'Pago' : 'Pendente',
-                                value: val
-                              });
+                                const { error: txErr } = await supabase
+                                  .from('transactions')
+                                  .insert([{
+                                    description: `${proc} - ${selectedPatient.name}`,
+                                    date: new Date().toLocaleDateString('pt-BR'),
+                                    category: 'Procedimento',
+                                    status: status === 'Pago' ? 'Pago' : 'Pendente',
+                                    value: val
+                                  }]);
+                                if (txErr) throw txErr;
 
-                              showAlert('Lançamento registrado e integrado ao prontuário médico com sucesso!');
-                              ((document.getElementById('new_proc_name') as HTMLInputElement).value = '');
-                              ((document.getElementById('new_proc_val') as HTMLInputElement).value = '');
+                                showAlert('Lançamento registrado e integrado ao prontuário médico com sucesso!');
+                                ((document.getElementById('new_proc_name') as HTMLInputElement).value = '');
+                                ((document.getElementById('new_proc_val') as HTMLInputElement).value = '');
+                              } catch (err: any) {
+                                console.error('Error registering financial/transaction:', err);
+                                showAlert(`Erro ao salvar lançamentos: ${err.message || err}`);
+                              }
                             }}
                             className="w-full py-2.5 bg-primary text-white-pure rounded-xl text-center font-black cursor-pointer shadow hover:opacity-90 transition-opacity"
                           >
@@ -2372,7 +2544,7 @@ export default function CRMPage() {
                               type="file" 
                               className="hidden" 
                               accept=".pdf,.png,.jpg"
-                              onChange={(e) => {
+                              onChange={async (e) => {
                                 const file = e.target.files?.[0];
                                 if (file) {
                                   const newDoc: PatientDocument = {
@@ -2383,11 +2555,22 @@ export default function CRMPage() {
                                     size: `${(file.size / (1024 * 1024)).toFixed(1)} MB`,
                                     signed: false
                                   };
-                                  setPatientDocuments(prev => ({
-                                    ...prev,
-                                    [selectedPatient.id]: [...(prev[selectedPatient.id] || []), newDoc]
-                                  }));
-                                  showAlert(`Documento "${file.name}" carregado com sucesso na pasta de prontuários!`);
+                                  const updatedDocs = [...(patientDocuments[selectedPatient.id] || []), newDoc];
+                                  try {
+                                    const { error } = await supabase
+                                      .from('patients')
+                                      .update({ documents: updatedDocs })
+                                      .eq('id', selectedPatient.id);
+                                    if (error) throw error;
+                                    setPatientDocuments(prev => ({
+                                      ...prev,
+                                      [selectedPatient.id]: updatedDocs
+                                    }));
+                                    showAlert(`Documento "${file.name}" carregado com sucesso na pasta de prontuários!`);
+                                  } catch (err: any) {
+                                    console.error('Error uploading document:', err);
+                                    showAlert(`Erro ao salvar documento: ${err.message}`);
+                                  }
                                 }
                               }}
                             />
@@ -2432,14 +2615,25 @@ export default function CRMPage() {
                               
                               {!doc.signed && (
                                 <button 
-                                  onClick={() => {
-                                    setPatientDocuments(prev => ({
-                                      ...prev,
-                                      [selectedPatient.id]: prev[selectedPatient.id].map(item => 
-                                        item.id === doc.id ? { ...item, signed: true } : item
-                                      )
-                                    }));
-                                    showAlert(`Sucesso! O documento foi assinado por ${selectedPatient.name} via iPad/tablet integrado com certificado ICP-Brasil e carimbo de data/hora válido!`);
+                                  onClick={async () => {
+                                    const updatedDocs = (patientDocuments[selectedPatient.id] || []).map(item => 
+                                      item.id === doc.id ? { ...item, signed: true } : item
+                                    );
+                                    try {
+                                      const { error } = await supabase
+                                        .from('patients')
+                                        .update({ documents: updatedDocs })
+                                        .eq('id', selectedPatient.id);
+                                      if (error) throw error;
+                                      setPatientDocuments(prev => ({
+                                        ...prev,
+                                        [selectedPatient.id]: updatedDocs
+                                      }));
+                                      showAlert(`Sucesso! O documento foi assinado por ${selectedPatient.name} via iPad/tablet integrado com certificado ICP-Brasil e carimbo de data/hora válido!`);
+                                    } catch (err: any) {
+                                      console.error('Error signing document:', err);
+                                      showAlert(`Erro ao assinar documento: ${err.message}`);
+                                    }
                                   }}
                                   className="px-2.5 py-1.5 text-[10px] bg-primary text-white-pure rounded-lg hover:opacity-90 font-black transition-opacity"
                                 >
@@ -2677,8 +2871,14 @@ export default function CRMPage() {
                     Nova Transação
                   </button>
                   <button onClick={() => {
-                    showConfirm('Tem certeza de que deseja resetar todo o histórico financeiro?', () => {
-                      transactions.forEach(t => deleteDoc(doc(db, 'transactions', t.id)));
+                    showConfirm('Tem certeza de que deseja resetar todo o histórico financeiro?', async () => {
+                      try {
+                        const { error } = await supabase.from('transactions').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+                        if (error) throw error;
+                      } catch (err: any) {
+                        console.error('Error resetting transactions:', err);
+                        showAlert(`Erro ao resetar financeiro: ${err.message}`);
+                      }
                     });
                   }} className="px-3 py-1.5 border border-error/50 text-error hover:bg-error/10 rounded-lg text-[12px] font-bold transition-colors">
                     Resetar Financeiro
@@ -2721,7 +2921,15 @@ export default function CRMPage() {
                             setEditingTransaction(tr);
                             setIsTransactionModalOpen(true);
                           }} className="p-1 text-on-surface-variant hover:text-primary transition-colors material-symbols-outlined text-[18px]">edit</button>
-                          <button onClick={() => deleteDoc(doc(db, 'transactions', tr.id))} className="p-1 text-on-surface-variant hover:text-error transition-colors material-symbols-outlined text-[18px]">delete</button>
+                          <button onClick={async () => {
+                            try {
+                              const { error } = await supabase.from('transactions').delete().eq('id', tr.id);
+                              if (error) throw error;
+                            } catch (err: any) {
+                              console.error('Error deleting transaction:', err);
+                              showAlert(`Erro ao excluir transação: ${err.message}`);
+                            }
+                          }} className="p-1 text-on-surface-variant hover:text-error transition-colors material-symbols-outlined text-[18px]">delete</button>
                         </td>
                       </tr>
                     ))}
@@ -2774,7 +2982,7 @@ export default function CRMPage() {
                           <td className="px-4 py-4 font-bold text-primary">R$ {s.price.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</td>
                           <td className="px-4 py-4 text-center">
                             <button onClick={() => { setEditingService(s); setIsServiceModalOpen(true); }} className="p-1.5 text-on-surface-variant hover:text-primary transition-colors text-[16px] material-symbols-outlined">edit</button>
-                            <button onClick={() => { showConfirm(`Remover o serviço ${s.name}?`, () => deleteDoc(doc(db, 'services', s.id))) }} className="p-1.5 text-on-surface-variant hover:text-error transition-colors text-[16px] material-symbols-outlined">delete</button>
+                            <button onClick={() => { showConfirm(`Remover o serviço ${s.name}?`, async () => { try { const { error } = await supabase.from('services').delete().eq('id', s.id); if (error) throw error; } catch (err: any) { console.error('Error deleting service:', err); showAlert(`Erro ao remover serviço: ${err.message}`); } }) }} className="p-1.5 text-on-surface-variant hover:text-error transition-colors text-[16px] material-symbols-outlined">delete</button>
                           </td>
                         </tr>
                       ))}
@@ -2835,7 +3043,15 @@ export default function CRMPage() {
                             </td>
                             <td className="px-4 py-4 text-center">
                               <button onClick={() => { setEditingInventory(i); setIsInventoryModalOpen(true); }} className="p-1.5 text-on-surface-variant hover:text-primary transition-colors text-[16px] material-symbols-outlined">edit</button>
-                              <button onClick={() => { showConfirm(`Remover o material ${i.name}?`, () => deleteDoc(doc(db, 'inventory', i.id))) }} className="p-1.5 text-on-surface-variant hover:text-error transition-colors text-[16px] material-symbols-outlined">delete</button>
+                              <button onClick={() => { showConfirm(`Remover o material ${i.name}?`, async () => {
+                                try {
+                                  const { error } = await supabase.from('inventory').delete().eq('id', i.id);
+                                  if (error) throw error;
+                                } catch (err: any) {
+                                  console.error('Error deleting inventory item:', err);
+                                  showAlert(`Erro ao remover material: ${err.message}`);
+                                }
+                              }) }} className="p-1.5 text-on-surface-variant hover:text-error transition-colors text-[16px] material-symbols-outlined">delete</button>
                             </td>
                           </tr>
                         );
@@ -2933,8 +3149,14 @@ export default function CRMPage() {
                               </button>
                               <button 
                                 onClick={() => {
-                                  showConfirm(`Tem certeza de que deseja remover ${p.name} do sistema? (Esta ação não pode ser desfeita)`, () => {
-                                    deleteDoc(doc(db, 'patients', p.id));
+                                  showConfirm(`Tem certeza de que deseja remover ${p.name} do sistema? (Esta ação não pode ser desfeita)`, async () => {
+                                    try {
+                                      const { error } = await supabase.from('patients').delete().eq('id', p.id);
+                                      if (error) throw error;
+                                    } catch (err: any) {
+                                      console.error('Error deleting patient:', err);
+                                      showAlert(`Erro ao excluir paciente: ${err.message}`);
+                                    }
                                   });
                                 }}
                                 className="p-1.5 text-on-surface-variant hover:text-error transition-colors text-[16px] material-symbols-outlined rounded-md"
@@ -3071,8 +3293,17 @@ export default function CRMPage() {
                           </td>
                           <td className="px-6 py-4 text-right space-x-1.5">
                             <button 
-                              onClick={() => {
-                                updateDoc(doc(db, 'users', u.id), { status: u.status === 'active' ? 'inactive' : 'active' });
+                              onClick={async () => {
+                                try {
+                                  const { error } = await supabase
+                                    .from('users')
+                                    .update({ status: u.status === 'active' ? 'inactive' : 'active' })
+                                    .eq('id', u.id);
+                                  if (error) throw error;
+                                } catch (err: any) {
+                                  console.error('Error updating status:', err);
+                                  showAlert(`Erro ao atualizar status: ${err.message}`);
+                                }
                               }}
                               className="p-2 text-on-surface-variant hover:text-primary transition-colors text-[18px] material-symbols-outlined rounded-lg hover:bg-surface-container"
                               title={u.status === 'active' ? 'Bloquear Acesso' : 'Desbloquear'}
@@ -3080,13 +3311,22 @@ export default function CRMPage() {
                               power_settings_new
                             </button>
                             <button 
-                              onClick={() => {
+                              onClick={async () => {
                                 const rateStr = prompt(`Defina a nova taxa de comissão para ${u.name} (apenas números):`, (u.commissionRate || 10).toString());
                                 if (rateStr !== null) {
                                   const parsed = parseInt(rateStr);
                                   if (!isNaN(parsed)) {
-                                    updateDoc(doc(db, 'users', u.id), { commissionRate: parsed });
-                                    showAlert('Taxa de comissão atualizada com sucesso!');
+                                    try {
+                                      const { error } = await supabase
+                                        .from('users')
+                                        .update({ commission_rate: parsed })
+                                        .eq('id', u.id);
+                                      if (error) throw error;
+                                      showAlert('Taxa de comissão atualizada com sucesso!');
+                                    } catch (err: any) {
+                                      console.error('Error updating commission rate:', err);
+                                      showAlert(`Erro ao atualizar comissão: ${err.message}`);
+                                    }
                                   }
                                 }
                               }}
@@ -3097,8 +3337,14 @@ export default function CRMPage() {
                             </button>
                             <button 
                               onClick={() => {
-                                showConfirm(`Tem certeza de que deseja remover ${u.name} do sistema?`, () => {
-                                  deleteDoc(doc(db, 'users', u.id));
+                                showConfirm(`Tem certeza de que deseja remover ${u.name} do sistema?`, async () => {
+                                  try {
+                                    const { error } = await supabase.from('users').delete().eq('id', u.id);
+                                    if (error) throw error;
+                                  } catch (err: any) {
+                                    console.error('Error deleting user profile:', err);
+                                    showAlert(`Erro ao excluir usuário: ${err.message}`);
+                                  }
                                 });
                               }}
                               className="p-2 text-on-surface-variant hover:text-error transition-colors text-[18px] material-symbols-outlined rounded-lg hover:bg-surface-container"
@@ -3133,7 +3379,7 @@ export default function CRMPage() {
             
             <h3 className="font-manrope text-[20px] font-bold text-primary mb-6">Editar Perfil</h3>
             
-            <form onSubmit={e => {
+            <form onSubmit={async (e) => {
               e.preventDefault();
               const d = new FormData(e.currentTarget);
               const name = d.get('name') as string;
@@ -3142,10 +3388,16 @@ export default function CRMPage() {
               
               if(name) {
                 const upd = { ...currentUser, name, phone, avatar };
-                setCurrentUser(upd);
-                updateDoc(doc(db, 'users', currentUser.id), { name, phone, avatar });
-                setIsEditProfileModalOpen(false);
-                showAlert('Perfil atualizado com sucesso!');
+                try {
+                  const { error } = await supabase.from('users').update({ name, phone, avatar }).eq('id', currentUser.id);
+                  if (error) throw error;
+                  setCurrentUser(upd);
+                  setIsEditProfileModalOpen(false);
+                  showAlert('Perfil atualizado com sucesso!');
+                } catch (err: any) {
+                  console.error('Error updating profile:', err);
+                  showAlert(`Erro ao atualizar perfil: ${err.message}`);
+                }
               }
             }} className="space-y-4 font-sans text-[13px]">
               <div>
@@ -3183,7 +3435,7 @@ export default function CRMPage() {
             
             <h3 className="font-manrope text-[20px] font-bold text-primary mb-6">Alterar Senha</h3>
             
-            <form onSubmit={e => {
+            <form onSubmit={async (e) => {
               e.preventDefault();
               const d = new FormData(e.currentTarget);
               const currentPass = d.get('currentPass') as string;
@@ -3198,11 +3450,18 @@ export default function CRMPage() {
                  return;
               }
               
-              const upd = { ...currentUser, password: newPass };
-              setCurrentUser(upd);
-              updateDoc(doc(db, 'users', currentUser.id), { password: newPass });
-              setIsChangePasswordModalOpen(false);
-              showAlert('Senha alterada com sucesso!');
+              try {
+                const { error: authErr } = await supabase.auth.updateUser({ password: newPass });
+                if (authErr) throw authErr;
+
+                const upd = { ...currentUser, password: newPass };
+                setCurrentUser(upd);
+                setIsChangePasswordModalOpen(false);
+                showAlert('Senha alterada com sucesso!');
+              } catch (err: any) {
+                console.error('Error updating password:', err);
+                showAlert(`Erro ao alterar senha: ${err.message}`);
+              }
             }} className="space-y-4 font-sans text-[13px]">
               <div>
                 <label className="block text-[11px] font-bold text-on-surface-variant mb-2">Senha Atual</label>
@@ -3280,7 +3539,7 @@ export default function CRMPage() {
               </div>
             </div>
 
-            <form onSubmit={(e) => {
+            <form onSubmit={async (e) => {
               e.preventDefault();
               const name = (document.getElementById('new_user_name') as HTMLInputElement).value;
               const username = (document.getElementById('new_user_username') as HTMLInputElement).value;
@@ -3300,28 +3559,51 @@ export default function CRMPage() {
                 return;
               }
 
-              const newMember: AppUser = {
-                id: Math.random().toString(),
-                name,
-                username,
-                password: '123', // Default initialization
-                role,
-                status: 'active',
-                specialty: role === 'prestador' ? specialty : undefined,
-                phone,
-                commissionRate: role === 'prestador' ? commissionRate : undefined,
-                permissions: {
-                  accessCRM: canAccessCRM,
-                  accessAgenda: canAccessAgenda,
-                  accessFinanceiro: canAccessFinanceiro,
-                  canSchedule,
-                  editPatients: canEditPatient
-                }
-              };
+              const email = `${username}@gabialmeida.com.br`;
+              const password = '123'; // Default initialization
 
-              addDoc(collection(db, 'users'), newMember);
-              setIsNewUserModalOpen(false);
-              showAlert(`Cadastrado com sucesso! ${name} agora possui acesso ao sistema.`);
+              try {
+                const tempClient = createTempClient();
+                const { data: signUpData, error: signUpErr } = await tempClient.auth.signUp({
+                  email,
+                  password
+                });
+                if (signUpErr) throw signUpErr;
+
+                if (!signUpData.user) {
+                  throw new Error('User creation returned empty payload');
+                }
+
+                const newMember: AppUser = {
+                  id: signUpData.user.id,
+                  name,
+                  username,
+                  password,
+                  role,
+                  status: 'active',
+                  specialty: role === 'prestador' ? specialty : undefined,
+                  phone,
+                  commissionRate: role === 'prestador' ? commissionRate : undefined,
+                  permissions: {
+                    accessCRM: canAccessCRM,
+                    accessAgenda: canAccessAgenda,
+                    accessFinanceiro: canAccessFinanceiro,
+                    canSchedule,
+                    editPatients: canEditPatient
+                  }
+                };
+
+                const { error: insertErr } = await supabase
+                  .from('users')
+                  .insert([mapUserToBackend(newMember)]);
+                if (insertErr) throw insertErr;
+
+                setIsNewUserModalOpen(false);
+                showAlert(`Cadastrado com sucesso! ${name} agora possui acesso ao sistema.`);
+              } catch (err: any) {
+                console.error('Error registering new team member:', err);
+                showAlert(`Erro ao cadastrar integrante: ${err.message || err}`);
+              }
             }} className="space-y-4 text-[12px] font-bold text-on-surface-variant">
               
               <div className="grid grid-cols-2 gap-4">
@@ -3429,7 +3711,7 @@ export default function CRMPage() {
               </div>
             </div>
 
-            <form onSubmit={(e) => {
+            <form onSubmit={async (e) => {
               e.preventDefault();
               const name = (document.getElementById('new_pat_name') as HTMLInputElement).value;
               const phone = (document.getElementById('new_pat_phone') as HTMLInputElement).value;
@@ -3440,35 +3722,47 @@ export default function CRMPage() {
                 return;
               }
 
-              if (editingPatientId) {
-                updateDoc(doc(db, 'patients', editingPatientId), { name, phone, cpf });
-                showAlert('Cliente atualizado com sucesso!');
-              } else {
-                const newPatient = {
-                  name,
-                  phone,
-                  cpf,
-                  avatar: 'https://api.dicebear.com/7.x/notionists/svg?seed=' + name.replace(/\s+/g, ''),
-                  detailsAvatar: 'https://api.dicebear.com/7.x/notionists/svg?seed=' + name.replace(/\s+/g, ''),
-                  status: 'Standard',
-                  tier: 'Cliente Avaliação',
-                  since: 'Hoje',
-                  totalSpent: 0,
-                  proceduresCount: 0,
-                  lastPhotoDate: '--',
-                  allergies: 'Nenhuma reportada',
-                  medications: 'Nenhum reportado',
-                  previousProcedures: 'Nenhum',
-                  evolutionNotes: '',
-                  beforePhoto: 'https://images.unsplash.com/photo-1542385151-efd85c07c293?w=500&h=500&fit=crop',
-                  afterPhoto: 'https://images.unsplash.com/photo-1542385151-efd85c07c293?w=500&h=500&fit=crop',
-                  lastVisit: 'Hoje',
-                  birthdate: 'Cadastrado Hoje',
-                  ltv: 'R$ 0,00',
-                  timeline: []
-                };
-                addDoc(collection(db, 'patients'), newPatient);
-                showAlert('Cliente cadastrado com sucesso!');
+              try {
+                if (editingPatientId) {
+                  const { error } = await supabase
+                    .from('patients')
+                    .update(mapPatientToBackend({ name, phone, cpf }))
+                    .eq('id', editingPatientId);
+                  if (error) throw error;
+                  showAlert('Cliente atualizado com sucesso!');
+                } else {
+                  const newPatient = {
+                    name,
+                    phone,
+                    cpf,
+                    avatar: 'https://api.dicebear.com/7.x/notionists/svg?seed=' + name.replace(/\s+/g, ''),
+                    detailsAvatar: 'https://api.dicebear.com/7.x/notionists/svg?seed=' + name.replace(/\s+/g, ''),
+                    status: 'Standard',
+                    tier: 'Cliente Avaliação',
+                    since: 'Hoje',
+                    totalSpent: 0,
+                    proceduresCount: 0,
+                    lastPhotoDate: '--',
+                    allergies: 'Nenhuma reportada',
+                    medications: 'Nenhum reportado',
+                    previousProcedures: 'Nenhum',
+                    evolutionNotes: '',
+                    beforePhoto: 'https://images.unsplash.com/photo-1542385151-efd85c07c293?w=500&h=500&fit=crop',
+                    afterPhoto: 'https://images.unsplash.com/photo-1542385151-efd85c07c293?w=500&h=500&fit=crop',
+                    lastVisit: 'Hoje',
+                    birthdate: 'Cadastrado Hoje',
+                    ltv: 'R$ 0,00',
+                    timeline: []
+                  };
+                  const { error } = await supabase
+                    .from('patients')
+                    .insert([mapPatientToBackend(newPatient)]);
+                  if (error) throw error;
+                  showAlert('Cliente cadastrado com sucesso!');
+                }
+              } catch (err: any) {
+                console.error('Error saving patient:', err);
+                showAlert(`Erro ao salvar cliente: ${err.message || err}`);
               }
               setIsPatientModalOpen(false);
             }}>
@@ -3569,7 +3863,7 @@ export default function CRMPage() {
             <h3 className="font-manrope text-[20px] font-bold text-primary mb-6">
               {editingService ? 'Editar Serviço' : 'Novo Serviço'}
             </h3>
-            <form onSubmit={e => {
+            <form onSubmit={async (e) => {
               e.preventDefault();
               const formData = new FormData(e.currentTarget);
               const name = formData.get('name') as string;
@@ -3577,12 +3871,24 @@ export default function CRMPage() {
               const duration = formData.get('duration') as string;
               const priceStr = formData.get('price') as string;
               const price = parseFloat(priceStr.replace(/[^0-9,.-]/g, '').replace(',', '.'));
-              if(editingService) {
-                updateDoc(doc(db, 'services', editingService.id), { name, category, duration, price });
-              } else {
-                addDoc(collection(db, 'services'), { name, category, duration, price });
+              try {
+                if(editingService) {
+                  const { error } = await supabase
+                    .from('services')
+                    .update({ name, category, duration, price })
+                    .eq('id', editingService.id);
+                  if (error) throw error;
+                } else {
+                  const { error } = await supabase
+                    .from('services')
+                    .insert([{ name, category, duration, price }]);
+                  if (error) throw error;
+                }
+                setIsServiceModalOpen(false);
+              } catch (err: any) {
+                console.error('Error saving service:', err);
+                showAlert(`Erro ao salvar serviço: ${err.message || err}`);
               }
-              setIsServiceModalOpen(false);
             }} className="space-y-4 font-sans text-[13px]">
               <div>
                 <label className="block text-[11px] font-bold text-on-surface-variant uppercase tracking-wider mb-2">Nome do Serviço</label>
@@ -3628,7 +3934,7 @@ export default function CRMPage() {
             <h3 className="font-manrope text-[20px] font-bold text-primary mb-6">
               {editingInventory ? 'Editar Estoque' : 'Novo Item Estoque'}
             </h3>
-            <form onSubmit={e => {
+            <form onSubmit={async (e) => {
               e.preventDefault();
               const formData = new FormData(e.currentTarget);
               const name = formData.get('name') as string;
@@ -3636,12 +3942,24 @@ export default function CRMPage() {
               const quantity = parseInt(formData.get('quantity') as string, 10);
               const minQuantity = parseInt(formData.get('minQuantity') as string, 10);
               
-              if(editingInventory) {
-                updateDoc(doc(db, 'inventory', editingInventory.id), { name, unit, quantity, minQuantity });
-              } else {
-                addDoc(collection(db, 'inventory'), { name, unit, quantity, minQuantity });
+              try {
+                if(editingInventory) {
+                  const { error } = await supabase
+                    .from('inventory')
+                    .update(mapInventoryToBackend({ name, unit, quantity, minQuantity }))
+                    .eq('id', editingInventory.id);
+                  if (error) throw error;
+                } else {
+                  const { error } = await supabase
+                    .from('inventory')
+                    .insert([mapInventoryToBackend({ name, unit, quantity, minQuantity })]);
+                  if (error) throw error;
+                }
+                setIsInventoryModalOpen(false);
+              } catch (err: any) {
+                console.error('Error saving inventory:', err);
+                showAlert(`Erro ao salvar estoque: ${err.message || err}`);
               }
-              setIsInventoryModalOpen(false);
             }} className="space-y-4 font-sans text-[13px]">
               <div>
                 <label className="block text-[11px] font-bold text-on-surface-variant uppercase tracking-wider mb-2">Nome do Insumo</label>
@@ -3683,7 +4001,7 @@ export default function CRMPage() {
             <h3 className="font-manrope text-[20px] font-bold text-primary mb-6">
               {editingTransaction ? 'Editar Transação' : 'Nova Transação'}
             </h3>
-            <form onSubmit={e => {
+            <form onSubmit={async (e) => {
               e.preventDefault();
               const formData = new FormData(e.currentTarget);
               const description = formData.get('description') as string;
@@ -3693,12 +4011,24 @@ export default function CRMPage() {
               const valueStr = formData.get('value') as string;
               const value = parseFloat(valueStr.replace(/[^0-9,.-]/g, '').replace(',', '.'));
               
-              if(editingTransaction) {
-                updateDoc(doc(db, 'transactions', editingTransaction.id), { description, date, category, status, value });
-              } else {
-                addDoc(collection(db, 'transactions'), { description, date, category, status, value });
+              try {
+                if(editingTransaction) {
+                  const { error } = await supabase
+                    .from('transactions')
+                    .update({ description, date, category, status, value })
+                    .eq('id', editingTransaction.id);
+                  if (error) throw error;
+                } else {
+                  const { error } = await supabase
+                    .from('transactions')
+                    .insert([{ description, date, category, status, value }]);
+                  if (error) throw error;
+                }
+                setIsTransactionModalOpen(false);
+              } catch (err: any) {
+                console.error('Error saving transaction:', err);
+                showAlert(`Erro ao salvar transação: ${err.message || err}`);
               }
-              setIsTransactionModalOpen(false);
             }} className="space-y-4 font-sans text-[13px]">
               <div>
                 <label className="block text-[11px] font-bold text-on-surface-variant uppercase tracking-wider mb-2">Descrição</label>
