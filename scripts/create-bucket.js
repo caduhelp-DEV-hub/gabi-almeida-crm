@@ -24,7 +24,7 @@ async function main() {
   }
 
   const buckets = await listRes.json();
-  const exists = buckets.find((b: { name: string }) => b.name === BUCKET_NAME);
+  const exists = buckets.find((b) => b.name === BUCKET_NAME);
 
   if (exists) {
     console.log(`Bucket "${BUCKET_NAME}" já existe.`);
