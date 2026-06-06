@@ -12,6 +12,7 @@
     "test:watch": "vitest",
     "test:e2e": "playwright test",
     "storage:create-bucket": "node --env-file=.env scripts/create-bucket.js",
+    "db:apply-schema": "node --env-file=.env scripts/apply-schema.js",
     "clean": "next clean"
   },
   "dependencies": {
