@@ -1,4 +1,5 @@
 import React from 'react';
+import Image from 'next/image';
 
 interface PatientDocument {
   id: string;
@@ -121,9 +122,12 @@ export default function DocumentViewerModal({ document: doc, onClose }: Document
                 <div className="bg-surface/30 rounded-2xl border border-outline-variant/40 p-5 text-center">
                   <h4 className="font-bold text-[12px] uppercase tracking-wider text-primary mb-3 text-left">Assinatura Digital de Consentimento</h4>
                   <div className="inline-block bg-white-pure border-2 border-outline-variant/50 rounded-2xl p-4 max-w-sm mx-auto">
-                    <img 
+                    <Image 
                       src={doc.signatureBase64} 
                       alt="Assinatura Digital" 
+                      width={500}
+                      height={140}
+                      unoptimized
                       className="max-h-[140px] w-auto mx-auto object-contain"
                     />
                   </div>

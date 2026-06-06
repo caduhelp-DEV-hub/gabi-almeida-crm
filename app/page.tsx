@@ -1,8 +1,10 @@
 'use client';
 
 import React, {useState, useEffect, useRef} from 'react';
+import Image from 'next/image';
 import AnamneseLimpezaDePele from '../components/AnamneseLimpezaDePele';
 import DocumentViewerModal from '../components/DocumentViewerModal';
+import ChangePasswordModal from '../components/modals/ChangePasswordModal';
 import { supabase } from '../lib/supabase';
 import {
   mapUserToFrontend,
@@ -1021,7 +1023,7 @@ export default function CRMPage() {
                   <p className="font-manrope text-[14px] text-on-surface font-bold leading-none">{currentUser?.name}</p>
                   <p className="text-[10px] text-on-surface-variant uppercase tracking-wider font-semibold mt-1">{currentUser?.role}</p>
                 </div>
-                <img 
+                <Image width={500} height={500} unoptimized 
                   alt="Perfil" 
                   className="w-10 h-10 rounded-full object-cover border-2 border-primary/20 transition-all hover:border-primary" 
                   src={currentUser?.avatar || `https://api.dicebear.com/7.x/notionists/svg?seed=${(currentUser?.name || 'User').replace(/\s+/g, '')}`}
@@ -1240,7 +1242,7 @@ export default function CRMPage() {
                       <p className="font-manrope text-[15px] font-bold text-on-surface-variant w-16">{appt.time}</p>
                       
                       {appt.patientAvatar ? (
-                        <img className="w-10 h-10 rounded-full object-cover" src={appt.patientAvatar} alt={appt.patientName} />
+                        <Image width={500} height={500} unoptimized className="w-10 h-10 rounded-full object-cover" src={appt.patientAvatar} alt={appt.patientName} />
                       ) : (
                         <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center font-manrope text-primary font-bold text-[12px]">
                           {appt.patientName.split(' ').map(n=>n[0]).join('')}
@@ -1385,8 +1387,8 @@ export default function CRMPage() {
                   
                   {/* Dynamic Practitioner Avatars */}
                   <div className="flex -space-x-2">
-                    <img className="w-8 h-8 rounded-full border-2 border-surface object-cover hover:z-10 transition-transform hover:scale-110" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAN-Snz7tw2cfJzM9hV2bOvnyopMNo02cO7qeufmV6KniT2HUq20-Uc-RRAkUX48x8ZKf93EvatW4M98a7buubdfWLGNqkXPLNrTtU1ZbEUEcVs5f5uWuhpl0Q2I0NaGJlrZCINa5rkAAXLS_CBdLRVveaDh9UGjr2iDt1eA0F0RWq5cWvfZcYUBxTyjUMTf5iKZ5-lEAATGNSqS2ap6D_9sr90et2Y5BEv3NCQhawEF3qma8IVuNwPY5_Z5dpvYHi2gmvEsUKME3A" title="Ricardo" />
-                    <img className="w-8 h-8 rounded-full border-2 border-surface object-cover hover:z-10 transition-transform hover:scale-110" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAZIoJ5rvFEd0QMoDhK--t5eo06m0e_1bwl91JesfdGrGuK7jx2D0IbCslQ2BXI21cNsAIomQGuNVKemV7t_bk7l9Cq2EIUbZRmflXAbPRdFMZ8ZNJwCA9_OQmPUHWdNJGN3xUo8DhmzgV2zzvBpZHhQBAKbGADEMh-nPQlk7t75ZOoYy4NkrQIWwst_VAWsIODxR87XUbLjQ5Gj_y2sZHFebWcQxLtztQv3_M9YOPoSuSyQEh-GYl3QCbRV7ZC2vngKjoQswx1GIw" title="Helena" />
+                    <Image width={500} height={500} unoptimized alt="Ricardo" className="w-8 h-8 rounded-full border-2 border-surface object-cover hover:z-10 transition-transform hover:scale-110" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAN-Snz7tw2cfJzM9hV2bOvnyopMNo02cO7qeufmV6KniT2HUq20-Uc-RRAkUX48x8ZKf93EvatW4M98a7buubdfWLGNqkXPLNrTtU1ZbEUEcVs5f5uWuhpl0Q2I0NaGJlrZCINa5rkAAXLS_CBdLRVveaDh9UGjr2iDt1eA0F0RWq5cWvfZcYUBxTyjUMTf5iKZ5-lEAATGNSqS2ap6D_9sr90et2Y5BEv3NCQhawEF3qma8IVuNwPY5_Z5dpvYHi2gmvEsUKME3A" title="Ricardo" />
+                    <Image width={500} height={500} unoptimized alt="Helena" className="w-8 h-8 rounded-full border-2 border-surface object-cover hover:z-10 transition-transform hover:scale-110" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAZIoJ5rvFEd0QMoDhK--t5eo06m0e_1bwl91JesfdGrGuK7jx2D0IbCslQ2BXI21cNsAIomQGuNVKemV7t_bk7l9Cq2EIUbZRmflXAbPRdFMZ8ZNJwCA9_OQmPUHWdNJGN3xUo8DhmzgV2zzvBpZHhQBAKbGADEMh-nPQlk7t75ZOoYy4NkrQIWwst_VAWsIODxR87XUbLjQ5Gj_y2sZHFebWcQxLtztQv3_M9YOPoSuSyQEh-GYl3QCbRV7ZC2vngKjoQswx1GIw" title="Helena" />
                     <div className="w-8 h-8 rounded-full border-2 border-surface bg-[#e5e2df] flex items-center justify-center text-[10px] font-bold text-primary cursor-pointer hover:bg-primary/10 hover:text-primary transition-colors">+2</div>
                   </div>
                 </div>
@@ -1520,7 +1522,7 @@ export default function CRMPage() {
                             >
                               <div className="flex items-center gap-3">
                                 {appt.patientAvatar ? (
-                                  <img className="w-8 h-8 rounded-full object-cover" src={appt.patientAvatar} alt={appt.patientName}/>
+                                  <Image width={500} height={500} unoptimized className="w-8 h-8 rounded-full object-cover" src={appt.patientAvatar} alt={appt.patientName}/>
                                 ) : (
                                   <div className="w-8 h-8 rounded-full bg-surface-container flex items-center justify-center font-bold text-[10px] font-manrope">
                                     {appt.patientName.charAt(0)}
@@ -1901,7 +1903,7 @@ export default function CRMPage() {
                     {selectedPatientId === patient.id && (
                       <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary"></div>
                     )}
-                    <img className="h-10 w-10 rounded-full object-cover" src={patient.avatar} alt={patient.name} />
+                    <Image width={500} height={500} unoptimized className="h-10 w-10 rounded-full object-cover" src={patient.avatar} alt={patient.name} />
                     <div className="flex-1 min-w-0">
                       <p className="font-manrope text-[13px] font-extrabold text-on-surface truncate">
                         {patient.pronoun ? patient.pronoun + ' ' : ''}{patient.name}
@@ -1933,7 +1935,7 @@ export default function CRMPage() {
                 {/* Profile header visual block card */}
                 <div className="bg-white-pure rounded-3xl p-5 lg:p-6 border border-outline-variant shadow-sm flex flex-col lg:flex-row gap-6 items-center lg:items-start relative overflow-hidden text-center lg:text-left">
                   <div className="relative group">
-                    <img 
+                    <Image width={500} height={500} unoptimized 
                       className="h-28 w-28 rounded-2xl object-cover border-2 border-primary/20 mx-auto lg:mx-0" 
                       src={selectedPatient.detailsAvatar} 
                       alt={selectedPatient.name} 
@@ -2160,7 +2162,7 @@ export default function CRMPage() {
                                   if (!photo) return null;
                                   return (
                                     <div key={photo.id} className="relative rounded-2xl overflow-hidden shadow-inner group bg-surface border border-outline-variant/40">
-                                      <img className="w-full h-48 sm:h-56 md:h-60 object-cover print-photo" src={photo.url} alt={`Comparativo ${photo.type}`} />
+                                      <Image width={500} height={500} unoptimized className="w-full h-48 sm:h-56 md:h-60 object-cover print-photo" src={photo.url} alt={`Comparativo ${photo.type}`} />
                                       <div className="absolute top-2 right-2 bg-black/60 text-white-pure px-2.5 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider">
                                         {photo.type}
                                       </div>
@@ -2178,7 +2180,7 @@ export default function CRMPage() {
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
                             <div className="relative rounded-2xl overflow-hidden shadow-inner group bg-surface border border-outline-variant/30">
                               {selectedPatient.beforePhoto ? (
-                                <img className="w-full h-48 sm:h-56 md:h-60 object-cover print-photo" src={selectedPatient.beforePhoto} alt="Evolução Antes" />
+                                <Image width={500} height={500} unoptimized className="w-full h-48 sm:h-56 md:h-60 object-cover print-photo" src={selectedPatient.beforePhoto} alt="Evolução Antes" />
                               ) : (
                                 <div className="w-full h-48 sm:h-56 md:h-60 bg-surface-container-highest/30 flex flex-col items-center justify-center text-outline gap-2 border border-dashed border-outline-variant/60 rounded-2xl">
                                   <span className="material-symbols-outlined text-4xl opacity-40">photo_camera</span>
@@ -2200,7 +2202,7 @@ export default function CRMPage() {
                             
                             <div className="relative rounded-2xl overflow-hidden shadow-inner group bg-surface border border-outline-variant/30">
                               {selectedPatient.afterPhoto ? (
-                                <img className="w-full h-48 sm:h-56 md:h-60 object-cover print-photo" src={selectedPatient.afterPhoto} alt="Evolução Depois" />
+                                <Image width={500} height={500} unoptimized className="w-full h-48 sm:h-56 md:h-60 object-cover print-photo" src={selectedPatient.afterPhoto} alt="Evolução Depois" />
                               ) : (
                                 <div className="w-full h-48 sm:h-56 md:h-60 bg-surface-container-highest/30 flex flex-col items-center justify-center text-outline gap-2 border border-dashed border-outline-variant/60 rounded-2xl">
                                   <span className="material-symbols-outlined text-4xl opacity-40">photo_camera</span>
@@ -2233,7 +2235,7 @@ export default function CRMPage() {
                                 const isSelected = compareSelectedIds.includes(photo.id);
                                 return (
                                   <div key={photo.id} className={`relative rounded-xl overflow-hidden group border transition-all ${isSelected ? 'border-primary ring-2 ring-primary/20 scale-[0.98]' : 'border-outline-variant/40 bg-surface'}`}>
-                                    <img src={photo.url} className="w-full h-24 object-cover" alt="Histórico" />
+                                    <Image width={500} height={500} unoptimized src={photo.url} className="w-full h-24 object-cover" alt="Histórico" />
                                     
                                     <div className="p-1.5 text-center">
                                       <p className="text-[9px] font-bold text-on-surface truncate">{photo.date}</p>
@@ -2474,7 +2476,26 @@ export default function CRMPage() {
                     onCancel={() => setActivePatientSubTab('evolution')} 
                     onSave={async (data) => {
                       try {
-                        // 1. Mapear alergias
+                        let signatureUrl = data.signatureBase64;
+                        try {
+                          const uploadRes = await fetch('/api/storage/upload', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                              bucket: 'signatures',
+                              path: `anamnese/${selectedPatient.id}/${crypto.randomUUID()}.png`,
+                              base64: data.signatureBase64,
+                              contentType: 'image/png'
+                            })
+                          });
+                          if (uploadRes.ok) {
+                            const uploadData = await uploadRes.json();
+                            signatureUrl = uploadData.url;
+                          }
+                        } catch (uploadErr) {
+                          console.warn('Falha no upload da assinatura, mantendo base64:', uploadErr);
+                        }
+
                         let allergiesStr = selectedPatient.allergies || 'Nenhuma';
                         if (data.healthToggles['Possui algum tipo de alergia?']) {
                           allergiesStr = 'Sim (verificar anamnese)';
@@ -2483,7 +2504,6 @@ export default function CRMPage() {
                           allergiesStr += ` - Outros relatos: ${data.otherHealth}`;
                         }
 
-                        // 2. Mapear medicamentos
                         let medicationsStr = selectedPatient.medications || 'Nenhum';
                         if (data.healthToggles['Utiliza anticoncepcional?'] || data.healthToggles['Utiliza cremes ou loções facial?']) {
                           const meds = [];
@@ -2492,13 +2512,11 @@ export default function CRMPage() {
                           medicationsStr = meds.join(', ');
                         }
 
-                        // 3. Mapear procedimentos anteriores
                         let prevProceduresStr = selectedPatient.previousProcedures || 'Nenhum';
                         if (data.healthToggles['Tratamento facial anterior?']) {
                           prevProceduresStr = 'Sim (verificar anamnese)';
                         }
 
-                        // 4. Montar o novo documento assinado
                         const newDoc: PatientDocument = {
                           id: 'doc_anamnese_' + crypto.randomUUID(),
                           name: `Ficha Anamnese - Limpeza de Pele - ${new Date().toLocaleDateString('pt-BR')}`,
@@ -2506,7 +2524,7 @@ export default function CRMPage() {
                           date: new Date().toLocaleDateString('pt-BR'),
                           size: '0.1 MB',
                           signed: true,
-                          signatureBase64: data.signatureBase64,
+                          signatureBase64: signatureUrl,
                           content: data
                         };
 
@@ -3126,7 +3144,7 @@ export default function CRMPage() {
                   <div className="space-y-4">
                     {commissionLeaders.map((lead, idx) => (
                       <div key={idx} className="flex items-center gap-3 p-2 bg-white-pure/40 rounded-xl hover:bg-white-pure transition-colors">
-                        <img className="w-10 h-10 rounded-full object-cover" src={lead.avatar} alt={lead.name} />
+                        <Image width={500} height={500} unoptimized className="w-10 h-10 rounded-full object-cover" src={lead.avatar} alt={lead.name} />
                         <div className="flex-1 min-w-0">
                           <p className="font-manrope text-[12px] font-bold text-on-surface truncate">{lead.name}</p>
                           <p className="text-[10px] text-on-surface-variant tracking-wider uppercase">Faturamento: R$ {lead.revenue.toLocaleString('pt-BR')}</p>
@@ -3413,7 +3431,7 @@ export default function CRMPage() {
                         <tr key={p.id} className="border-b border-outline-variant/30 hover:bg-[#fcfaf7]">
                           <td className="px-4 py-4">
                             <div className="flex items-center gap-3">
-                              <img src={p.avatar} alt="avatar" className="w-10 h-10 rounded-full border border-primary/20 object-cover" />
+                              <Image width={500} height={500} unoptimized src={p.avatar} alt="avatar" className="w-10 h-10 rounded-full border border-primary/20 object-cover" />
                               <div className="flex flex-col">
                                 <span className="font-extrabold text-on-surface text-[14px] font-manrope">
                                   {p.pronoun ? p.pronoun + ' ' : ''}{p.name}
@@ -3752,66 +3770,12 @@ export default function CRMPage() {
       )}
 
       {/* Change Password Modal */}
-      {isChangePasswordModalOpen && currentUser && (
-        <div className="fixed inset-0 bg-[#31302fd0] backdrop-blur-md flex items-center justify-center z-50 p-4 animate-fade-in">
-          <div className="bg-white-pure rounded-3xl border border-outline-variant w-full max-w-lg p-8 shadow-2xl relative">
-            <button 
-              onClick={() => setIsChangePasswordModalOpen(false)}
-              className="absolute top-6 right-6 p-2 rounded-full hover:bg-surface-container/50 text-on-surface transition-colors"
-            >
-              <span className="material-symbols-outlined text-[20px]">close</span>
-            </button>
-            
-            <h3 className="font-manrope text-[20px] font-bold text-primary mb-6">Alterar Senha</h3>
-            
-            <form onSubmit={async (e) => {
-              e.preventDefault();
-              const d = new FormData(e.currentTarget);
-              const currentPass = d.get('currentPass') as string;
-              const newPass = d.get('newPass') as string;
-              
-              if(newPass.length < 6) {
-                 showAlert('A nova senha deve ter no mínimo 6 caracteres.');
-                 return;
-              }
-              
-              try {
-                const res = await fetch('/api/auth/change-password', {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({
-                    currentPassword: currentPass,
-                    newPassword: newPass
-                  })
-                });
-
-                const data = await res.json();
-                if (!res.ok) throw new Error(data.error || 'Erro ao alterar senha.');
-
-                setIsChangePasswordModalOpen(false);
-                showAlert('Senha alterada com sucesso!');
-              } catch (err: any) {
-                console.error('Error updating password:', err);
-                showAlert(`Erro ao alterar senha: ${err.message}`);
-              }
-            }} className="space-y-4 font-sans text-[13px]">
-              <div>
-                <label className="block text-[11px] font-bold text-on-surface-variant mb-2">Senha Atual</label>
-                <input required name="currentPass" type="password" className="w-full bg-surface-container px-4 py-3 rounded-xl border border-outline-variant focus:outline-primary" />
-              </div>
-              <div>
-                <label className="block text-[11px] font-bold text-on-surface-variant mb-2">Nova Senha</label>
-                <input required name="newPass" type="password" className="w-full bg-surface-container px-4 py-3 rounded-xl border border-outline-variant focus:outline-primary" />
-              </div>
-              
-              <div className="pt-4 flex gap-4">
-                <button type="button" onClick={() => setIsChangePasswordModalOpen(false)} className="flex-1 py-3 border border-outline-variant rounded-xl font-bold">Cancelar</button>
-                <button type="submit" className="flex-1 py-3 bg-primary text-white-pure rounded-xl font-bold shadow-md hover:opacity-90">Confirmar</button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      <ChangePasswordModal
+        isOpen={isChangePasswordModalOpen}
+        onClose={() => setIsChangePasswordModalOpen(false)}
+        currentUser={currentUser}
+        showAlert={showAlert}
+      />
 
       {/* Global Alert & Confirm Dialog */}
       {dialogState.isOpen && (
@@ -4161,7 +4125,7 @@ export default function CRMPage() {
                 {/* Avatar upload section */}
                 <div className="flex flex-col items-center mb-4">
                   <div className="relative group cursor-pointer" onClick={() => document.getElementById('new_pat_avatar_file')?.click()}>
-                    <img 
+                    <Image width={500} height={500} unoptimized 
                       className="h-20 w-20 rounded-2xl object-cover border-2 border-primary/20 hover:opacity-85 transition-opacity"
                       src={newPatAvatar || (editingPatientId ? patients.find(p => p.id === editingPatientId)?.avatar : '') || 'https://api.dicebear.com/7.x/notionists/svg?seed=placeholder'} 
                       alt="Preview Avatar"
@@ -4705,7 +4669,7 @@ export default function CRMPage() {
             >
               <span className="material-symbols-outlined text-3xl">close</span>
             </button>
-            <img src={activeLightboxImage} className="max-w-full max-h-[80vh] rounded-2xl object-contain shadow-2xl border border-white/10" alt="Visualização ampliada" onClick={(e) => e.stopPropagation()} />
+            <Image width={500} height={500} unoptimized src={activeLightboxImage} className="max-w-full max-h-[80vh] rounded-2xl object-contain shadow-2xl border border-white/10" alt="Visualização ampliada" onClick={(e) => e.stopPropagation()} />
           </div>
         </div>
       )}
