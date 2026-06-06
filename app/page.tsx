@@ -4,276 +4,28 @@ import React, {useState, useEffect, useRef} from 'react';
 import AnamneseLimpezaDePele from '../components/AnamneseLimpezaDePele';
 import DocumentViewerModal from '../components/DocumentViewerModal';
 import { supabase } from '../lib/supabase';
-
-const mapUserToFrontend = (u: any): AppUser => ({
-  id: u.id,
-  name: u.name,
-  username: u.username,
-  role: u.role,
-  status: u.status,
-  specialty: u.specialty,
-  phone: u.phone,
-  avatar: u.avatar,
-  commissionRate: u.commission_rate,
-  permissions: u.permissions
-});
-
-const mapUserToBackend = (u: Partial<AppUser>) => {
-  const res: any = {};
-  if (u.id !== undefined) res.id = u.id;
-  if (u.name !== undefined) res.name = u.name;
-  if (u.username !== undefined) res.username = u.username;
-  if (u.role !== undefined) res.role = u.role;
-  if (u.status !== undefined) res.status = u.status;
-  if (u.specialty !== undefined) res.specialty = u.specialty;
-  if (u.phone !== undefined) res.phone = u.phone;
-  if (u.avatar !== undefined) res.avatar = u.avatar;
-  if (u.commissionRate !== undefined) res.commission_rate = u.commissionRate;
-  if (u.permissions !== undefined) res.permissions = u.permissions;
-  return res;
-};
-
-const mapPatientToFrontend = (p: any): Patient => ({
-  id: p.id,
-  name: p.name,
-  avatar: p.avatar,
-  detailsAvatar: p.details_avatar,
-  lastVisit: p.last_visit,
-  tier: p.tier,
-  since: p.since,
-  totalSpent: Number(p.total_spent || 0),
-  proceduresCount: Number(p.procedures_count || 0),
-  lastPhotoDate: p.last_photo_date,
-  status: p.status,
-  allergies: p.allergies,
-  medications: p.medications,
-  previousProcedures: p.previous_procedures,
-  evolutionNotes: p.evolution_notes,
-  beforePhoto: p.before_photo,
-  afterPhoto: p.after_photo,
-  evolutionPhotos: p.evolution_photos || [],
-  timeline: p.timeline || [],
-  phone: p.phone,
-  cpf: p.cpf,
-  pronoun: p.pronoun
-});
-
-const mapPatientToBackend = (p: Partial<Patient>) => {
-  const res: any = {};
-  if (p.id !== undefined) res.id = p.id;
-  if (p.name !== undefined) res.name = p.name;
-  if (p.avatar !== undefined) res.avatar = p.avatar;
-  if (p.detailsAvatar !== undefined) res.details_avatar = p.detailsAvatar;
-  if (p.lastVisit !== undefined) res.last_visit = p.lastVisit;
-  if (p.tier !== undefined) res.tier = p.tier;
-  if (p.since !== undefined) res.since = p.since;
-  if (p.totalSpent !== undefined) res.total_spent = p.totalSpent;
-  if (p.proceduresCount !== undefined) res.procedures_count = p.proceduresCount;
-  if (p.lastPhotoDate !== undefined) res.last_photo_date = p.lastPhotoDate;
-  if (p.status !== undefined) res.status = p.status;
-  if (p.allergies !== undefined) res.allergies = p.allergies;
-  if (p.medications !== undefined) res.medications = p.medications;
-  if (p.previousProcedures !== undefined) res.previous_procedures = p.previousProcedures;
-  if (p.evolutionNotes !== undefined) res.evolution_notes = p.evolutionNotes;
-  if (p.beforePhoto !== undefined) res.before_photo = p.beforePhoto;
-  if (p.afterPhoto !== undefined) res.after_photo = p.afterPhoto;
-  if (p.evolutionPhotos !== undefined) res.evolution_photos = p.evolutionPhotos;
-  if (p.timeline !== undefined) res.timeline = p.timeline;
-  if (p.phone !== undefined) res.phone = p.phone;
-  if (p.cpf !== undefined) res.cpf = p.cpf;
-  if (p.pronoun !== undefined) res.pronoun = p.pronoun;
-  return res;
-};
-
-const mapAppointmentToFrontend = (a: any): Appointment => ({
-  id: a.id,
-  patientId: a.patient_id,
-  time: a.time,
-  patientName: a.patients?.name || a.patient_name,
-  patientAvatar: a.patients?.avatar || a.patient_avatar,
-  procedure: a.procedure,
-  status: a.status,
-  professional: a.professional,
-  category: a.category,
-  notes: a.notes,
-  date: a.date || new Date().toISOString().split('T')[0]
-});
-
-const mapAppointmentToBackend = (a: Partial<Appointment>) => {
-  const res: any = {};
-  if (a.id !== undefined) res.id = a.id;
-  if (a.patientId !== undefined) res.patient_id = a.patientId;
-  if (a.time !== undefined) res.time = a.time;
-  if (a.patientName !== undefined) res.patient_name = a.patientName;
-  if (a.patientAvatar !== undefined) res.patient_avatar = a.patientAvatar;
-  if (a.procedure !== undefined) res.procedure = a.procedure;
-  if (a.status !== undefined) res.status = a.status;
-  if (a.professional !== undefined) res.professional = a.professional;
-  if (a.category !== undefined) res.category = a.category;
-  if (a.notes !== undefined) res.notes = a.notes;
-  if (a.date !== undefined) res.date = a.date;
-  return res;
-};
-
-const getAppointmentColorClass = (status: string) => {
-  switch (status) {
-    case 'Finalizado':
-      return 'bg-emerald-50/90 border-emerald-500 text-emerald-800 hover:bg-emerald-100/90';
-    case 'Em Atendimento':
-      return 'bg-cyan-50/90 border-cyan-500 text-cyan-800 hover:bg-cyan-100/90';
-    case 'Confirmado':
-      return 'bg-amber-50/90 border-amber-500 text-amber-800 hover:bg-amber-100/90';
-    case 'Pendente':
-    default:
-      return 'bg-slate-50/90 border-slate-400 text-slate-700 hover:bg-slate-100/90';
-  }
-};
-
-const mapInventoryToFrontend = (i: any): InventoryItem => ({
-  id: i.id,
-  name: i.name,
-  quantity: Number(i.quantity || 0),
-  minQuantity: Number(i.min_quantity || 0),
-  unit: i.unit
-});
-
-const mapInventoryToBackend = (i: Partial<InventoryItem>) => {
-  const res: any = {};
-  if (i.id !== undefined) res.id = i.id;
-  if (i.name !== undefined) res.name = i.name;
-  if (i.quantity !== undefined) res.quantity = i.quantity;
-  if (i.minQuantity !== undefined) res.min_quantity = i.minQuantity;
-  if (i.unit !== undefined) res.unit = i.unit;
-  return res;
-};
-
-
-
-// Interfaces for our state engine
-interface TimelineItem {
-  id: string;
-  title: string;
-  date: string;
-  description: string;
-  category: string;
-  status: string;
-}
-
-interface EvolutionPhoto {
-  id: string;
-  url: string;
-  date: string;
-  type: 'Antes' | 'Depois' | 'Evolução';
-}
-
-interface Patient {
-  id: string;
-  name: string;
-  avatar: string;
-  detailsAvatar: string;
-  lastVisit: string;
-  tier: string;
-  since: string;
-  totalSpent: number;
-  proceduresCount: number;
-  lastPhotoDate: string;
-  status: string;
-  ltv?: string;
-  birthdate?: string;
-  allergies: string;
-  medications: string;
-  previousProcedures: string;
-  evolutionNotes: string;
-  beforePhoto: string;
-  afterPhoto: string;
-  evolutionPhotos: EvolutionPhoto[];
-  timeline: TimelineItem[];
-  phone?: string;
-  cpf?: string;
-  pronoun?: string;
-}
-
-interface Appointment {
-  id: string;
-  patientId?: string;
-  time: string;
-  patientName: string;
-  patientAvatar?: string;
-  procedure: string;
-  status: 'Confirmado' | 'Em Atendimento' | 'Finalizado' | 'Pendente';
-  professional: string;
-  category: 'Estética' | 'Consulta';
-  notes?: string;
-  date: string;
-}
-
-interface ServiceObj {
-  id: string;
-  name: string;
-  price: number;
-  duration: string;
-  category: string;
-}
-
-interface InventoryItem {
-  id: string;
-  name: string;
-  quantity: number;
-  minQuantity: number;
-  unit: string;
-}
-
-interface Transaction {
-  id: string;
-  date: string;
-  description: string;
-  category: string;
-  status: 'Confirmado' | 'Pago' | 'Pendente';
-  value: number;
-}
-
-interface CommissionLeader {
-  name: string;
-  avatar: string;
-  revenue: number;
-  commission: number;
-}
-
-interface AppUser {
-  id: string;
-  name: string;
-  username: string;
-  password?: string;
-  role: 'admin' | 'staff' | 'prestador';
-  status: 'active' | 'inactive';
-  specialty?: string;
-  phone?: string;
-  avatar?: string;
-  commissionRate?: number;
-  permissions?: {
-    accessCRM: boolean;
-    accessAgenda: boolean;
-    accessFinanceiro: boolean;
-    canSchedule: boolean;
-    editPatients: boolean;
-  };
-}
-
-const defaultAppUsers: AppUser[] = [
-  { 
-    id: '1', 
-    name: 'Gabi Almeida', 
-    username: 'admin', 
-    password: 'admin',
-    role: 'admin', 
-    status: 'active',
-    specialty: 'Fundadora & Biomédica Esteta',
-    phone: '(11) 99876-5432',
-    avatar: 'https://api.dicebear.com/7.x/notionists/svg?seed=GabiAlmeida',
-    commissionRate: 40,
-    permissions: { accessCRM: true, accessAgenda: true, accessFinanceiro: true, canSchedule: true, editPatients: true }
-  }
-];
+import {
+  mapUserToFrontend,
+  mapUserToBackend,
+  mapPatientToFrontend,
+  mapPatientToBackend,
+  mapAppointmentToFrontend,
+  mapAppointmentToBackend,
+  mapInventoryToFrontend,
+  mapInventoryToBackend,
+  getAppointmentColorClass
+} from '../lib/mappers';
+import type {
+  TimelineItem,
+  EvolutionPhoto,
+  Patient,
+  Appointment,
+  ServiceObj,
+  InventoryItem,
+  Transaction,
+  CommissionLeader,
+  AppUser
+} from '../lib/types';
 
 export default function CRMPage() {
   // Global Modal State
@@ -284,7 +36,7 @@ export default function CRMPage() {
   // Auth state
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [currentUser, setCurrentUser] = useState<AppUser | null>(null);
-  const [appUsers, setAppUsers] = useState<AppUser[]>(defaultAppUsers);
+  const [appUsers, setAppUsers] = useState<AppUser[]>([]);
   
   // Login form state
   const [loginUsername, setLoginUsername] = useState('');
@@ -474,12 +226,11 @@ export default function CRMPage() {
   const [, todayMonth] = todayStr.split('/');
 
   const dailyFinancialRevenue = transactions
-    .filter(t => !(t as any).deleted_at && t.date === todayStr && t.value > 0)
+    .filter(t => t.date === todayStr && t.value > 0)
     .reduce((acc, t) => acc + t.value, 0);
 
   const totalRevenueThisMonth = transactions
     .filter(t => {
-      if ((t as any).deleted_at) return false;
       const parts = t.date.split('/');
       if (parts.length === 3) {
         const [, m, y] = parts;
@@ -489,12 +240,12 @@ export default function CRMPage() {
     })
     .reduce((acc, t) => acc + t.value, 0);
 
-  const appointmentsToConsider = appointments.filter(a => !(a as any).deleted_at);
+  const appointmentsToConsider = appointments;
   const appointmentsToday = appointmentsToConsider.filter(a => a.date === todayDateStr).length;
   const totalAtendimentosDisplay = appointmentsToday;
   const totalDailyRevenueDisplay = dailyFinancialRevenue;
   const ticketMedio = totalAtendimentosDisplay > 0 ? (totalDailyRevenueDisplay / totalAtendimentosDisplay) : 0;
-  const leadsAtivos = patients.filter(p => !(p as any).deleted_at).length;
+  const leadsAtivos = patients.length;
   const conversoes = appointmentsToConsider.filter(a => a.status === 'Confirmado' && a.date === todayDateStr).length;
   const taxaConversao = appointmentsToday > 0 ? Math.round((conversoes / appointmentsToday) * 100) : 0;
 
@@ -524,7 +275,6 @@ export default function CRMPage() {
   // Dynamic calculation of commissions and revenue
   const getDynamicCommissions = () => {
     const monthlyTransactions = transactions.filter(t => {
-      if ((t as any).deleted_at) return false;
       const parts = t.date.split('/');
       if (parts.length === 3) {
         const [, m, y] = parts;
@@ -1751,7 +1501,6 @@ export default function CRMPage() {
                           const relativeHour = (hour + (minute / 60)) - startHour;
                           const topPos = Math.max(10, Math.round(relativeHour * 80 + 10));
 
-                          const isInjectable = false;
                           const isConsult = appt.category === 'Consulta';
                           const appointmentColorClass = getAppointmentColorClass(appt.status);
 
@@ -1781,7 +1530,7 @@ export default function CRMPage() {
                                   <p className="font-manrope text-[12px] font-bold text-on-surface">{appt.patientName}</p>
                                   <p className="text-[10px] text-on-surface-variant flex items-center gap-1 mt-0.5">
                                     <span className="material-symbols-outlined text-[13px]">
-                                      {isInjectable ? 'medical_services' : isConsult ? 'event_note' : 'face'}
+                                      {isConsult ? 'event_note' : 'face'}
                                     </span> 
                                     {appt.procedure}
                                   </p>
@@ -1884,13 +1633,10 @@ export default function CRMPage() {
                           return (
                             <div key={idx} className={`p-1.5 space-y-3 ${day.active ? 'bg-primary/[0.01]' : ''}`}>
                               {dayAppts.map(appt => {
-                                const isInjectable = false;
                                 const isConsult = appt.category === 'Consulta';
-                                const cardClass = isInjectable
-                                  ? 'bg-primary-container/10 border-primary-container text-primary'
-                                  : isConsult
-                                    ? 'bg-tertiary-container/10 border-tertiary-container text-tertiary'
-                                    : 'bg-secondary-container/10 border-secondary-container text-[#745c00]';
+                                const cardClass = isConsult
+                                  ? 'bg-tertiary-container/10 border-tertiary-container text-tertiary'
+                                  : 'bg-secondary-container/10 border-secondary-container text-[#745c00]';
                                 return (
                                   <div 
                                     key={appt.id} 
@@ -1991,13 +1737,10 @@ export default function CRMPage() {
                               return appt.date === dateStr;
                             })
                             .map(appt => {
-                              const isInjectable = false;
                               const isConsult = appt.category === 'Consulta';
-                              const categoryColorClass = isInjectable 
-                                ? 'bg-primary-container/10 border-primary-container text-primary' 
-                                : isConsult 
-                                  ? 'bg-tertiary-container/10 border-tertiary-container text-tertiary' 
-                                  : 'bg-secondary-container/10 border-secondary-container text-[#745c00]';
+                              const categoryColorClass = isConsult
+                                ? 'bg-tertiary-container/10 border-tertiary-container text-tertiary'
+                                : 'bg-secondary-container/10 border-secondary-container text-[#745c00]';
                               return (
                                 <div 
                                   key={appt.id}
@@ -2064,17 +1807,6 @@ export default function CRMPage() {
                 </div>
                 
                 <div className="space-y-4 overflow-y-auto custom-scrollbar flex-1">
-                  {activeNextAppointments.map((next, index) => (
-                    <div key={index} className="p-4 bg-surface rounded-2xl border border-outline-variant flex flex-col hover:border-primary/35 transition-all">
-                      <div className="flex justify-between items-start mb-2">
-                        <span className="text-[10px] text-outline font-bold uppercase tracking-wider">{next.time}</span>
-                        <span className={`w-2 h-2 rounded-full ${next.tagColor === 'bg-secondary-container' ? 'bg-[#fed65b]' : 'bg-[#956c44]'}`}></span>
-                      </div>
-                      <p className="font-manrope text-[13px] font-bold text-on-surface">{next.name}</p>
-                      <p className="text-[11px] text-on-surface-variant mt-0.5">{next.category}</p>
-                    </div>
-                  ))}
-
                   <div className="mt-6 pt-4 border-t border-outline-variant/30">
                     <p className="text-[10px] text-outline uppercase font-bold tracking-widest mb-3">Métricas Estimadas</p>
                     <div className="space-y-3">
@@ -2768,7 +2500,7 @@ export default function CRMPage() {
 
                         // 4. Montar o novo documento assinado
                         const newDoc: PatientDocument = {
-                          id: 'doc_anamnese_' + Math.random().toString(36).substring(2, 9),
+                          id: 'doc_anamnese_' + crypto.randomUUID(),
                           name: `Ficha Anamnese - Limpeza de Pele - ${new Date().toLocaleDateString('pt-BR')}`,
                           type: 'Anamnese',
                           date: new Date().toLocaleDateString('pt-BR'),
@@ -2782,7 +2514,7 @@ export default function CRMPage() {
 
                         // 5. Adicionar item à timeline
                         const newTimelineItem = {
-                          id: 'tl_anamnese_' + Math.random().toString(36).substring(2, 9),
+                          id: 'tl_anamnese_' + crypto.randomUUID(),
                           title: 'Anamnese Preenchida',
                           date: new Date().toLocaleDateString('pt-BR'),
                           description: 'Ficha de Anamnese: Limpeza de Pele salva e assinada digitalmente.',
@@ -3058,7 +2790,7 @@ export default function CRMPage() {
                                 const file = e.target.files?.[0];
                                 if (file) {
                                   const newDoc: PatientDocument = {
-                                    id: 'doc_' + Math.random().toString(36).substring(2, 9),
+                                    id: 'doc_' + crypto.randomUUID(),
                                     name: file.name,
                                     type: file.name.toLowerCase().includes('contrato') ? 'Contrato' : 'Outro',
                                     date: new Date().toLocaleDateString('pt-BR'),
@@ -4038,38 +3770,24 @@ export default function CRMPage() {
               const currentPass = d.get('currentPass') as string;
               const newPass = d.get('newPass') as string;
               
-              if(currentPass !== currentUser.password && currentPass !== '123' && currentUser.password !== undefined) {
-                 showAlert('Senha atual incorreta!');
-                 return;
-              }
-              if(newPass.length < 3) {
-                 showAlert('A nova senha deve ter no mínimo 3 caracteres.');
+              if(newPass.length < 6) {
+                 showAlert('A nova senha deve ter no mínimo 6 caracteres.');
                  return;
               }
               
               try {
-                const res = await fetch('/api/auth/users/update', {
+                const res = await fetch('/api/auth/change-password', {
                   method: 'POST',
                   headers: { 'Content-Type': 'application/json' },
                   body: JSON.stringify({
-                    id: currentUser.id,
-                    name: currentUser.name,
-                    username: currentUser.username,
-                    role: currentUser.role,
-                    status: currentUser.status,
-                    phone: currentUser.phone,
-                    specialty: currentUser.specialty,
-                    commissionRate: currentUser.commissionRate,
-                    permissions: currentUser.permissions,
-                    password: newPass
+                    currentPassword: currentPass,
+                    newPassword: newPass
                   })
                 });
 
                 const data = await res.json();
                 if (!res.ok) throw new Error(data.error || 'Erro ao alterar senha.');
 
-                const upd = { ...currentUser, password: newPass };
-                setCurrentUser(upd);
                 setIsChangePasswordModalOpen(false);
                 showAlert('Senha alterada com sucesso!');
               } catch (err: any) {

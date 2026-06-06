@@ -1,12 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
-import { supabase } from '../../../../../lib/supabase';
+import { supabaseAdmin } from '../../../../../lib/supabase';
+import { requireAdmin } from '../../../../../lib/auth';
 
 export const dynamic = 'force-dynamic';
 
 const SALT_ROUNDS = 10;
 
 export async function POST(request: NextRequest) {
+  const auth = await requireAdmin(request);
+  if (auth instanceof NextResponse) return auth;
+
   try {
     const { id, name, username, role, status, phone, specialty, commissionRate, permissions, password } = await request.json();
 
@@ -17,8 +21,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Verificar se o username já está sendo usado por outro usuário
-    const { data: existingUser } = await supabase
+    const { data: existingUser } = await supabaseAdmin
       .from('users')
       .select('id')
       .eq('username', username)
@@ -33,7 +36,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const updateData: any = {
+    const updateData: Record<string, unknown> = {
       name,
       username,
       role,
@@ -44,12 +47,11 @@ export async function POST(request: NextRequest) {
       permissions: permissions || {}
     };
 
-    // Se uma nova senha foi fornecida, gerar o hash
     if (password && password.trim() !== '') {
       updateData.password_hash = await bcrypt.hash(password, SALT_ROUNDS);
     }
 
-    const { data, error } = await supabase
+    const { data, error } = await supabaseAdmin
       .from('users')
       .update(updateData)
       .eq('id', id)
@@ -64,8 +66,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    return NextResponse.json({ user: data }, { status: 200 });
-  } catch (err: any) {
+    const { password_hash, ...safeUser } = data;
+    return NextResponse.json({ user: safeUser }, { status: 200 });
+  } catch (err) {
     console.error('[Auth Update] Error:', err);
     return NextResponse.json(
       { error: 'Erro interno do servidor.' },

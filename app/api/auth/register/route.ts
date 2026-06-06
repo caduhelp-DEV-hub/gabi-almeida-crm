@@ -1,12 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
-import { supabase } from '../../../../lib/supabase';
+import { supabaseAdmin } from '../../../../lib/supabase';
+import { requireAdmin } from '../../../../lib/auth';
 
 export const dynamic = 'force-dynamic';
 
 const SALT_ROUNDS = 10;
 
 export async function POST(request: NextRequest) {
+  const auth = await requireAdmin(request);
+  if (auth instanceof NextResponse) return auth;
+
   try {
     const { name, username, role, specialty, phone, commissionRate, permissions, password } = await request.json();
 
@@ -17,13 +21,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Verificar se usuário já existe
-    const { data: existingUser } = await supabase
+    const { data: existingUser } = await supabaseAdmin
       .from('users')
       .select('id')
       .eq('username', username)
       .limit(1)
-      .single();
+      .maybeSingle();
 
     if (existingUser) {
       return NextResponse.json(
@@ -32,7 +35,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const passwordHash = await bcrypt.hash(password && password.trim() !== '' ? password : '123', SALT_ROUNDS);
+    const finalPassword = password && password.trim() !== '' ? password : '123';
+    const passwordHash = await bcrypt.hash(finalPassword, SALT_ROUNDS);
 
     const newUser = {
       name,
@@ -40,14 +44,14 @@ export async function POST(request: NextRequest) {
       password_hash: passwordHash,
       role,
       status: 'active',
-      specialty: specialty || undefined,
+      specialty: specialty || null,
       phone,
       avatar: `https://api.dicebear.com/7.x/notionists/svg?seed=${encodeURIComponent(username)}`,
-      commission_rate: commissionRate || undefined,
+      commission_rate: commissionRate || 0,
       permissions: permissions || {}
     };
 
-    const { data, error } = await supabase
+    const { data, error } = await supabaseAdmin
       .from('users')
       .insert([newUser])
       .select()
@@ -61,8 +65,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    return NextResponse.json({ user: data }, { status: 201 });
-  } catch (err: any) {
+    const { password_hash, ...safeUser } = data;
+    return NextResponse.json({ user: safeUser }, { status: 201 });
+  } catch (err) {
     console.error('[Auth Register] Error:', err);
     return NextResponse.json(
       { error: 'Erro interno do servidor.' },

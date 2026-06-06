@@ -1,5 +1,10 @@
 -- Script de inicialização do banco de dados do CRM Gabi Almeida no Supabase (PostgreSQL)
 -- Autenticação gerenciada pela API do Next.js (sem Supabase Auth)
+--
+-- IMPORTANTE: As políticas abaixo concedem acesso apenas à role `authenticated`.
+-- O backend Next.js deve se autenticar via SUPABASE_SERVICE_ROLE_KEY (server-side)
+-- e repassar o cookie de sessão JWT próprio (lib/auth.ts). Não exponha a service role
+-- ao frontend.
 
 -- 1. Tabela de Usuários do CRM (autenticação própria)
 CREATE TABLE IF NOT EXISTS public.users (
@@ -21,8 +26,6 @@ CREATE TABLE IF NOT EXISTS public.users (
 ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS "Allow anon full access to users" ON public.users;
-CREATE POLICY "Allow anon full access to users" ON public.users
-    FOR ALL TO anon USING (true) WITH CHECK (true);
 
 DROP POLICY IF EXISTS "Allow authenticated full access to users" ON public.users;
 CREATE POLICY "Allow authenticated full access to users" ON public.users
@@ -71,8 +74,6 @@ CREATE POLICY "Allow authenticated full access to patients" ON public.patients
     FOR ALL TO authenticated USING (true) WITH CHECK (true);
 
 DROP POLICY IF EXISTS "Allow anon full access to patients" ON public.patients;
-CREATE POLICY "Allow anon full access to patients" ON public.patients
-    FOR ALL TO anon USING (true) WITH CHECK (true);
 
 -- 3. Tabela de Agenda/Compromissos
 CREATE TABLE IF NOT EXISTS public.appointments (
@@ -97,8 +98,6 @@ CREATE POLICY "Allow authenticated full access to appointments" ON public.appoin
     FOR ALL TO authenticated USING (true) WITH CHECK (true);
 
 DROP POLICY IF EXISTS "Allow anon full access to appointments" ON public.appointments;
-CREATE POLICY "Allow anon full access to appointments" ON public.appointments
-    FOR ALL TO anon USING (true) WITH CHECK (true);
 
 -- 4. Tabela de Lançamentos Financeiros (Transações)
 CREATE TABLE IF NOT EXISTS public.transactions (
@@ -118,8 +117,6 @@ CREATE POLICY "Allow authenticated full access to transactions" ON public.transa
     FOR ALL TO authenticated USING (true) WITH CHECK (true);
 
 DROP POLICY IF EXISTS "Allow anon full access to transactions" ON public.transactions;
-CREATE POLICY "Allow anon full access to transactions" ON public.transactions
-    FOR ALL TO anon USING (true) WITH CHECK (true);
 
 -- 5. Tabela de Serviços e Tratamentos
 CREATE TABLE IF NOT EXISTS public.services (
@@ -138,8 +135,6 @@ CREATE POLICY "Allow authenticated full access to services" ON public.services
     FOR ALL TO authenticated USING (true) WITH CHECK (true);
 
 DROP POLICY IF EXISTS "Allow anon full access to services" ON public.services;
-CREATE POLICY "Allow anon full access to services" ON public.services
-    FOR ALL TO anon USING (true) WITH CHECK (true);
 
 -- 6. Tabela de Insumos/Estoque
 CREATE TABLE IF NOT EXISTS public.inventory (
@@ -158,8 +153,6 @@ CREATE POLICY "Allow authenticated full access to inventory" ON public.inventory
     FOR ALL TO authenticated USING (true) WITH CHECK (true);
 
 DROP POLICY IF EXISTS "Allow anon full access to inventory" ON public.inventory;
-CREATE POLICY "Allow anon full access to inventory" ON public.inventory
-    FOR ALL TO anon USING (true) WITH CHECK (true);
 
 -- ============================================================
 -- MIGRATION: Executar APENAS se a tabela users já existe com schema antigo

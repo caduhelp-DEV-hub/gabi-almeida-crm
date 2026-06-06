@@ -40,7 +40,7 @@ export async function POST(request: Request) {
     `;
 
     const response = await ai.models.generateContent({
-      model: 'gemini-3.5-flash',
+      model: 'gemini-2.0-flash',
       contents: message || 'Dê uma sugestão de fidelização baseada nos dados de hoje.',
       config: {
         systemInstruction,
@@ -53,7 +53,7 @@ export async function POST(request: Request) {
   } catch (error: any) {
     console.error('Gemini error:', error);
     return NextResponse.json(
-      {error: 'Erro ao processar requisição do assistente: ' + (error.message || error)},
+      {error: 'Erro ao processar requisição do assistente.'},
       {status: 500}
     );
   }
