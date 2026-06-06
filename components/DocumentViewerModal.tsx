@@ -22,11 +22,11 @@ export default function DocumentViewerModal({ document: doc, onClose }: Document
   const content = doc.content || {};
 
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9999] flex items-center justify-center p-4 overflow-y-auto animate-fade-in font-manrope">
-      <div className="bg-white-pure rounded-3xl w-full max-w-3xl max-h-[90vh] overflow-y-auto shadow-2xl border border-outline-variant/50 flex flex-col">
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9999] flex items-center justify-center p-0 sm:p-4 overflow-y-auto animate-fade-in font-manrope">
+      <div className="bg-white-pure sm:rounded-3xl w-full max-w-3xl h-full sm:h-auto sm:max-h-[90vh] overflow-y-auto shadow-2xl border border-outline-variant/50 flex flex-col">
         
         {/* Header */}
-        <div className="p-6 border-b border-outline-variant/50 flex items-center justify-between sticky top-0 bg-white-pure z-10">
+        <div className="p-4 sm:p-6 border-b border-outline-variant/50 flex items-center justify-between sticky top-0 bg-white-pure z-10">
           <div className="flex items-center gap-3">
             <span className="p-3 bg-primary/10 text-primary rounded-xl">
               <span className="material-symbols-outlined text-[24px]">description</span>
@@ -47,7 +47,7 @@ export default function DocumentViewerModal({ document: doc, onClose }: Document
         </div>
 
         {/* Content Body */}
-        <div className="p-6 space-y-6 flex-1">
+        <div className="p-4 sm:p-6 space-y-6 flex-1">
           {isAnamnese ? (
             <div className="space-y-6">
               {/* Questionário */}

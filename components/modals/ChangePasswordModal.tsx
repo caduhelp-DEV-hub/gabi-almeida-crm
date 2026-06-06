@@ -12,8 +12,8 @@ export default function ChangePasswordModal({ isOpen, onClose, currentUser, show
   if (!isOpen || !currentUser) return null;
 
   return (
-    <div className="fixed inset-0 bg-[#31302fd0] backdrop-blur-md flex items-center justify-center z-50 p-4 animate-fade-in">
-      <div className="bg-white-pure rounded-3xl border border-outline-variant w-full max-w-lg p-8 shadow-2xl relative">
+    <div className="fixed inset-0 bg-[#31302fd0] backdrop-blur-md flex items-center justify-center z-50 p-0 sm:p-4 animate-fade-in">
+      <div className="bg-white-pure sm:rounded-3xl border border-outline-variant w-full max-w-lg p-5 sm:p-8 shadow-2xl relative h-full sm:h-auto sm:max-h-[90vh] overflow-y-auto">
         <button
           onClick={onClose}
           className="absolute top-6 right-6 p-2 rounded-full hover:bg-surface-container/50 text-on-surface transition-colors"

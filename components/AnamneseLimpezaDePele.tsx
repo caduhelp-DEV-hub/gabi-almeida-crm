@@ -179,7 +179,7 @@ export default function AnamneseLimpeza({ patientName, patientPhone = '(11) 9743
                     <button
                       type="button"
                       onClick={() => setHealthToggles(prev => ({ ...prev, [q]: true }))}
-                      className={`px-3 py-1 rounded-lg text-[10px] font-bold border transition-all duration-300 cursor-pointer ${
+                      className={`min-h-[44px] min-w-[60px] px-4 py-2.5 rounded-lg text-[13px] font-bold border transition-all duration-300 cursor-pointer ${
                         isYes 
                           ? 'bg-emerald-50 border-emerald-600 text-emerald-700 scale-105 shadow-sm' 
                           : 'border-outline-variant/50 text-on-surface-variant hover:bg-surface'
@@ -190,7 +190,7 @@ export default function AnamneseLimpeza({ patientName, patientPhone = '(11) 9743
                     <button
                       type="button"
                       onClick={() => setHealthToggles(prev => ({ ...prev, [q]: false }))}
-                      className={`px-3 py-1 rounded-lg text-[10px] font-bold border transition-all duration-300 cursor-pointer ${
+                      className={`min-h-[44px] min-w-[60px] px-4 py-2.5 rounded-lg text-[13px] font-bold border transition-all duration-300 cursor-pointer ${
                         !isYes 
                           ? 'bg-[#ba1a1a]/10 border-[#ba1a1a] text-[#ba1a1a] scale-105 shadow-sm' 
                           : 'border-outline-variant/50 text-on-surface-variant hover:bg-surface'
@@ -291,7 +291,7 @@ export default function AnamneseLimpeza({ patientName, patientPhone = '(11) 9743
                     <button
                       type="button"
                       onClick={() => setHealthToggles(prev => ({ ...prev, fotos: true }))}
-                      className={`px-3 py-1 rounded-lg text-[10px] font-bold border transition-all duration-300 cursor-pointer ${
+                      className={`min-h-[44px] min-w-[60px] px-4 py-2.5 rounded-lg text-[13px] font-bold border transition-all duration-300 cursor-pointer ${
                         healthToggles['fotos'] 
                           ? 'bg-emerald-50 border-emerald-600 text-emerald-700 scale-105 shadow-sm' 
                           : 'border-outline-variant/50 text-on-surface-variant hover:bg-surface'
@@ -302,7 +302,7 @@ export default function AnamneseLimpeza({ patientName, patientPhone = '(11) 9743
                     <button
                       type="button"
                       onClick={() => setHealthToggles(prev => ({ ...prev, fotos: false }))}
-                      className={`px-3 py-1 rounded-lg text-[10px] font-bold border transition-all duration-300 cursor-pointer ${
+                      className={`min-h-[44px] min-w-[60px] px-4 py-2.5 rounded-lg text-[13px] font-bold border transition-all duration-300 cursor-pointer ${
                         !healthToggles['fotos'] 
                           ? 'bg-[#ba1a1a]/10 border-[#ba1a1a] text-[#ba1a1a] scale-105 shadow-sm' 
                           : 'border-outline-variant/50 text-on-surface-variant hover:bg-surface'

@@ -147,6 +147,7 @@ export default function CRMPage() {
   const [isProfDropdownOpen, setIsProfDropdownOpen] = useState(false);
   const [isAlertNotificationOpen, setIsAlertNotificationOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
 
   // Gabi Almeida AI State Engine
   const [aiAdvice, setAiAdvice] = useState<string>('Dica Gabi Almeida AI: Você tem 3 clientes com interesse em Bioestimuladores hoje. Que tal oferecer o novo protocolo?');
@@ -777,7 +778,7 @@ export default function CRMPage() {
   }
 
   return (
-    <div className="bg-background text-on-surface font-sans overflow-hidden h-screen flex relative">
+    <div className="bg-background text-on-surface font-sans overflow-hidden h-[100dvh] flex relative">
       
       {/* Mobile Menu Overlay */}
       {isMobileMenuOpen && (
@@ -914,13 +915,20 @@ export default function CRMPage() {
       <main className="flex-1 flex flex-col h-full overflow-hidden relative">
         
         {/* TopNavBar Shell */}
-        <header className="h-20 w-full flex justify-between items-center px-6 md:px-8 bg-white-pure/60 backdrop-blur-xl border-b border-outline-variant z-20 relative gap-4">
+        <header className="h-16 md:h-20 w-full flex justify-between items-center px-4 md:px-8 bg-white-pure/60 backdrop-blur-xl border-b border-outline-variant z-20 relative gap-4">
           
-          <button 
+          <button
             onClick={() => setIsMobileMenuOpen(true)}
             className="lg:hidden p-2 text-on-surface-variant hover:text-primary transition-colors cursor-pointer flex items-center justify-center -ml-2"
           >
             <span className="material-symbols-outlined text-[24px]">menu</span>
+          </button>
+
+          <button
+            onClick={() => setIsMobileSearchOpen(true)}
+            className="sm:hidden p-2 text-on-surface-variant hover:text-primary transition-colors cursor-pointer flex items-center justify-center"
+          >
+            <span className="material-symbols-outlined text-[24px]">search</span>
           </button>
 
           {/* Universal Search context depending on current tab */}
@@ -968,7 +976,7 @@ export default function CRMPage() {
                 </button>
                 
                 {isAlertNotificationOpen && (
-                  <div className="absolute right-0 mt-3 w-80 bg-surface-container-lowest border border-outline-variant rounded-2xl p-4 shadow-xl z-50">
+                  <div className="absolute right-0 mt-3 w-80 max-w-[calc(100vw-2rem)] bg-surface-container-lowest border border-outline-variant rounded-2xl p-4 shadow-xl z-50">
                     <div className="flex justify-between items-center mb-4 pb-2 border-b border-outline-variant/50">
                       <span className="font-manrope text-[14px] font-bold text-primary">Alertas Clínicos Ativos</span>
                       <span className="bg-error-container text-on-error-container px-2 py-0.5 rounded text-[10px] font-bold">{criticalAlerts.length} Críticos</span>
@@ -1026,12 +1034,12 @@ export default function CRMPage() {
                 <Image width={500} height={500} unoptimized 
                   alt="Perfil" 
                   className="w-10 h-10 rounded-full object-cover border-2 border-primary/20 transition-all hover:border-primary" 
-                  src={currentUser?.avatar || `https://api.dicebear.com/7.x/notionists/svg?seed=${(currentUser?.name || 'User').replace(/\s+/g, '')}`}
+                  src={currentUser?.avatar || `https://api.dicebear.com/7.x/notionists/svg?seed=${(currentUser?.name || 'User').replace(/\s+/g, '')}`} sizes="(max-width: 768px) 100vw, 500px"
                 />
               </div>
               
               {isProfileMenuOpen && (
-                <div className="absolute right-0 mt-3 w-56 bg-white-pure rounded-2xl shadow-xl border border-outline-variant py-2 z-50 animate-fade-in text-[13px] font-sans">
+                <div className="absolute right-0 mt-3 w-56 max-w-[calc(100vw-2rem)] bg-white-pure rounded-2xl shadow-xl border border-outline-variant py-2 z-50 animate-fade-in text-[13px] font-sans">
                   <button 
                     onClick={() => { setIsProfileMenuOpen(false); setIsEditProfileModalOpen(true); }}
                     className="w-full text-left px-4 py-2.5 hover:bg-surface-container flex items-center gap-3 text-on-surface"
@@ -1063,6 +1071,26 @@ export default function CRMPage() {
 
           </div>
         </header>
+
+        {isMobileSearchOpen && (
+          <div className="fixed inset-0 z-40 bg-white-pure p-4 flex items-center gap-2 sm:hidden">
+            <span className="material-symbols-outlined text-on-surface-variant opacity-60">search</span>
+            <input
+              autoFocus
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Buscar..."
+              className="flex-1 bg-[#f7f3f0] border-none rounded-full font-sans text-[14px] focus:ring-1 focus:ring-primary/40 focus:outline-none placeholder:text-on-surface-variant/50 px-4 py-2.5"
+            />
+            <button
+              onClick={() => setIsMobileSearchOpen(false)}
+              className="p-2 text-on-surface-variant"
+            >
+              <span className="material-symbols-outlined">close</span>
+            </button>
+          </div>
+        )}
 
         {/* 3. Main Dashboard Tab Canvas */}
         {currentTab === 'dashboard' && (
@@ -1242,7 +1270,7 @@ export default function CRMPage() {
                       <p className="font-manrope text-[15px] font-bold text-on-surface-variant w-16">{appt.time}</p>
                       
                       {appt.patientAvatar ? (
-                        <Image width={500} height={500} unoptimized className="w-10 h-10 rounded-full object-cover" src={appt.patientAvatar} alt={appt.patientName} />
+                        <Image width={500} height={500} unoptimized className="w-10 h-10 rounded-full object-cover" src={appt.patientAvatar} alt={appt.patientName} sizes="(max-width: 768px) 100vw, 500px" />
                       ) : (
                         <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center font-manrope text-primary font-bold text-[12px]">
                           {appt.patientName.split(' ').map(n=>n[0]).join('')}
@@ -1387,8 +1415,8 @@ export default function CRMPage() {
                   
                   {/* Dynamic Practitioner Avatars */}
                   <div className="flex -space-x-2">
-                    <Image width={500} height={500} unoptimized alt="Ricardo" className="w-8 h-8 rounded-full border-2 border-surface object-cover hover:z-10 transition-transform hover:scale-110" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAN-Snz7tw2cfJzM9hV2bOvnyopMNo02cO7qeufmV6KniT2HUq20-Uc-RRAkUX48x8ZKf93EvatW4M98a7buubdfWLGNqkXPLNrTtU1ZbEUEcVs5f5uWuhpl0Q2I0NaGJlrZCINa5rkAAXLS_CBdLRVveaDh9UGjr2iDt1eA0F0RWq5cWvfZcYUBxTyjUMTf5iKZ5-lEAATGNSqS2ap6D_9sr90et2Y5BEv3NCQhawEF3qma8IVuNwPY5_Z5dpvYHi2gmvEsUKME3A" title="Ricardo" />
-                    <Image width={500} height={500} unoptimized alt="Helena" className="w-8 h-8 rounded-full border-2 border-surface object-cover hover:z-10 transition-transform hover:scale-110" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAZIoJ5rvFEd0QMoDhK--t5eo06m0e_1bwl91JesfdGrGuK7jx2D0IbCslQ2BXI21cNsAIomQGuNVKemV7t_bk7l9Cq2EIUbZRmflXAbPRdFMZ8ZNJwCA9_OQmPUHWdNJGN3xUo8DhmzgV2zzvBpZHhQBAKbGADEMh-nPQlk7t75ZOoYy4NkrQIWwst_VAWsIODxR87XUbLjQ5Gj_y2sZHFebWcQxLtztQv3_M9YOPoSuSyQEh-GYl3QCbRV7ZC2vngKjoQswx1GIw" title="Helena" />
+                    <Image width={500} height={500} unoptimized alt="Ricardo" className="w-8 h-8 rounded-full border-2 border-surface object-cover hover:z-10 transition-transform hover:scale-110" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAN-Snz7tw2cfJzM9hV2bOvnyopMNo02cO7qeufmV6KniT2HUq20-Uc-RRAkUX48x8ZKf93EvatW4M98a7buubdfWLGNqkXPLNrTtU1ZbEUEcVs5f5uWuhpl0Q2I0NaGJlrZCINa5rkAAXLS_CBdLRVveaDh9UGjr2iDt1eA0F0RWq5cWvfZcYUBxTyjUMTf5iKZ5-lEAATGNSqS2ap6D_9sr90et2Y5BEv3NCQhawEF3qma8IVuNwPY5_Z5dpvYHi2gmvEsUKME3A" title="Ricardo" sizes="(max-width: 768px) 100vw, 500px" />
+                    <Image width={500} height={500} unoptimized alt="Helena" className="w-8 h-8 rounded-full border-2 border-surface object-cover hover:z-10 transition-transform hover:scale-110" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAZIoJ5rvFEd0QMoDhK--t5eo06m0e_1bwl91JesfdGrGuK7jx2D0IbCslQ2BXI21cNsAIomQGuNVKemV7t_bk7l9Cq2EIUbZRmflXAbPRdFMZ8ZNJwCA9_OQmPUHWdNJGN3xUo8DhmzgV2zzvBpZHhQBAKbGADEMh-nPQlk7t75ZOoYy4NkrQIWwst_VAWsIODxR87XUbLjQ5Gj_y2sZHFebWcQxLtztQv3_M9YOPoSuSyQEh-GYl3QCbRV7ZC2vngKjoQswx1GIw" title="Helena" sizes="(max-width: 768px) 100vw, 500px" />
                     <div className="w-8 h-8 rounded-full border-2 border-surface bg-[#e5e2df] flex items-center justify-center text-[10px] font-bold text-primary cursor-pointer hover:bg-primary/10 hover:text-primary transition-colors">+2</div>
                   </div>
                 </div>
@@ -1522,7 +1550,7 @@ export default function CRMPage() {
                             >
                               <div className="flex items-center gap-3">
                                 {appt.patientAvatar ? (
-                                  <Image width={500} height={500} unoptimized className="w-8 h-8 rounded-full object-cover" src={appt.patientAvatar} alt={appt.patientName}/>
+                                  <Image width={500} height={500} unoptimized className="w-8 h-8 rounded-full object-cover" src={appt.patientAvatar} alt={appt.patientName} sizes="(max-width: 768px) 100vw, 500px"/>
                                 ) : (
                                   <div className="w-8 h-8 rounded-full bg-surface-container flex items-center justify-center font-bold text-[10px] font-manrope">
                                     {appt.patientName.charAt(0)}
@@ -1903,7 +1931,7 @@ export default function CRMPage() {
                     {selectedPatientId === patient.id && (
                       <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary"></div>
                     )}
-                    <Image width={500} height={500} unoptimized className="h-10 w-10 rounded-full object-cover" src={patient.avatar} alt={patient.name} />
+                    <Image width={500} height={500} unoptimized className="h-10 w-10 rounded-full object-cover" src={patient.avatar} alt={patient.name} sizes="(max-width: 768px) 100vw, 500px" />
                     <div className="flex-1 min-w-0">
                       <p className="font-manrope text-[13px] font-extrabold text-on-surface truncate">
                         {patient.pronoun ? patient.pronoun + ' ' : ''}{patient.name}
@@ -1938,7 +1966,7 @@ export default function CRMPage() {
                     <Image width={500} height={500} unoptimized 
                       className="h-28 w-28 rounded-2xl object-cover border-2 border-primary/20 mx-auto lg:mx-0" 
                       src={selectedPatient.detailsAvatar} 
-                      alt={selectedPatient.name} 
+                      alt={selectedPatient.name} sizes="(max-width: 768px) 100vw, 500px" 
                     />
                     <button 
                       onClick={() => document.getElementById('patient_details_avatar_upload')?.click()}
@@ -2162,7 +2190,7 @@ export default function CRMPage() {
                                   if (!photo) return null;
                                   return (
                                     <div key={photo.id} className="relative rounded-2xl overflow-hidden shadow-inner group bg-surface border border-outline-variant/40">
-                                      <Image width={500} height={500} unoptimized className="w-full h-48 sm:h-56 md:h-60 object-cover print-photo" src={photo.url} alt={`Comparativo ${photo.type}`} />
+                                      <Image width={500} height={500} unoptimized className="w-full h-48 sm:h-56 md:h-60 object-cover print-photo" src={photo.url} alt={`Comparativo ${photo.type}`} sizes="(max-width: 768px) 100vw, 500px" />
                                       <div className="absolute top-2 right-2 bg-black/60 text-white-pure px-2.5 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider">
                                         {photo.type}
                                       </div>
@@ -2180,7 +2208,7 @@ export default function CRMPage() {
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
                             <div className="relative rounded-2xl overflow-hidden shadow-inner group bg-surface border border-outline-variant/30">
                               {selectedPatient.beforePhoto ? (
-                                <Image width={500} height={500} unoptimized className="w-full h-48 sm:h-56 md:h-60 object-cover print-photo" src={selectedPatient.beforePhoto} alt="Evolução Antes" />
+                                <Image width={500} height={500} unoptimized className="w-full h-48 sm:h-56 md:h-60 object-cover print-photo" src={selectedPatient.beforePhoto} alt="Evolução Antes" sizes="(max-width: 768px) 100vw, 500px" />
                               ) : (
                                 <div className="w-full h-48 sm:h-56 md:h-60 bg-surface-container-highest/30 flex flex-col items-center justify-center text-outline gap-2 border border-dashed border-outline-variant/60 rounded-2xl">
                                   <span className="material-symbols-outlined text-4xl opacity-40">photo_camera</span>
@@ -2202,7 +2230,7 @@ export default function CRMPage() {
                             
                             <div className="relative rounded-2xl overflow-hidden shadow-inner group bg-surface border border-outline-variant/30">
                               {selectedPatient.afterPhoto ? (
-                                <Image width={500} height={500} unoptimized className="w-full h-48 sm:h-56 md:h-60 object-cover print-photo" src={selectedPatient.afterPhoto} alt="Evolução Depois" />
+                                <Image width={500} height={500} unoptimized className="w-full h-48 sm:h-56 md:h-60 object-cover print-photo" src={selectedPatient.afterPhoto} alt="Evolução Depois" sizes="(max-width: 768px) 100vw, 500px" />
                               ) : (
                                 <div className="w-full h-48 sm:h-56 md:h-60 bg-surface-container-highest/30 flex flex-col items-center justify-center text-outline gap-2 border border-dashed border-outline-variant/60 rounded-2xl">
                                   <span className="material-symbols-outlined text-4xl opacity-40">photo_camera</span>
@@ -2235,7 +2263,7 @@ export default function CRMPage() {
                                 const isSelected = compareSelectedIds.includes(photo.id);
                                 return (
                                   <div key={photo.id} className={`relative rounded-xl overflow-hidden group border transition-all ${isSelected ? 'border-primary ring-2 ring-primary/20 scale-[0.98]' : 'border-outline-variant/40 bg-surface'}`}>
-                                    <Image width={500} height={500} unoptimized src={photo.url} className="w-full h-24 object-cover" alt="Histórico" />
+                                    <Image width={500} height={500} unoptimized src={photo.url} className="w-full h-24 object-cover" alt="Histórico" sizes="(max-width: 768px) 100vw, 500px" />
                                     
                                     <div className="p-1.5 text-center">
                                       <p className="text-[9px] font-bold text-on-surface truncate">{photo.date}</p>
@@ -3144,7 +3172,7 @@ export default function CRMPage() {
                   <div className="space-y-4">
                     {commissionLeaders.map((lead, idx) => (
                       <div key={idx} className="flex items-center gap-3 p-2 bg-white-pure/40 rounded-xl hover:bg-white-pure transition-colors">
-                        <Image width={500} height={500} unoptimized className="w-10 h-10 rounded-full object-cover" src={lead.avatar} alt={lead.name} />
+                        <Image width={500} height={500} unoptimized className="w-10 h-10 rounded-full object-cover" src={lead.avatar} alt={lead.name} sizes="(max-width: 768px) 100vw, 500px" />
                         <div className="flex-1 min-w-0">
                           <p className="font-manrope text-[12px] font-bold text-on-surface truncate">{lead.name}</p>
                           <p className="text-[10px] text-on-surface-variant tracking-wider uppercase">Faturamento: R$ {lead.revenue.toLocaleString('pt-BR')}</p>
@@ -3431,7 +3459,7 @@ export default function CRMPage() {
                         <tr key={p.id} className="border-b border-outline-variant/30 hover:bg-[#fcfaf7]">
                           <td className="px-4 py-4">
                             <div className="flex items-center gap-3">
-                              <Image width={500} height={500} unoptimized src={p.avatar} alt="avatar" className="w-10 h-10 rounded-full border border-primary/20 object-cover" />
+                              <Image width={500} height={500} unoptimized src={p.avatar} alt="avatar" className="w-10 h-10 rounded-full border border-primary/20 object-cover" sizes="(max-width: 768px) 100vw, 500px" />
                               <div className="flex flex-col">
                                 <span className="font-extrabold text-on-surface text-[14px] font-manrope">
                                   {p.pronoun ? p.pronoun + ' ' : ''}{p.name}
@@ -3715,8 +3743,8 @@ export default function CRMPage() {
 
       {/* Edit Profile Modal */}
       {isEditProfileModalOpen && currentUser && (
-        <div className="fixed inset-0 bg-[#31302fd0] backdrop-blur-md flex items-center justify-center z-50 p-4 animate-fade-in">
-          <div className="bg-white-pure rounded-3xl border border-outline-variant w-full max-w-lg p-8 shadow-2xl relative">
+        <div className="fixed inset-0 bg-[#31302fd0] backdrop-blur-md flex items-center justify-center z-50 p-0 sm:p-4 animate-fade-in">
+          <div className="bg-white-pure sm:rounded-3xl border border-outline-variant w-full max-w-lg p-5 sm:p-8 shadow-2xl relative h-full sm:h-auto sm:max-h-[90vh] overflow-y-auto">
             <button 
               onClick={() => setIsEditProfileModalOpen(false)}
               className="absolute top-6 right-6 p-2 rounded-full hover:bg-surface-container/50 text-on-surface transition-colors"
@@ -3779,8 +3807,8 @@ export default function CRMPage() {
 
       {/* Global Alert & Confirm Dialog */}
       {dialogState.isOpen && (
-        <div className="fixed inset-0 bg-[#31302fd0] backdrop-blur-md flex items-center justify-center z-50 p-4 animate-fade-in">
-          <div className="bg-white-pure rounded-3xl border border-outline-variant w-full max-w-sm p-8 shadow-2xl relative select-none flex flex-col items-center">
+        <div className="fixed inset-0 bg-[#31302fd0] backdrop-blur-md flex items-center justify-center z-50 p-0 sm:p-4 animate-fade-in">
+          <div className="bg-white-pure sm:rounded-3xl border border-outline-variant w-full max-w-sm p-5 sm:p-8 shadow-2xl relative h-full sm:h-auto sm:max-h-[90vh] overflow-y-auto select-none flex flex-col items-center">
             
             <div className="w-16 h-16 bg-primary/10 text-primary rounded-full flex items-center justify-center mb-6">
               <span className="material-symbols-outlined text-3xl">
@@ -3817,8 +3845,8 @@ export default function CRMPage() {
 
       {/* Dynamic ICP UI User Registration Modal */}
       {isNewUserModalOpen && (
-        <div className="fixed inset-0 bg-[#31302fd0] backdrop-blur-md flex items-center justify-center z-50 p-4 animate-fade-in">
-          <div className="bg-white-pure rounded-3xl border border-outline-variant w-full max-w-xl p-8 shadow-2xl relative select-none">
+        <div className="fixed inset-0 bg-[#31302fd0] backdrop-blur-md flex items-center justify-center z-50 p-0 sm:p-4 animate-fade-in">
+          <div className="bg-white-pure sm:rounded-3xl border border-outline-variant w-full max-w-xl p-5 sm:p-8 shadow-2xl relative h-full sm:h-auto sm:max-h-[90vh] overflow-y-auto select-none">
             
             <button 
               onClick={() => {
@@ -4034,8 +4062,8 @@ export default function CRMPage() {
 
       {/* Dynamic Patient Registration Modal */}
       {isPatientModalOpen && (
-        <div className="fixed inset-0 bg-[#31302fd0] backdrop-blur-md flex items-center justify-center z-50 p-4 animate-fade-in">
-          <div className="bg-white-pure rounded-3xl border border-outline-variant w-full max-w-xl p-8 shadow-2xl relative select-none">
+        <div className="fixed inset-0 bg-[#31302fd0] backdrop-blur-md flex items-center justify-center z-50 p-0 sm:p-4 animate-fade-in">
+          <div className="bg-white-pure sm:rounded-3xl border border-outline-variant w-full max-w-xl p-5 sm:p-8 shadow-2xl relative h-full sm:h-auto sm:max-h-[90vh] overflow-y-auto select-none">
             
             <button 
               onClick={() => setIsPatientModalOpen(false)}
@@ -4125,10 +4153,11 @@ export default function CRMPage() {
                 {/* Avatar upload section */}
                 <div className="flex flex-col items-center mb-4">
                   <div className="relative group cursor-pointer" onClick={() => document.getElementById('new_pat_avatar_file')?.click()}>
-                    <Image width={500} height={500} unoptimized 
+                    <Image width={500} height={500} unoptimized
                       className="h-20 w-20 rounded-2xl object-cover border-2 border-primary/20 hover:opacity-85 transition-opacity"
-                      src={newPatAvatar || (editingPatientId ? patients.find(p => p.id === editingPatientId)?.avatar : '') || 'https://api.dicebear.com/7.x/notionists/svg?seed=placeholder'} 
+                      src={newPatAvatar || (editingPatientId ? patients.find(p => p.id === editingPatientId)?.avatar : '') || 'https://api.dicebear.com/7.x/notionists/svg?seed=placeholder'}
                       alt="Preview Avatar"
+                      sizes="(max-width: 768px) 100vw, 500px"
                     />
                     <div className="absolute inset-0 bg-black/40 rounded-2xl opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
                       <span className="material-symbols-outlined text-white-pure text-[20px]">photo_camera</span>
@@ -4254,8 +4283,8 @@ export default function CRMPage() {
 
       {/* 9. Service Modal */}
       {isServiceModalOpen && (
-        <div className="fixed inset-0 bg-[#31302fd0] backdrop-blur-md flex items-center justify-center z-50 p-4 animate-fade-in">
-          <div className="bg-white-pure rounded-3xl border border-outline-variant w-full max-w-lg p-8 shadow-2xl relative select-none">
+        <div className="fixed inset-0 bg-[#31302fd0] backdrop-blur-md flex items-center justify-center z-50 p-0 sm:p-4 animate-fade-in">
+          <div className="bg-white-pure sm:rounded-3xl border border-outline-variant w-full max-w-lg p-5 sm:p-8 shadow-2xl relative h-full sm:h-auto sm:max-h-[90vh] overflow-y-auto select-none">
             <button 
               onClick={() => setIsServiceModalOpen(false)}
               className="absolute top-6 right-6 p-2 rounded-full hover:bg-surface-container/50 text-on-surface transition-colors"
@@ -4333,8 +4362,8 @@ export default function CRMPage() {
 
       {/* 10. Inventory Modal */}
       {isInventoryModalOpen && (
-        <div className="fixed inset-0 bg-[#31302fd0] backdrop-blur-md flex items-center justify-center z-50 p-4 animate-fade-in">
-          <div className="bg-white-pure rounded-3xl border border-outline-variant w-full max-w-lg p-8 shadow-2xl relative select-none">
+        <div className="fixed inset-0 bg-[#31302fd0] backdrop-blur-md flex items-center justify-center z-50 p-0 sm:p-4 animate-fade-in">
+          <div className="bg-white-pure sm:rounded-3xl border border-outline-variant w-full max-w-lg p-5 sm:p-8 shadow-2xl relative h-full sm:h-auto sm:max-h-[90vh] overflow-y-auto select-none">
             <button 
               onClick={() => setIsInventoryModalOpen(false)}
               className="absolute top-6 right-6 p-2 rounded-full hover:bg-surface-container/50 text-on-surface transition-colors"
@@ -4408,8 +4437,8 @@ export default function CRMPage() {
 
       {/* 11. Transaction Modal */}
       {isTransactionModalOpen && (
-        <div className="fixed inset-0 bg-[#31302fd0] backdrop-blur-md flex items-center justify-center z-50 p-4 animate-fade-in">
-          <div className="bg-white-pure rounded-3xl border border-outline-variant w-full max-w-lg p-8 shadow-2xl relative select-none">
+        <div className="fixed inset-0 bg-[#31302fd0] backdrop-blur-md flex items-center justify-center z-50 p-0 sm:p-4 animate-fade-in">
+          <div className="bg-white-pure sm:rounded-3xl border border-outline-variant w-full max-w-lg p-5 sm:p-8 shadow-2xl relative h-full sm:h-auto sm:max-h-[90vh] overflow-y-auto select-none">
             <button 
               onClick={() => setIsTransactionModalOpen(false)}
               className="absolute top-6 right-6 p-2 rounded-full hover:bg-surface-container/50 text-on-surface transition-colors"
@@ -4501,8 +4530,8 @@ export default function CRMPage() {
 
       {/* 7. Novo Agendamento Modal Overlay */}
       {isNewAppointmentOpen && (
-        <div className="fixed inset-0 bg-[#31302fd0] backdrop-blur-md flex items-center justify-center z-50 p-4 animate-fade-in">
-          <div className="bg-white-pure rounded-3xl border border-outline-variant w-full max-w-lg p-8 shadow-2xl relative select-none">
+        <div className="fixed inset-0 bg-[#31302fd0] backdrop-blur-md flex items-center justify-center z-50 p-0 sm:p-4 animate-fade-in">
+          <div className="bg-white-pure sm:rounded-3xl border border-outline-variant w-full max-w-lg p-5 sm:p-8 shadow-2xl relative h-full sm:h-auto sm:max-h-[90vh] overflow-y-auto select-none">
             
             <button 
               onClick={() => {
@@ -4669,7 +4698,7 @@ export default function CRMPage() {
             >
               <span className="material-symbols-outlined text-3xl">close</span>
             </button>
-            <Image width={500} height={500} unoptimized src={activeLightboxImage} className="max-w-full max-h-[80vh] rounded-2xl object-contain shadow-2xl border border-white/10" alt="Visualização ampliada" onClick={(e) => e.stopPropagation()} />
+            <Image width={500} height={500} unoptimized src={activeLightboxImage} className="max-w-full max-h-[80vh] rounded-2xl object-contain shadow-2xl border border-white/10" alt="Visualização ampliada" onClick={(e) => e.stopPropagation()} sizes="(max-width: 768px) 100vw, 500px" />
           </div>
         </div>
       )}
