@@ -1,13 +1,13 @@
 import { NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
-import { supabase } from '../../../../lib/supabase';
+import { supabaseAdmin } from '../../../../lib/supabase';
 
 const SALT_ROUNDS = 10;
 
 export async function POST() {
   try {
     // Verificar se já existe algum admin
-    const { data: existingAdmin } = await supabase
+    const { data: existingAdmin } = await supabaseAdmin
       .from('users')
       .select('id')
       .eq('role', 'admin')
@@ -25,7 +25,7 @@ export async function POST() {
     const passwordHash = await bcrypt.hash('admin123', SALT_ROUNDS);
 
     // Criar admin padrão
-    const { data: newAdmin, error } = await supabase
+    const { data: newAdmin, error } = await supabaseAdmin
       .from('users')
       .insert([{
         name: 'Dra. Gabi Almeida',

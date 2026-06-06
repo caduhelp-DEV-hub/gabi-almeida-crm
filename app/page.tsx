@@ -976,7 +976,7 @@ export default function CRMPage() {
                 </button>
                 
                 {isAlertNotificationOpen && (
-                  <div className="absolute right-0 mt-3 w-80 max-w-[calc(100vw-2rem)] bg-surface-container-lowest border border-outline-variant rounded-2xl p-4 shadow-xl z-50">
+                  <div className="absolute right-4 sm:right-0 mt-3 w-[calc(100vw-2rem)] sm:w-80 bg-surface-container-lowest border border-outline-variant rounded-2xl p-4 shadow-xl z-50">
                     <div className="flex justify-between items-center mb-4 pb-2 border-b border-outline-variant/50">
                       <span className="font-manrope text-[14px] font-bold text-primary">Alertas Clínicos Ativos</span>
                       <span className="bg-error-container text-on-error-container px-2 py-0.5 rounded text-[10px] font-bold">{criticalAlerts.length} Críticos</span>
@@ -1039,7 +1039,7 @@ export default function CRMPage() {
               </div>
               
               {isProfileMenuOpen && (
-                <div className="absolute right-0 mt-3 w-56 max-w-[calc(100vw-2rem)] bg-white-pure rounded-2xl shadow-xl border border-outline-variant py-2 z-50 animate-fade-in text-[13px] font-sans">
+                <div className="absolute right-4 sm:right-0 mt-3 w-[calc(100vw-2rem)] sm:w-56 bg-white-pure rounded-2xl shadow-xl border border-outline-variant py-2 z-50 animate-fade-in text-[13px] font-sans">
                   <button 
                     onClick={() => { setIsProfileMenuOpen(false); setIsEditProfileModalOpen(true); }}
                     className="w-full text-left px-4 py-2.5 hover:bg-surface-container flex items-center gap-3 text-on-surface"

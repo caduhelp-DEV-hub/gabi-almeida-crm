@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
-import { supabase } from '../../../../lib/supabase';
+import { supabaseAdmin } from '../../../../lib/supabase';
 import { signSessionToken, COOKIE_NAME } from '../../../../lib/auth';
 
 const TOKEN_EXPIRY_SECONDS = 60 * 60 * 24 * 7;
@@ -16,7 +16,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { data: user, error } = await supabase
+    const { data: user, error } = await supabaseAdmin
       .from('users')
       .select('*')
       .eq('username', username)
