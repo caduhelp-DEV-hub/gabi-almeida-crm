@@ -2606,7 +2606,7 @@ export default function CRMPage() {
                             <div key={item.id} className="relative flex gap-6 items-start">
                               <div className="z-10 bg-primary w-12 h-12 rounded-full flex items-center justify-center shadow border-4 border-white-pure text-white-pure">
                                 <span className="material-symbols-outlined text-[18px]">
-                                  {item.categoria === 'Procedimento' ? 'face' : 'chat_bubble'}
+                                  {item.category === 'Procedimento' ? 'face' : 'chat_bubble'}
                                 </span>
                               </div>
                               <div className="flex-1 pt-1 bg-surface-container/10 p-4 rounded-xl border border-outline-variant/30">
@@ -2614,10 +2614,10 @@ export default function CRMPage() {
                                   <h4 className="font-manrope text-[13px] font-bold text-on-surface">{item.title}</h4>
                                   <span className="text-[11px] text-on-surface-variant font-medium">{item.date}</span>
                                 </div>
-                                <p className="text-[12px] text-on-surface-variant leading-relaxed mt-1">{item.descricao}</p>
+                                <p className="text-[12px] text-on-surface-variant leading-relaxed mt-1">{item.description}</p>
                                 <div className="flex gap-2 mt-3">
                                   <span className="bg-[#fed65b] text-[#745c00] px-2.5 py-0.5 rounded-full text-[9px] font-bold uppercase">
-                                    {item.categoria}
+                                    {item.category}
                                   </span>
                                   <span className="bg-tertiary-fixed text-on-tertiary-fixed-variant px-2.5 py-0.5 rounded-full text-[9px] font-bold uppercase">
                                     {item.status}
@@ -2798,7 +2798,7 @@ export default function CRMPage() {
                                   <td className="py-3.5 font-medium text-on-surface-variant">{item.date}</td>
                                   <td className="py-3.5">
                                     <p className="font-bold text-on-surface font-manrope">{item.procedimento}</p>
-                                    <p className="text-[10px] text-outline mt-0.5">{item.descricao}</p>
+                                    <p className="text-[10px] text-outline mt-0.5">{item.description}</p>
                                   </td>
                                   <td className="py-3.5 text-on-surface-variant font-medium">{item.method}</td>
                                   <td className="py-3.5 font-bold font-manrope text-primary">R$ {item.price.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
