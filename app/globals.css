@@ -149,3 +149,72 @@
     margin: 1.5cm;
   }
 }
+
+/* Mobile Responsiveness Styles (MinhaAgenda reference visual mapping) */
+@media (max-width: 768px) {
+  * {
+    box-sizing: border-box !important;
+  }
+  
+  body, html {
+    overflow-x: hidden !important;
+    width: 100vw;
+  }
+
+  /* Sidebar fix fixed drawer and overlay */
+  .sidebar {
+    position: fixed !important;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    height: 100% !important;
+    transform: translateX(-100%) !important;
+    transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    z-index: 250 !important;
+  }
+  
+  .sidebar.open {
+    transform: translateX(0) !important;
+  }
+  
+  .sidebar-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.4);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    z-index: 240;
+  }
+  
+  .sidebar.open ~ .sidebar-overlay,
+  .sidebar-overlay.open {
+    display: block !important;
+  }
+
+  /* Safe tap target sizes */
+  button, select, input, a {
+    min-height: 44px;
+  }
+
+  /* Custom styles for the mobile Agenda header and date selectors */
+  .view-toggle button {
+    min-height: 36px; /* slightly smaller for pills to look compact */
+  }
+
+  /* Ensure text sizing compliance */
+  .font-sans, .font-manrope {
+    font-size: 14px;
+  }
+  
+  span, label, p, p.text-[10px] {
+    font-size: 12px;
+  }
+
+  /* Scrollbars and layouts adjustments for month/week views */
+  .agenda-grid {
+    width: 100% !important;
+    overflow-x: auto !important;
+  }
+}
+

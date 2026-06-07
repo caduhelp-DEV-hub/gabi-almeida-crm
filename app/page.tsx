@@ -244,6 +244,23 @@ export default function CRMPage() {
     })
     .reduce((acc, t) => acc + t.value, 0);
 
+  // Mobile Financeiro metrics
+  const monthlyRevenueTransactions = transactions.filter(t => {
+    const parts = t.date.split('/');
+    if (parts.length === 3) {
+      const [, m, y] = parts;
+      return m === todayMonth && y === todayYear && t.value > 0;
+    }
+    return false;
+  });
+  const receitaEsperada = monthlyRevenueTransactions.reduce((acc, t) => acc + t.value, 0);
+  const receitaRecebida = monthlyRevenueTransactions
+    .filter(t => t.status === 'Pago' || t.status === 'Confirmado')
+    .reduce((acc, t) => acc + t.value, 0);
+  const aReceber = monthlyRevenueTransactions
+    .filter(t => t.status === 'Pendente')
+    .reduce((acc, t) => acc + t.value, 0);
+
   const appointmentsToConsider = appointments;
   const appointmentsToday = appointmentsToConsider.filter(a => a.date === todayDateStr).length;
   const totalAtendimentosDisplay = appointmentsToday;
@@ -941,7 +958,7 @@ export default function CRMPage() {
       <main className="main-content flex-1 flex flex-col h-full overflow-hidden relative">
         
         {/* TopNavBar Shell */}
-        <header className="h-16 md:h-20 w-full flex justify-between items-center px-4 md:px-8 bg-white-pure/60 backdrop-blur-xl border-b border-outline-variant z-20 relative gap-4">
+        <header className={`h-16 md:h-20 w-full flex justify-between items-center px-4 md:px-8 bg-white-pure/60 backdrop-blur-xl border-b border-outline-variant z-20 relative gap-4 ${currentTab === 'agenda' ? 'hidden lg:flex' : 'flex'}`}>
           
           <button
             onClick={() => setIsMobileMenuOpen(true)}
@@ -1404,10 +1421,119 @@ export default function CRMPage() {
 
         {/* 4. Agenda Tab Canvas */}
         {currentTab === 'agenda' && (
-          <section className="flex-1 overflow-hidden flex flex-col p-6 md:p-8 bg-surface select-none relative">
+          <section className="flex-1 overflow-hidden flex flex-col p-0 lg:p-8 bg-surface select-none relative">
+            
+            {/* Mobile-Only Header and Calendar */}
+            <div className="lg:hidden flex flex-col w-full bg-white-pure border-b border-outline-variant sticky top-0 z-30">
+              {/* Header: ☰ | [Semanal] [Mensal] | 🔍 */}
+              <div className="h-14 flex items-center justify-between px-4">
+                <button 
+                  onClick={() => setIsMobileMenuOpen(true)}
+                  className="p-2 text-on-surface-variant hover:text-primary transition-colors cursor-pointer flex items-center justify-center -ml-2"
+                >
+                  <span className="material-symbols-outlined text-[24px]">menu</span>
+                </button>
+
+                <div className="flex p-1 bg-surface-container rounded-full border border-outline-variant/60 select-none">
+                  <button 
+                    onClick={() => setAgendaView('semanal')}
+                    className={`px-4 py-1 rounded-full text-[12px] font-bold transition-all cursor-pointer h-9 flex items-center justify-center min-w-[70px] ${agendaView !== 'mensal' ? 'bg-[#79542e] text-white-pure shadow-sm' : 'text-on-surface-variant'}`}
+                  >
+                    Semana
+                  </button>
+                  <button 
+                    onClick={() => setAgendaView('mensal')}
+                    className={`px-4 py-1 rounded-full text-[12px] font-bold transition-all cursor-pointer h-9 flex items-center justify-center min-w-[70px] ${agendaView === 'mensal' ? 'bg-[#79542e] text-white-pure shadow-sm' : 'text-on-surface-variant'}`}
+                  >
+                    Mês
+                  </button>
+                </div>
+
+                <button 
+                  onClick={() => setIsMobileSearchOpen(true)}
+                  className="p-2 text-on-surface-variant hover:text-primary transition-colors cursor-pointer flex items-center justify-center -mr-2"
+                >
+                  <span className="material-symbols-outlined text-[24px]">search</span>
+                </button>
+              </div>
+
+              {/* Compact Weekly Calendar (only if not monthly view) */}
+              {agendaView !== 'mensal' && (
+                <div className="flex flex-col bg-white-pure pt-2 pb-3 px-4 border-t border-outline-variant/30 select-none">
+                  <div className="flex justify-between items-center mb-2">
+                    <button 
+                      onClick={() => {
+                        const newDate = new Date(agendaNavDate);
+                        newDate.setDate(newDate.getDate() - 7);
+                        setAgendaNavDate(newDate);
+                      }}
+                      className="text-on-surface-variant hover:text-primary transition-colors flex items-center justify-center p-1"
+                    >
+                      <span className="material-symbols-outlined text-[18px]">chevron_left</span>
+                    </button>
+                    <span className="font-manrope text-[11px] font-black uppercase tracking-wider text-primary">
+                      {agendaNavDate.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' }).toUpperCase()}
+                    </span>
+                    <button 
+                      onClick={() => {
+                        const newDate = new Date(agendaNavDate);
+                        newDate.setDate(newDate.getDate() + 7);
+                        setAgendaNavDate(newDate);
+                      }}
+                      className="text-on-surface-variant hover:text-primary transition-colors flex items-center justify-center p-1"
+                    >
+                      <span className="material-symbols-outlined text-[18px]">chevron_right</span>
+                    </button>
+                  </div>
+                  
+                  {/* 7 Columns: Dom-Sáb */}
+                  <div className="grid grid-cols-7 gap-1 text-center">
+                    {(() => {
+                      const activeDate = new Date(agendaNavDate);
+                      const dayOfWeek = activeDate.getDay();
+                      const sunday = new Date(activeDate);
+                      sunday.setDate(activeDate.getDate() - dayOfWeek);
+
+                      const days = [];
+                      const labels = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+                      for (let i = 0; i < 7; i++) {
+                        const d = new Date(sunday);
+                        d.setDate(sunday.getDate() + i);
+                        days.push({
+                          label: labels[i],
+                          dayNum: d.getDate(),
+                          dateObject: d,
+                          isToday: d.toDateString() === new Date().toDateString(),
+                          isSelected: d.toDateString() === agendaNavDate.toDateString()
+                        });
+                      }
+
+                      return days.map((day, idx) => (
+                        <div 
+                          key={idx} 
+                          onClick={() => setAgendaNavDate(day.dateObject)}
+                          className="flex flex-col items-center cursor-pointer py-1"
+                        >
+                          <span className="text-[10px] text-outline font-bold uppercase tracking-tight mb-1">{day.label}</span>
+                          <span className={`w-8 h-8 flex items-center justify-center rounded-full text-[13px] font-bold transition-all ${
+                            day.isSelected 
+                              ? 'bg-[#79542e] text-white-pure shadow-sm' 
+                              : day.isToday 
+                                ? 'text-[#79542e] border border-[#79542e]' 
+                                : 'text-on-surface hover:bg-surface-container/50'
+                          }`}>
+                            {day.dayNum}
+                          </span>
+                        </div>
+                      ));
+                    })()}
+                  </div>
+                </div>
+              )}
+            </div>
             
             {/* Calendar Controls */}
-            <div className="flex justify-between items-end mb-6">
+            <div className="hidden lg:flex justify-between items-end mb-6">
               <div className="space-y-3">
                 <h2 className="font-manrope text-headline-md font-bold text-on-surface flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3 text-[20px] sm:text-[26px]">
                   <span className="material-symbols-outlined text-primary" style={{fontVariationSettings: "'FILL' 1"}}>calendar_today</span>
@@ -1493,9 +1619,131 @@ export default function CRMPage() {
               {/* Main Schedule Container */}
               <div className="flex-1 bg-white-pure rounded-3xl border border-outline-variant shadow-sm overflow-hidden flex flex-col">
                 
+                {/* Mobile View: Vertical list of cards (Timeline replacement) */}
+                {agendaView !== 'mensal' && (
+                  <div className="flex-1 overflow-y-auto p-4 space-y-3 lg:hidden bg-[#fbfaf8]">
+                    {(() => {
+                      const formattedDay = String(agendaNavDate.getDate()).padStart(2, '0');
+                      const formattedMonth = String(agendaNavDate.getMonth() + 1).padStart(2, '0');
+                      const dateStr = `${agendaNavDate.getFullYear()}-${formattedMonth}-${formattedDay}`;
+                      const dayAppts = appointments.filter(appt => appt.date === dateStr);
+
+                      if (dayAppts.length === 0) {
+                        return (
+                          <div className="flex flex-col items-center justify-center py-12 text-center">
+                            <span className="material-symbols-outlined text-[48px] text-outline opacity-40">calendar_today</span>
+                            <p className="mt-2 font-manrope text-[14px] font-bold text-on-surface-variant">Nenhum atendimento agendado</p>
+                            <p className="text-[11px] text-outline mt-1">Toque no botão "+" para criar um novo</p>
+                          </div>
+                        );
+                      }
+
+                      return dayAppts.map(appt => {
+                        const isConsult = appt.category === 'Consulta';
+                        
+                        // Assign background colors based on professional
+                        let cardColorClass = 'bg-emerald-50/60 border-emerald-300 text-emerald-900';
+                        if (appt.professional.toLowerCase().includes('ricardo')) {
+                          cardColorClass = 'bg-blue-50/60 border-blue-300 text-blue-900';
+                        } else if (appt.professional.toLowerCase().includes('helena')) {
+                          cardColorClass = 'bg-pink-50/60 border-pink-300 text-pink-900';
+                        }
+
+                        const badgeBg = appt.status === 'Finalizado' 
+                          ? 'bg-emerald-600 text-white-pure' 
+                          : appt.status === 'Em Atendimento' 
+                            ? 'bg-cyan-600 text-white-pure' 
+                            : appt.status === 'Confirmado' 
+                              ? 'bg-amber-500 text-white-pure' 
+                              : 'bg-slate-400 text-white-pure';
+
+                        return (
+                          <div 
+                            key={appt.id} 
+                            className={`p-4 rounded-xl border-l-4 border shadow-sm flex flex-col gap-2 relative group hover:shadow-md transition-all ${cardColorClass}`}
+                          >
+                            {/* Status badge in top right */}
+                            <span className={`absolute top-4 right-4 text-[9px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wide ${badgeBg}`}>
+                              {appt.status}
+                            </span>
+
+                            {/* Time */}
+                            <p className="font-manrope text-[13px] font-extrabold flex items-center gap-1.5">
+                              <span className="material-symbols-outlined text-[14px]">schedule</span>
+                              {appt.time}
+                            </p>
+
+                            {/* Client Name */}
+                            <p className="text-[13px] font-medium flex items-center gap-1.5">
+                              <span className="material-symbols-outlined text-[16px]">person</span>
+                              {appt.patientName}
+                            </p>
+
+                            {/* Service / Procedure */}
+                            <p className="text-[13px] font-medium flex items-center gap-1.5">
+                              <span className="material-symbols-outlined text-[16px]">
+                                {isConsult ? 'event_note' : 'spa'}
+                              </span>
+                              {appt.procedure}
+                            </p>
+
+                            {/* Notes */}
+                            {appt.notes && (
+                              <p className="text-[12px] opacity-80 italic flex items-start gap-1.5 mt-1 pt-1 border-t border-black/5">
+                                <span className="material-symbols-outlined text-[14px] mt-0.5">chat_bubble</span>
+                                {appt.notes}
+                              </p>
+                            )}
+
+                            {/* Actions bar */}
+                            <div className="flex gap-3 justify-end mt-2 pt-2 border-t border-black/5">
+                              <button 
+                                onClick={() => {
+                                  setEditingAppointment(appt);
+                                  setNewApptPatient(appt.patientName);
+                                  setNewApptProcedure(appt.procedure);
+                                  setNewApptProfessional(appt.professional);
+                                  setNewApptTime(appt.time);
+                                  setNewApptDate(appt.date);
+                                  setNewApptCategory(appt.category);
+                                  setNewApptStatus(appt.status);
+                                  setIsNewAppointmentOpen(true);
+                                }}
+                                className="p-1 hover:text-primary transition-colors flex items-center gap-1 font-bold text-[11px] cursor-pointer"
+                              >
+                                <span className="material-symbols-outlined text-[15px]">edit</span>
+                                Editar
+                              </button>
+                              <button 
+                                onClick={() => {
+                                  showConfirm(`Remover agendamento de ${appt.patientName}?`, async () => {
+                                    try {
+                                      const { error } = await supabase.from('appointments').delete().eq('id', appt.id);
+                                      if (error) throw error;
+                                      setAppointments(prev => prev.filter(a => a.id !== appt.id));
+                                      showAlert('Agendamento removido.');
+                                    } catch (err: any) {
+                                      console.error('Delete appt error:', err);
+                                      showAlert(`Erro ao excluir: ${err.message}`);
+                                    }
+                                  });
+                                }}
+                                className="p-1 hover:text-error transition-colors flex items-center gap-1 font-bold text-[11px] cursor-pointer"
+                              >
+                                <span className="material-symbols-outlined text-[15px]">delete</span>
+                                Excluir
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      });
+                    })()}
+                  </div>
+                )}
+                
                 {/* 4.1 Daily View Layout */}
                 {agendaView === 'diaria' && (
-                  <div className="agenda-grid w-full h-full flex flex-row overflow-hidden">
+                  <div className="agenda-grid w-full h-full hidden lg:flex flex-row overflow-hidden">
                     {/* Clock hours sidebar */}
                     <div className="w-20 sm:w-24 border-r border-outline-variant flex flex-col pt-16 font-manrope bg-surface-container/10">
                       <div className="h-20 flex items-start justify-center text-[11px] text-outline pt-2 font-bold">08:00</div>
@@ -1669,7 +1917,7 @@ export default function CRMPage() {
 
                 {/* 4.2 Weekly View Layout */}
                 {agendaView === 'semanal' && (
-                  <div className="agenda-grid w-full h-full flex flex-col overflow-x-auto overflow-y-hidden bg-white-pure custom-scrollbar">
+                  <div className="agenda-grid w-full h-full hidden lg:flex flex-col overflow-x-auto overflow-y-hidden bg-white-pure custom-scrollbar">
                     <div className="flex flex-col min-w-[800px] h-full overflow-hidden">
                       {/* Header: Weekdays */}
                       <div className="grid grid-cols-7 border-b border-outline-variant bg-surface-container/30">
@@ -1856,7 +2104,7 @@ export default function CRMPage() {
               </div>
 
               {/* Dynamic Gabi Almeida AI Widget column (Image 3) */}
-              <div className="w-80 border-l border-outline-variant bg-surface-container-lowest p-6 flex flex-col gap-6 rounded-3xl">
+              <div className="hidden lg:flex w-80 border-l border-outline-variant bg-surface-container-lowest p-6 flex flex-col gap-6 rounded-3xl">
                 <div className="flex items-center justify-between">
                   <h3 className="font-manrope font-bold text-[16px]">Próximos hoje</h3>
                   <span className="text-[11px] bg-primary/10 text-primary px-2 py-0.5 rounded-full font-bold">2 Clientes</span>
@@ -1937,6 +2185,26 @@ export default function CRMPage() {
               </div>
 
             </div>
+
+            {/* FAB Floating action button for mobile */}
+            <button 
+              onClick={() => {
+                setEditingAppointment(null);
+                setNewApptPatient('');
+                setNewApptProcedure('');
+                setNewApptProfessional('');
+                setNewApptTime('08:00');
+                const formattedDay = String(agendaNavDate.getDate()).padStart(2, '0');
+                const formattedMonth = String(agendaNavDate.getMonth() + 1).padStart(2, '0');
+                setNewApptDate(`${agendaNavDate.getFullYear()}-${formattedMonth}-${formattedDay}`);
+                setNewApptCategory('Estética');
+                setNewApptStatus('Pendente');
+                setIsNewAppointmentOpen(true);
+              }}
+              className="lg:hidden fixed bottom-6 right-5 w-14 h-14 bg-[#79542e] text-white-pure rounded-full shadow-2xl flex items-center justify-center z-40 active:scale-95 transition-transform cursor-pointer"
+            >
+              <span className="material-symbols-outlined text-[28px]">add</span>
+            </button>
 
           </section>
         )}
@@ -2989,10 +3257,75 @@ export default function CRMPage() {
 
         {/* 6. Financeiro Module (Image 1 Layout) */}
         {currentTab === 'financeiro' && (
-          <section className="flex-1 overflow-y-auto p-6 md:p-8 bg-surface">
+          <section className="flex-1 overflow-y-auto px-4 py-6 lg:p-8 bg-surface">
             
             {/* Bento cards metric panel (Image 1) */}
-            <div className="financeiro-grid grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+            
+            {/* Mobile Period Selector (dropdown) */}
+            <div className="lg:hidden px-4 mb-4 select-none">
+              <div className="relative">
+                <select 
+                  value={`${agendaNavDate.getMonth() + 1}/${agendaNavDate.getFullYear()}`}
+                  onChange={(e) => {
+                    const [m, y] = e.target.value.split('/').map(Number);
+                    const d = new Date(agendaNavDate);
+                    d.setMonth(m - 1);
+                    d.setFullYear(y);
+                    setAgendaNavDate(d);
+                  }}
+                  className="w-full bg-[#fcfbf9] border border-outline-variant/60 rounded-xl px-4 py-3 text-[14px] font-bold text-primary appearance-none focus:outline-none focus:ring-1 focus:ring-primary/30 cursor-pointer"
+                >
+                  {(() => {
+                    const months = [
+                      'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
+                      'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
+                    ];
+                    const years = [2023, 2024, 2025, 2026];
+                    const options = [];
+                    for (const year of years) {
+                      for (let i = 0; i < 12; i++) {
+                        options.push({
+                          label: `${months[i]} de ${year}`,
+                          value: `${i + 1}/${year}`
+                        });
+                      }
+                    }
+                    return options.map(opt => (
+                      <option key={opt.value} value={opt.value}>{opt.label}</option>
+                    ));
+                  })()}
+                </select>
+                <span className="material-symbols-outlined absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-outline">
+                  unfold_more
+                </span>
+              </div>
+            </div>
+
+            {/* Mobile 3-Card Revenue panel */}
+            <div className="lg:hidden grid grid-cols-3 gap-2 px-4 mb-6">
+              {/* Receita Esperada */}
+              <div className="bg-[#fcfbf9] border border-outline-variant/60 rounded-xl p-2.5 text-center flex flex-col justify-between shadow-sm">
+                <span className="text-[10px] text-outline font-bold uppercase tracking-wider leading-none mb-1">Esperada</span>
+                <span className="font-manrope text-[14px] font-black text-blue-600 leading-none">
+                  R$ {receitaEsperada.toLocaleString('pt-BR', { maximumFractionDigits: 0 })}
+                </span>
+              </div>
+              {/* Receita Recebida */}
+              <div className="bg-[#fcfbf9] border border-outline-variant/60 rounded-xl p-2.5 text-center flex flex-col justify-between shadow-sm">
+                <span className="text-[10px] text-outline font-bold uppercase tracking-wider leading-none mb-1">Recebida</span>
+                <span className="font-manrope text-[14px] font-black text-emerald-600 leading-none">
+                  R$ {receitaRecebida.toLocaleString('pt-BR', { maximumFractionDigits: 0 })}
+                </span>
+              </div>
+              {/* A Receber */}
+              <div className="bg-[#fcfbf9] border border-outline-variant/60 rounded-xl p-2.5 text-center flex flex-col justify-between shadow-sm">
+                <span className="text-[10px] text-outline font-bold uppercase tracking-wider leading-none mb-1">A Receber</span>
+                <span className="font-manrope text-[14px] font-black text-amber-600 leading-none">
+                  R$ {aReceber.toLocaleString('pt-BR', { maximumFractionDigits: 0 })}
+                </span>
+              </div>
+            </div>
+            <div className="financeiro-grid hidden lg:grid grid-cols-3 gap-6 mb-8">
               
               {/* Entradas Card */}
               <div className="glass-panel p-6 rounded-3xl relative overflow-hidden group">
@@ -3134,7 +3467,7 @@ export default function CRMPage() {
                 </div>
 
                 {/* Highly aesthetic interactive bars chart representing image 1 meticulously */}
-                <div className="relative h-60 w-full flex items-end justify-between px-4 mt-4">
+                <div className="relative h-48 lg:h-60 w-full flex items-end justify-between px-4 mt-4">
                   <div className="absolute inset-0 flex flex-col justify-between pointer-events-none pb-1">
                     <div className="border-b border-outline-variant/20 w-full h-0"></div>
                     <div className="border-b border-outline-variant/20 w-full h-0"></div>
@@ -3205,13 +3538,15 @@ export default function CRMPage() {
                   <h3 className="font-manrope text-[16px] font-bold text-on-surface mb-6">Repasse de Comissões</h3>
                   <div className="space-y-4">
                     {commissionLeaders.map((lead, idx) => (
-                      <div key={idx} className="flex items-center gap-3 p-2 bg-white-pure/40 rounded-xl hover:bg-white-pure transition-colors">
-                        <Image width={500} height={500} unoptimized className="w-10 h-10 rounded-full object-cover" src={lead.avatar} alt={lead.name} sizes="(max-width: 768px) 100vw, 500px" />
-                        <div className="flex-1 min-w-0">
-                          <p className="font-manrope text-[12px] font-bold text-on-surface truncate">{lead.name}</p>
-                          <p className="text-[10px] text-on-surface-variant tracking-wider uppercase">Faturamento: R$ {lead.revenue.toLocaleString('pt-BR')}</p>
+                      <div key={idx} className="flex items-center justify-between py-3 border-b border-outline-variant/30 lg:border-none lg:bg-white-pure/40 lg:rounded-xl lg:p-2 lg:hover:bg-white-pure transition-colors">
+                        <div className="flex items-center gap-3">
+                          <Image width={500} height={500} unoptimized className="w-10 h-10 rounded-full object-cover" src={lead.avatar} alt={lead.name} sizes="(max-width: 768px) 100vw, 500px" />
+                          <div className="min-w-0">
+                            <p className="font-manrope text-[13px] lg:text-[12px] font-bold text-on-surface truncate">{lead.name}</p>
+                            <p className="text-[11px] lg:text-[10px] text-on-surface-variant tracking-wider uppercase">Faturamento: R$ {lead.revenue.toLocaleString('pt-BR')}</p>
+                          </div>
                         </div>
-                        <p className="font-manrope text-[12px] font-extrabold text-primary">R$ {lead.commission.toLocaleString('pt-BR')}</p>
+                        <p className="font-manrope text-[13px] lg:text-[12px] font-extrabold text-primary">R$ {lead.commission.toLocaleString('pt-BR')}</p>
                       </div>
                     ))}
                   </div>
