@@ -2924,11 +2924,11 @@ export default function CRMPage() {
                                 }));
                                 const newTx: Cobranca = {
                                   id: Math.random().toString(),
-                                  description: `${proc} - ${selectedPatient.nome}`,
-                                  date: new Date().toLocaleDateString('pt-BR'),
-                                  category: 'Procedimento',
+                                  descricao: `${proc} - ${selectedPatient.nome}`,
+                                  data: new Date().toLocaleDateString('pt-BR'),
+                                  categoria: 'Procedimento',
                                   status: status === 'Pago' ? 'Pago' : 'Pendente',
-                                  value: val
+                                  valor: val
                                 };
                                 setTransactions(prev => [newTx, ...prev]);
 
