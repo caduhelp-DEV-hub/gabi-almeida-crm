@@ -50,7 +50,7 @@ export default function CRMPage() {
   const [dashboardPeriod, setDashboardPeriod] = useState('Hoje');
   
   // Agenda View Control (Diária / Semanal / Mensal)
-  const [agendaView, setAgendaView] = useState<'diaria' | 'semanal' | 'mensal'>('diaria');
+  const [agendaView, setAgendaView] = useState<'diaria' | 'semanal' | 'mensal' | 'lista'>('diaria');
   const [isNewUserModalOpen, setIsNewUserModalOpen] = useState<boolean>(false);
   const [editingUser, setEditingUser] = useState<AppUser | null>(null);
   const [editingAppointment, setEditingAppointment] = useState<Appointment | null>(null);
@@ -715,6 +715,29 @@ export default function CRMPage() {
       default:
         return 'bg-surface-container-highest text-on-surface-variant';
     }
+  };
+
+  const exportTransactionsCSV = () => {
+    const headers = ['Data', 'Descricao', 'Categoria', 'Status', 'Valor'];
+    const rows = filteredTransactions.map(t => [
+      t.date,
+      `"${t.description.replace(/"/g, '""')}"`,
+      t.category,
+      t.status,
+      t.value.toFixed(2).replace('.', ',')
+    ]);
+    const csv = [headers, ...rows].map(r => r.join(';')).join('\n');
+    const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `transacoes_${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const printTransactions = () => {
+    window.print();
   };
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -1452,6 +1475,12 @@ export default function CRMPage() {
                   >
                     Mês
                   </button>
+                  <button 
+                    onClick={() => setAgendaView('lista')}
+                    className={`px-4 py-1 rounded-full text-[12px] font-bold transition-all cursor-pointer h-9 flex items-center justify-center min-w-[70px] ${agendaView === 'lista' ? 'bg-[#79542e] text-white-pure shadow-sm' : 'text-on-surface-variant'}`}
+                  >
+                    Lista
+                  </button>
                 </div>
 
                 <button 
@@ -1565,6 +1594,12 @@ export default function CRMPage() {
                       className={`px-5 py-1.5 rounded-full text-label-md text-[12px] font-bold transition-all cursor-pointer ${agendaView === 'mensal' ? 'bg-[#79542e] text-white-pure shadow-sm' : 'text-on-surface-variant hover:text-primary'}`}
                     >
                       Mês
+                    </button>
+                    <button 
+                      onClick={() => setAgendaView('lista')}
+                      className={`px-5 py-1.5 rounded-full text-label-md text-[12px] font-bold transition-all cursor-pointer ${agendaView === 'lista' ? 'bg-[#79542e] text-white-pure shadow-sm' : 'text-on-surface-variant hover:text-primary'}`}
+                    >
+                      Lista
                     </button>
                   </div>
                   
@@ -2140,6 +2175,119 @@ export default function CRMPage() {
                           Ir para Timeline Diária
                         </button>
                       </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* 4.4 List View (Monthly Chronological) */}
+                {agendaView === 'lista' && (
+                  <div className="agenda-grid w-full h-full flex flex-col overflow-hidden bg-white-pure rounded-3xl border border-outline-variant/60">
+                    <div className="flex justify-between items-center p-6 border-b border-outline-variant select-none">
+                      <div className="flex items-center gap-3">
+                        <button
+                          onClick={() => setAgendaNavDate(new Date(agendaNavDate.getFullYear(), agendaNavDate.getMonth() - 1, 1))}
+                          className="w-9 h-9 rounded-full border border-outline-variant/60 hover:bg-surface-container flex items-center justify-center transition-colors cursor-pointer"
+                          aria-label="Mês anterior"
+                        >
+                          <span className="material-symbols-outlined text-[18px]">chevron_left</span>
+                        </button>
+                        <h4 className="font-manrope font-black text-primary text-[18px] uppercase tracking-wider">
+                          {agendaNavDate.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })}
+                        </h4>
+                        <button
+                          onClick={() => setAgendaNavDate(new Date(agendaNavDate.getFullYear(), agendaNavDate.getMonth() + 1, 1))}
+                          className="w-9 h-9 rounded-full border border-outline-variant/60 hover:bg-surface-container flex items-center justify-center transition-colors cursor-pointer"
+                          aria-label="Próximo mês"
+                        >
+                          <span className="material-symbols-outlined text-[18px]">chevron_right</span>
+                        </button>
+                      </div>
+                      <span className="text-[12px] text-on-surface-variant font-bold">
+                        {(() => {
+                          const monthStr = `${agendaNavDate.getFullYear()}-${String(agendaNavDate.getMonth() + 1).padStart(2, '0')}`;
+                          return appointments.filter(a => a.date.startsWith(monthStr)).length;
+                        })()} agendamentos
+                      </span>
+                    </div>
+
+                    <div className="flex-1 overflow-y-auto p-6 space-y-6 custom-scrollbar">
+                      {(() => {
+                        const month = agendaNavDate.getMonth();
+                        const year = agendaNavDate.getFullYear();
+                        const daysInMonth = new Date(year, month + 1, 0).getDate();
+                        const daysWithAppts: { day: number; dateStr: string; appts: typeof appointments }[] = [];
+                        for (let day = 1; day <= daysInMonth; day++) {
+                          const formattedDay = String(day).padStart(2, '0');
+                          const formattedMonth = String(month + 1).padStart(2, '0');
+                          const dateStr = `${year}-${formattedMonth}-${formattedDay}`;
+                          const dayAppts = appointments
+                            .filter(a => a.date === dateStr)
+                            .filter(a => selectedProfessional === 'todos' || a.professional === selectedProfessional)
+                            .sort((a, b) => a.time.localeCompare(b.time));
+                          if (dayAppts.length > 0) {
+                            daysWithAppts.push({ day, dateStr, appts: dayAppts });
+                          }
+                        }
+                        if (daysWithAppts.length === 0) {
+                          return (
+                            <div className="text-center py-16 text-outline space-y-2">
+                              <span className="material-symbols-outlined text-5xl opacity-35">event_busy</span>
+                              <p className="text-[13px]">Nenhum agendamento neste mês.</p>
+                            </div>
+                          );
+                        }
+                        return daysWithAppts.map(({ day, dateStr, appts }) => {
+                          const date = new Date(year, month, day);
+                          const weekday = date.toLocaleDateString('pt-BR', { weekday: 'long' });
+                          return (
+                            <div key={dateStr}>
+                              <div className="flex items-center gap-3 mb-3">
+                                <div className="w-12 h-12 rounded-2xl bg-primary/10 flex flex-col items-center justify-center flex-shrink-0">
+                                  <span className="text-[18px] font-black text-primary leading-none">{day}</span>
+                                  <span className="text-[8px] uppercase font-bold text-primary/70 leading-none mt-0.5">{date.toLocaleDateString('pt-BR', { month: 'short' }).replace('.', '')}</span>
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-[14px] font-bold text-on-surface capitalize">{weekday}</p>
+                                  <p className="text-[11px] text-on-surface-variant">{appts.length} agendamento{appts.length > 1 ? 's' : ''}</p>
+                                </div>
+                              </div>
+                              <div className="space-y-2 sm:ml-[60px] sm:border-l-2 sm:border-outline-variant/40 sm:pl-4">
+                                {appts.map(appt => {
+                                  const isConsult = appt.category === 'Consulta';
+                                  const statusColors: { [key: string]: string } = {
+                                    'Finalizado': 'bg-emerald-500',
+                                    'Em Atendimento': 'bg-cyan-500',
+                                    'Confirmado': 'bg-amber-500',
+                                    'Pendente': 'bg-slate-400'
+                                  };
+                                  return (
+                                    <div
+                                      key={appt.id}
+                                      onClick={() => {
+                                        setAgendaNavDate(new Date(year, month, day));
+                                        setAgendaView('diaria');
+                                      }}
+                                      className="flex items-center gap-3 p-3 rounded-xl border border-outline-variant/50 bg-white-pure hover:border-primary/40 hover:shadow-sm transition-all cursor-pointer"
+                                    >
+                                      <span className="text-[12px] font-mono font-bold text-primary w-12 flex-shrink-0">{appt.time}</span>
+                                      <div className="flex-1 min-w-0">
+                                        <p className="text-[13px] font-bold text-on-surface truncate">{appt.patientName}</p>
+                                        <p className="text-[11px] text-on-surface-variant truncate">{appt.procedure} • {appt.professional}</p>
+                                      </div>
+                                      <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider ${
+                                        isConsult ? 'bg-tertiary-container/15 text-tertiary' : 'bg-secondary-container/20 text-[#745c00]'
+                                      }`}>
+                                        {appt.category}
+                                      </span>
+                                      <span className={`w-2 h-2 rounded-full flex-shrink-0 ${statusColors[appt.status] || 'bg-slate-400'}`} title={appt.status}></span>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          );
+                        });
+                      })()}
                     </div>
                   </div>
                 )}
@@ -3324,6 +3472,15 @@ export default function CRMPage() {
               .bar-anim { transform-origin: bottom; animation: bar-grow 0.6s ease-out backwards; }
               .legend-row { transition: opacity 0.2s ease, transform 0.2s ease; cursor: pointer; padding: 4px 6px; border-radius: 8px; }
               .legend-row:hover { background: rgba(121, 84, 46, 0.06); }
+              @media print {
+                .no-print, header, aside, nav, [class*="sidebar"], [class*="sticky"] { display: none !important; }
+                body, html, #__next, main { background: white !important; height: auto !important; overflow: visible !important; }
+                .glass-panel { box-shadow: none !important; border: 1px solid #ccc !important; page-break-inside: avoid; }
+                table { font-size: 11px !important; }
+                thead { display: table-header-group; }
+                tr { page-break-inside: avoid; }
+                @page { size: A4; margin: 1cm; }
+              }
             `}} />
             <div className="financeiro-grid grid grid-cols-1 lg:grid-cols-2 gap-3 mb-8">
               
@@ -3535,7 +3692,23 @@ export default function CRMPage() {
               {/* Top Row Header */}
               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 border-b border-outline-variant/30 pb-4 gap-4">
                 <h3 className="font-manrope text-[16px] font-bold text-on-surface">Transações Financeiras</h3>
-                <div className="flex gap-2">
+                <div className="flex flex-wrap gap-2 no-print">
+                  <button
+                    onClick={exportTransactionsCSV}
+                    className="px-3 py-1.5 border border-primary/40 text-primary hover:bg-primary/5 rounded-lg text-[12px] font-bold transition-colors flex items-center gap-1.5"
+                    title="Exportar transações filtradas como CSV"
+                  >
+                    <span className="material-symbols-outlined text-[16px]">file_download</span>
+                    CSV
+                  </button>
+                  <button
+                    onClick={printTransactions}
+                    className="px-3 py-1.5 border border-primary/40 text-primary hover:bg-primary/5 rounded-lg text-[12px] font-bold transition-colors flex items-center gap-1.5"
+                    title="Imprimir relatório de transações"
+                  >
+                    <span className="material-symbols-outlined text-[16px]">print</span>
+                    Imprimir
+                  </button>
                   <button onClick={() => {
                     setEditingTransaction(null);
                     setIsTransactionModalOpen(true);
