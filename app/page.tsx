@@ -76,6 +76,11 @@ export default function CRMPage() {
   const [isTransactionModalOpen, setIsTransactionModalOpen] = useState(false);
   const [editingCobranca, setEditingTransaction] = useState<Cobranca | null>(null);
 
+  const [isClientInteractModalOpen, setIsClientInteractModalOpen] = useState(false);
+  const [interactClient, setInteractClient] = useState<Cliente | null>(null);
+  const [interactAppointmentId, setInteractAppointmentId] = useState<string | null>(null);
+  const [isWhatsAppSubmenuOpen, setIsWhatsAppSubmenuOpen] = useState(false);
+
   // Cliente Sub-tabs Financial & Document Lists States
   interface PatientFinancialItem {
     id: string;
@@ -1651,10 +1656,49 @@ export default function CRMPage() {
                             </p>
 
                             {/* Client Name */}
-                            <p className="text-[13px] font-medium flex items-center gap-1.5">
-                              <span className="material-symbols-outlined text-[16px]">person</span>
-                              {appt.clienteNome}
-                            </p>
+                            <p 
+                               onClick={(e) => {
+                                 e.stopPropagation();
+                                 const client = patients.find(p => p.nome.toLowerCase() === appt.clienteNome.toLowerCase() || p.id === appt.clienteId);
+                                 if (client) {
+                                   setInteractClient(client);
+                                   setInteractAppointmentId(appt.id);
+                                   setIsWhatsAppSubmenuOpen(false);
+                                   setIsClientInteractModalOpen(true);
+                                 } else {
+                                   const tempClient: Cliente = {
+                                     id: appt.clienteId || '',
+                                     nome: appt.clienteNome,
+                                     avatar: appt.clienteAvatar || 'https://api.dicebear.com/7.x/notionists/svg?seed=' + appt.clienteNome.replace(/\s+/g, ''),
+                                     fotoDetalhes: appt.clienteAvatar || 'https://api.dicebear.com/7.x/notionists/svg?seed=' + appt.clienteNome.replace(/\s+/g, ''),
+                                     ultimaVisita: 'Hoje',
+                                     tier: 'Standard',
+                                     since: 'Hoje',
+                                     totalGasto: 0,
+                                     qtdeProcedimentos: 0,
+                                     dataUltimaFoto: '--',
+                                     status: 'Ativo',
+                                     alergias: 'Nenhuma',
+                                     medicacoes: 'Nenhum',
+                                     procedimentosAnteriores: 'Nenhum',
+                                     notasEvolucao: '',
+                                     fotoAntes: '',
+                                     fotoDepois: '',
+                                     fotosEvolucao: [],
+                                     historico: [],
+                                     telefone: '(11) 98029-7072'
+                                   };
+                                   setInteractClient(tempClient);
+                                   setInteractAppointmentId(appt.id);
+                                   setIsWhatsAppSubmenuOpen(false);
+                                   setIsClientInteractModalOpen(true);
+                                 }
+                               }}
+                               className="text-[13px] font-bold text-primary hover:underline cursor-pointer flex items-center gap-1.5"
+                             >
+                               <span className="material-symbols-outlined text-[16px]">person</span>
+                               {appt.clienteNome}
+                             </p>
 
                             {/* Service / Procedure */}
                             <p className="text-[13px] font-medium flex items-center gap-1.5">
@@ -2070,7 +2114,16 @@ export default function CRMPage() {
                     )}
                     <Image width={500} height={500} unoptimized className="h-10 w-10 rounded-full object-cover" src={patient.avatar} alt={patient.nome} sizes="(max-width: 768px) 100vw, 500px" />
                     <div className="flex-1 min-w-0">
-                      <p className="font-manrope text-[13px] font-extrabold text-on-surface truncate">
+                      <p 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setInteractClient(patient);
+                          setInteractAppointmentId(null);
+                          setIsWhatsAppSubmenuOpen(false);
+                          setIsClientInteractModalOpen(true);
+                        }}
+                        className="font-manrope text-[13px] font-extrabold text-primary hover:underline cursor-pointer truncate"
+                      >
                         {patient.pronome ? patient.pronome + ' ' : ''}{patient.nome}
                       </p>
                       <p className="text-[10px] text-on-surface-variant truncate mt-0.5">Última consulta: {patient.ultimaVisita}</p>
@@ -2119,27 +2172,23 @@ export default function CRMPage() {
                       onChange={async (e) => {
                         const file = e.target.files?.[0];
                         if (file) {
-                          const reader = new FileReader();
-                          reader.onloadend = async () => {
-                            const base64 = reader.result as string;
-                            try {
-                              const { data, error } = await supabase
-                                .from('clientes')
-                                .update({ avatar: base64, details_avatar: base64 })
-                                .eq('id', selectedPatient.id)
-                                .select();
-                              if (error) throw error;
-                              if (data && data[0]) {
-                                const updated = mapClienteToFrontend(data[0]);
-                                setPatients(prev => prev.map(p => p.id === selectedPatient.id ? updated : p));
-                              }
-                              showAlert('Foto de perfil atualizada com sucesso!');
-                            } catch (err: any) {
-                              console.error(err);
-                              showAlert(`Erro ao atualizar foto de perfil: ${err.message}`);
+                          try {
+                            const url = await uploadUserAvatar(file);
+                            const { data, error } = await supabase
+                              .from('clientes')
+                              .update({ avatar: url, foto_detalhes: url })
+                              .eq('id', selectedPatient.id)
+                              .select();
+                            if (error) throw error;
+                            if (data && data[0]) {
+                              const updated = mapClienteToFrontend(data[0]);
+                              setPatients(prev => prev.map(p => p.id === selectedPatient.id ? updated : p));
                             }
-                          };
-                          reader.readAsDataURL(file);
+                            showAlert('Foto de perfil atualizada com sucesso!');
+                          } catch (err: any) {
+                            console.error(err);
+                            showAlert(`Erro ao atualizar foto de perfil: ${err.message}`);
+                          }
                         }
                       }}
                     />
@@ -5046,6 +5095,137 @@ export default function CRMPage() {
               <span className="material-symbols-outlined text-3xl">close</span>
             </button>
             <Image width={500} height={500} unoptimized src={activeLightboxImage} className="max-w-full max-h-[80vh] rounded-2xl object-contain shadow-2xl border border-white/10" alt="Visualização ampliada" onClick={(e) => e.stopPropagation()} sizes="(max-width: 768px) 100vw, 500px" />
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Interação com o Cliente (Foto 2) */}
+      {isClientInteractModalOpen && interactClient && (
+        <div className="fixed inset-0 bg-[#31302fd0] backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fade-in" onClick={() => setIsClientInteractModalOpen(false)}>
+          <div className="bg-[#f7f3f0] rounded-3xl border border-outline-variant w-full max-w-md p-6 shadow-2xl relative" onClick={(e) => e.stopPropagation()}>
+            <button
+              onClick={() => setIsClientInteractModalOpen(false)}
+              className="absolute top-4 right-4 p-1.5 rounded-full hover:bg-surface-container/50 text-on-surface transition-colors cursor-pointer"
+            >
+              <span className="material-symbols-outlined text-[20px]">close</span>
+            </button>
+
+            <div className="text-center space-y-4">
+              <Image width={500} height={500} unoptimized className="h-16 w-16 rounded-full object-cover border-2 border-primary/20 mx-auto" src={interactClient.avatar} alt={interactClient.nome} sizes="100vw" />
+              <div>
+                <h3 className="font-manrope text-[18px] font-bold text-on-surface leading-tight">{interactClient.nome}</h3>
+                <p className="text-[12px] text-on-surface-variant font-semibold mt-0.5">{interactClient.telefone || 'Sem telefone cadastrado'}</p>
+              </div>
+            </div>
+
+            {/* Menu de Opções */}
+            <div className="grid grid-cols-4 gap-2 border-t border-outline-variant/50 mt-6 pt-4 text-center">
+              <a 
+                href={`tel:${interactClient.telefone || ''}`} 
+                onClick={() => setIsClientInteractModalOpen(false)}
+                className="flex flex-col items-center justify-center p-2 rounded-2xl hover:bg-surface transition-all cursor-pointer min-h-[70px]"
+              >
+                <span className="material-symbols-outlined text-emerald-600 text-2xl">call</span>
+                <span className="text-[11px] font-bold text-on-surface mt-1">Ligar</span>
+              </a>
+
+              <button 
+                onClick={() => setIsWhatsAppSubmenuOpen(!isWhatsAppSubmenuOpen)}
+                className={`flex flex-col items-center justify-center p-2 rounded-2xl hover:bg-surface transition-all cursor-pointer min-h-[70px] ${isWhatsAppSubmenuOpen ? 'bg-primary/5 border border-primary/20' : ''}`}
+              >
+                <span className="material-symbols-outlined text-emerald-500 text-2xl">chat</span>
+                <span className="text-[11px] font-bold text-on-surface mt-1">Whats</span>
+              </button>
+
+              <button 
+                onClick={() => {
+                  setIsClientInteractModalOpen(false);
+                  setEditingPatientId(interactClient.id);
+                  setNewPatAvatar(interactClient.avatar);
+                  setIsPatientModalOpen(true);
+                }}
+                className="flex flex-col items-center justify-center p-2 rounded-2xl hover:bg-surface transition-all cursor-pointer min-h-[70px]"
+              >
+                <span className="material-symbols-outlined text-blue-600 text-2xl">edit</span>
+                <span className="text-[11px] font-bold text-on-surface mt-1">Editar</span>
+              </button>
+
+              <button 
+                onClick={() => {
+                  setIsClientInteractModalOpen(false);
+                  showConfirm(`Deseja realmente excluir o cliente ${interactClient.nome}?`, async () => {
+                    try {
+                      const { error } = await supabase.from('clientes').delete().eq('id', interactClient.id);
+                      if (error) throw error;
+                      setPatients(prev => prev.filter(p => p.id !== interactClient.id));
+                      showAlert('Cliente excluído com sucesso.');
+                    } catch (err: any) {
+                      console.error(err);
+                      showAlert(`Erro ao excluir cliente: ${err.message}`);
+                    }
+                  });
+                }}
+                className="flex flex-col items-center justify-center p-2 rounded-2xl hover:bg-surface transition-all cursor-pointer min-h-[70px]"
+              >
+                <span className="material-symbols-outlined text-error text-2xl">delete</span>
+                <span className="text-[11px] font-bold text-error mt-1">Deletar</span>
+              </button>
+            </div>
+
+            {/* Submenu do WhatsApp */}
+            {isWhatsAppSubmenuOpen && (
+              <div className="bg-white-pure border border-outline-variant/60 rounded-2xl p-4 mt-4 space-y-2.5 animate-slide-up text-[12px]">
+                <p className="text-[10px] text-on-surface-variant font-bold text-center uppercase tracking-wider">
+                  Este é um serviço provido pelo Whats. Requer conexão com a internet.
+                </p>
+                
+                <button
+                  onClick={() => {
+                    const cleanPhone = (interactClient.telefone || '').replace(/\D/g, '');
+                    window.open(`https://wa.me/55${cleanPhone}`, '_blank');
+                    setIsClientInteractModalOpen(false);
+                  }}
+                  className="w-full text-left py-2.5 px-3 hover:bg-surface rounded-xl font-bold text-primary flex items-center gap-2"
+                >
+                  <span className="material-symbols-outlined text-emerald-500 text-[18px]">chat</span>
+                  Abrir chat
+                </button>
+
+                <button
+                  onClick={() => {
+                    const cleanPhone = (interactClient.telefone || '').replace(/\D/g, '');
+                    const message = encodeURIComponent(`Olá ${interactClient.nome}! Passando para lembrar do seu agendamento em nossa clínica. Estamos te aguardando!`);
+                    window.open(`https://wa.me/55${cleanPhone}?text=${message}`, '_blank');
+                    setIsClientInteractModalOpen(false);
+                  }}
+                  className="w-full text-left py-2.5 px-3 hover:bg-surface rounded-xl font-bold text-primary flex items-center gap-2"
+                >
+                  <span className="material-symbols-outlined text-emerald-500 text-[18px]">notifications</span>
+                  Enviar lembrete
+                </button>
+
+                <button
+                  onClick={() => {
+                    const cleanPhone = (interactClient.telefone || '').replace(/\D/g, '');
+                    const message = encodeURIComponent(`Olá ${interactClient.nome}! Como está a evolução do seu pós-procedimento? Qualquer dúvida ou retorno, por favor entre em contato.`);
+                    window.open(`https://wa.me/55${cleanPhone}?text=${message}`, '_blank');
+                    setIsClientInteractModalOpen(false);
+                  }}
+                  className="w-full text-left py-2.5 px-3 hover:bg-surface rounded-xl font-bold text-primary flex items-center gap-2"
+                >
+                  <span className="material-symbols-outlined text-emerald-500 text-[18px]">quickreply</span>
+                  Enviar mensagem pré-definida
+                </button>
+
+                <button
+                  onClick={() => setIsWhatsAppSubmenuOpen(false)}
+                  className="w-full text-center py-2 bg-surface hover:bg-surface-container rounded-xl font-bold text-on-surface-variant mt-1"
+                >
+                  Cancelar
+                </button>
+              </div>
+            )}
+
           </div>
         </div>
       )}

@@ -165,19 +165,21 @@
   }
 
   /* Sidebar fix fixed drawer and overlay */
-  .sidebar {
-    position: fixed !important;
-    left: 0;
-    top: 0;
-    bottom: 0;
-    height: 100% !important;
-    transform: translateX(-100%) !important;
-    transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
-    z-index: 250 !important;
-  }
-  
-  .sidebar.open {
-    transform: translateX(0) !important;
+  @media (max-width: 1023px) {
+    .sidebar {
+      position: fixed !important;
+      left: 0;
+      top: 0;
+      bottom: 0;
+      height: 100% !important;
+      transform: translateX(-100%) !important;
+      transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
+      z-index: 250 !important;
+    }
+    
+    .sidebar.open {
+      transform: translateX(0) !important;
+    }
   }
   
   .sidebar-overlay {
