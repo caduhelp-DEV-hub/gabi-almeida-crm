@@ -46,7 +46,7 @@ export default function CRMPage() {
   const [loginError, setLoginError] = useState('');
 
   // Sidebar tab control
-  const [currentTab, setCurrentTab] = useState<'dashboard' | 'agenda' | 'clientes' | 'financeiro' | 'usuarios' | 'cadastro-cliente' | 'servicos' | 'estoque'>('dashboard');
+  const [currentTab, setCurrentTab] = useState<'dashboard' | 'agenda' | 'clientes' | 'financeiro' | 'usuarios' | 'cadastro-cliente' | 'servicos' | 'estoque'>('agenda');
   const [dashboardPeriod, setDashboardPeriod] = useState('Hoje');
   
   // Agenda View Control (Diária / Semanal / Mensal)
@@ -575,7 +575,7 @@ export default function CRMPage() {
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    ctx.strokeStyle = '#79542e'; // Primary color
+    ctx.strokeStyle = '#7B2FBE'; // Primary color
     ctx.lineWidth = 2.5;
     ctx.lineCap = 'round';
     ctx.beginPath();
@@ -862,7 +862,7 @@ export default function CRMPage() {
     <div className="bg-background text-on-surface font-sans overflow-hidden h-[100dvh] flex relative">
       
       {/* Mobile Menu Overlay */}
-      {false && isMobileMenuOpen && (
+      {isMobileMenuOpen && (
         <div 
           className="fixed inset-0 bg-black/40 z-30 lg:hidden backdrop-blur-sm transition-opacity"
           onClick={() => setIsMobileMenuOpen(false)}
@@ -870,7 +870,7 @@ export default function CRMPage() {
       )}
 
       {/* 1. Left SideNavBar */}
-      <aside className={`sidebar fixed lg:relative left-0 top-0 h-full w-72 flex flex-col border-r border-outline-variant bg-surface-container-low backdrop-blur-md z-40 transition-transform duration-300 ${isMobileMenuOpen ? 'open translate-x-0' : '-translate-x-full lg:translate-x-0'}`}>
+      <aside className={`sidebar fixed left-0 top-0 h-full w-72 flex flex-col border-r border-outline-variant bg-surface-container-low backdrop-blur-md z-40 transition-transform duration-300 ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}`}>
         <div className="p-8 pb-4 flex flex-col">
           <div className="h-16 flex items-center gap-2">
             <span className="material-symbols-outlined text-primary text-3xl">spa</span>
@@ -882,15 +882,6 @@ export default function CRMPage() {
         </div>
 
         <nav className="flex-1 px-4 space-y-2 flex flex-col pt-4">
-          <button 
-            id="nav-dashboard"
-            onClick={() => { setCurrentTab('dashboard'); setSearchQuery(''); setIsMobileMenuOpen(false); }}
-            className={`flex items-center gap-4 px-4 py-3 rounded-xl transition-all duration-300 text-left ${currentTab === 'dashboard' ? 'text-primary font-bold border-r-4 border-primary bg-primary/10 scale-95' : 'text-on-surface-variant hover:text-primary hover:bg-surface-container'}`}
-          >
-            <span className="material-symbols-outlined" style={{fontVariationSettings: currentTab === 'dashboard' ? "'FILL' 1" : "'FILL' 0"}}>dashboard</span>
-            <span className="font-manrope text-[14px] leading-none">Dashboard</span>
-          </button>
-
           <button 
             id="nav-agenda"
             onClick={() => { setCurrentTab('agenda'); setSearchQuery(''); setIsMobileMenuOpen(false); }}
@@ -1177,290 +1168,6 @@ export default function CRMPage() {
           </div>
         )}
 
-        {/* 3. Main Dashboard Tab Canvas */}
-        {currentTab === 'dashboard' && (
-          <section className="flex-1 overflow-y-auto p-6 md:p-8 bg-surface select-none">
-            
-            {/* Greeting Header */}
-            <div className="mb-8 lg:mb-10 flex flex-col lg:flex-row justify-between lg:items-end gap-4">
-              <div>
-                <h2 id="greeting-header" className="font-manrope text-headline-lg text-primary font-light text-[28px] lg:text-[36px]">
-                  Bom dia, {currentProfessional.name.split(' ')[1]}.
-                </h2>
-                <p className="font-sans text-[14px] lg:text-[15px] text-on-surface-variant">
-                  Sua studio de estética avançada está com <span className="font-bold text-primary">92%</span> de ocupação hoje.
-                </p>
-              </div>
-
-              {/* Badges system indicators mapping layout exactly */}
-              <div className="flex flex-wrap items-center gap-2 lg:gap-3">
-                <select 
-                  className="bg-surface-container px-4 py-2 rounded-xl text-[12px] font-bold text-on-surface-variant border border-outline-variant focus:outline-primary cursor-pointer hover:bg-surface-container-high transition-colors"
-                  value={dashboardPeriod}
-                  onChange={e => setDashboardPeriod(e.target.value)}
-                >
-                  <option value="Hoje">Hoje</option>
-                  <option value="Estes Mês">Este Mês</option>
-                  <option value="Tudo">Todo o Período</option>
-                </select>
-                <div className="w-[1px] h-6 bg-outline-variant mx-1 hidden sm:block"></div>
-                <span className="flex items-center gap-2 px-3 py-1.5 lg:px-4 lg:py-2 bg-secondary/10 text-secondary rounded-full font-manrope text-[11px] lg:text-[12px] font-semibold border border-secondary/20">
-                  <span className="w-2 h-2 bg-secondary rounded-full animate-pulse"></span>
-                  {professionals.length} {professionals.length === 1 ? 'Profissional Ativo' : 'Profissionais Ativos'}
-                </span>
-                <span className="flex items-center gap-2 px-3 py-1.5 lg:px-4 lg:py-2 bg-tertiary/10 text-tertiary rounded-full font-manrope text-[11px] lg:text-[12px] font-semibold">
-                  <span className="material-symbols-outlined text-[16px] lg:text-[18px]">verified</span>
-                  Sincronizado
-                </span>
-              </div>
-            </div>
-
-            {/* Bento Grid layout containing metrics */}
-            <div className="grid grid-cols-1 md:grid-cols-12 gap-6 mb-8">
-              
-              {/* Daily Financial Summary */}
-              <div className="col-span-1 md:col-span-12 lg:col-span-8 bg-surface-container-lowest rounded-3xl p-6 sm:p-8 border border-outline-variant shadow-sm flex flex-col gap-6 relative overflow-hidden group">
-                <div className="flex justify-between items-start z-10 w-full">
-                  <div className="flex-1">
-                    <p className="font-manrope text-[12px] text-on-surface-variant uppercase tracking-widest font-bold">Resumo Financeiro Diário</p>
-                    <h3 className="font-manrope text-[32px] sm:text-[44px] font-bold text-on-surface tracking-tight mt-1 whitespace-nowrap overflow-hidden text-ellipsis">R$ {totalDailyRevenueDisplay.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</h3>
-                    <div className="flex items-center gap-2 mt-1.5 flex-wrap">
-                      <span className="material-symbols-outlined text-tertiary">trending_up</span>
-                      <span className="text-tertiary font-manrope text-[12px] font-bold">+14.2% em relação a ontem</span>
-                    </div>
-                  </div>
-                  <div className="flex gap-2 shrink-0">
-                    <button onClick={() => showAlert('Download do fechamento diário iniciado.')} className="p-2 hover:bg-surface-container rounded-lg transition-colors cursor-pointer" title="Exportar dados">
-                      <span className="material-symbols-outlined text-on-surface-variant">download</span>
-                    </button>
-                    <button className="p-2 hover:bg-surface-container rounded-lg transition-colors cursor-pointer">
-                      <span className="material-symbols-outlined text-on-surface-variant">more_vert</span>
-                    </button>
-                  </div>
-                </div>
-
-                {/* Elegant dynamic revenue graph mockup */}
-                <div className="h-32 sm:h-44 w-full mt-2 chart-gradient relative border-b border-outline-variant/30 rounded-lg">
-                  <div className="absolute bottom-0 left-0 w-full h-full flex items-end justify-between px-2 sm:px-6 pointer-events-none">
-                    <div className="h-[20%] w-1 sm:w-1.5 bg-primary/20 rounded-t"></div>
-                    <div className="h-[35%] w-1 sm:w-1.5 bg-primary/20 rounded-t"></div>
-                    <div className="h-[30%] w-1 sm:w-1.5 bg-primary/20 rounded-t"></div>
-                    <div className="h-[55%] w-1 sm:w-1.5 bg-primary/20 rounded-t"></div>
-                    <div className="h-[75%] w-1 sm:w-1.5 bg-primary/30 rounded-t"></div>
-                    <div className="h-[65%] w-1 sm:w-1.5 bg-primary/40 rounded-t"></div>
-                    <div className="h-[85%] w-1 sm:w-1.5 bg-primary/60 rounded-t"></div>
-                    <div className="h-[95%] w-1 sm:w-1.5 bg-primary rounded-t shadow-sm"></div>
-                  </div>
-                  <div className="absolute inset-0 flex items-center justify-center opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity duration-300">
-                    <div className="bg-surface-container-lowest shadow-lg border border-outline-variant/60 px-4 py-2 rounded-xl">
-                      <p className="font-manrope text-[11px] text-primary font-bold">Pico de Atendimento às 14:00</p>
-                      <p className="font-manrope text-[15px] font-extrabold text-center">R$ {(totalDailyRevenueDisplay * 0.35).toLocaleString('pt-BR', {minimumFractionDigits: 2})}</p>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Micro indicators */}
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6 mt-2 pt-4 border-t border-outline-variant/40">
-                  <div>
-                    <p className="font-manrope text-[11px] text-on-surface-variant font-medium">Atendimentos do dia</p>
-                    <p className="font-manrope text-[16px] sm:text-[18px] font-black text-on-surface mt-1">{totalAtendimentosDisplay}</p>
-                  </div>
-                  <div>
-                    <p className="font-manrope text-[11px] text-on-surface-variant font-medium">Ticket Médio</p>
-                    <p className="font-manrope text-[16px] sm:text-[18px] font-black text-on-surface mt-1">R$ {ticketMedio.toLocaleString('pt-BR', {maximumFractionDigits: 0})}</p>
-                  </div>
-                  <div>
-                    <p className="font-manrope text-[11px] text-on-surface-variant font-medium">Conversão</p>
-                    <p className="font-manrope text-[16px] sm:text-[18px] font-black text-on-surface mt-1">{taxaConversao}%</p>
-                  </div>
-                  <div>
-                    <p className="font-manrope text-[11px] text-on-surface-variant font-medium">Leads Ativos</p>
-                    <p className="font-manrope text-[16px] sm:text-[18px] font-black text-on-surface mt-1">{leadsAtivos}</p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Side cards: Alerts & Month Milestone (matches image 3 layout exactly) */}
-              <div className="col-span-12 lg:col-span-4 flex flex-col gap-6">
-                
-                {/* Active Alerts List */}
-                <div className="bg-surface-container-lowest rounded-3xl p-6 border border-outline-variant shadow-sm flex-1">
-                  <div className="flex justify-between items-center mb-4">
-                    <h4 className="font-manrope text-[16px] font-bold text-primary">Alertas Clínicos</h4>
-                    <span className="bg-error-container text-on-error-container px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider">
-                      {criticalAlerts.length} Ativos
-                    </span>
-                  </div>
-                  <div className="space-y-3">
-                    {criticalAlerts.length === 0 ? (
-                      <p className="text-[12px] text-on-surface-variant italic py-2 text-center">Nenhum alerta pendente no momento.</p>
-                    ) : (
-                      criticalAlerts.map(alert => (
-                        <div key={alert.id} className={`flex gap-3 p-3 rounded-xl border-l-4 ${alert.alertClass}`}>
-                          <span className="material-symbols-outlined text-[18px] mt-0.5">{alert.icon}</span>
-                          <div>
-                            <p className="font-manrope text-[12px] font-bold">{alert.title}</p>
-                            <p className="text-[11px] text-on-surface-variant/90 leading-snug mt-0.5">{alert.text}</p>
-                          </div>
-                        </div>
-                      ))
-                    )}
-                  </div>
-                </div>
-
-                {/* Target Milestones Progress Card */}
-                <div className="bg-primary text-white-pure rounded-3xl p-6 shadow-md relative overflow-hidden flex flex-col justify-between">
-                  <div className="relative z-10">
-                    <h4 className="font-manrope text-[16px] font-semibold text-primary-fixed uppercase tracking-wider mb-1">Meta Mensal de Vendas</h4>
-                    <p className="font-sans text-[13px] opacity-90 mb-4 text-white-pure/90">Você atingiu {currentRevenuePercent}% da sua meta de faturamento no mês.</p>
-                    <div className="w-full bg-white-pure/20 h-2 rounded-full mb-2">
-                      <div className="bg-white-pure h-full rounded-full transition-all duration-1000" style={{width: `${currentRevenuePercent}%`}}></div>
-                    </div>
-                    <div className="flex justify-between font-manrope text-[10px] text-primary-fixed uppercase tracking-tighter">
-                      <span>R$ {totalRevenueThisMonth.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</span>
-                      <span>R$ {primaryRevenueTarget.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</span>
-                    </div>
-                  </div>
-                  <div className="absolute -right-4 -bottom-4 opacity-10">
-                    <span className="material-symbols-outlined text-[120px]" style={{fontVariationSettings: "'FILL' 1"}}>trending_up</span>
-                  </div>
-                </div>
-
-              </div>
-
-            </div>
-
-            {/* Bottom Section details: Today Agenda & Best Selling Services */}
-            <div className="grid grid-cols-12 gap-6">
-              
-              {/* Daily Schedule block (Left column, image 3) */}
-              <div className="col-span-12 lg:col-span-7 bg-surface-container-lowest rounded-3xl p-8 border border-outline-variant shadow-sm">
-                <div className="flex justify-between items-center mb-6">
-                  <div>
-                    <h4 className="font-manrope text-[18px] font-bold text-on-surface">Minha Agenda Hoje</h4>
-                    <p className="text-sans text-[13px] text-on-surface-variant mt-1">Quinta-feira, 24 de Outubro</p>
-                  </div>
-                  <button 
-                    onClick={() => setCurrentTab('agenda')}
-                    className="text-primary hover:underline font-manrope text-[13px] font-bold flex items-center gap-1"
-                  >
-                    Ver Agenda Completa
-                    <span className="material-symbols-outlined text-[16px]">chevron_right</span>
-                  </button>
-                </div>
-
-                <div className="space-y-2">
-                  {appointments.map((appt) => (
-                    <div key={appt.id} className="flex items-center gap-4 p-3 hover:bg-surface-container-low transition-colors rounded-2xl group border-b border-outline-variant/30 last:border-0">
-                      <p className="font-manrope text-[15px] font-bold text-on-surface-variant w-16">{appt.time}</p>
-                      
-                      {appt.patientAvatar ? (
-                        <Image width={500} height={500} unoptimized className="w-10 h-10 rounded-full object-cover" src={appt.patientAvatar} alt={appt.patientName} sizes="(max-width: 768px) 100vw, 500px" />
-                      ) : (
-                        <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center font-manrope text-primary font-bold text-[12px]">
-                          {appt.patientName.split(' ').map(n=>n[0]).join('')}
-                        </div>
-                      )}
-
-                      <div className="flex-1">
-                        <p className="font-manrope text-[13px] font-bold text-on-surface">{appt.patientName}</p>
-                        <p className="font-sans text-[12px] text-on-surface-variant">{appt.procedure}</p>
-                      </div>
-
-                      <div className="flex items-center gap-4">
-                        <span className={`px-2.5 py-0.5 rounded-full font-manrope text-[10px] uppercase font-bold text-white-pure ${appt.status === 'Confirmado' ? 'bg-[#735c00]' : appt.status === 'Em Atendimento' ? 'bg-[#79542e]' : 'bg-gray-light text-on-surface'}`}>
-                          {appt.status}
-                        </span>
-                        <button 
-                          onClick={() => {
-                            if (appt.patientName === 'Mariana Silveira') {
-                              setSelectedPatientId('p1');
-                            }
-                            setCurrentTab('clientes');
-                          }} 
-                          className="material-symbols-outlined text-outline group-hover:text-primary transition-colors cursor-pointer"
-                        >
-                          chevron_right
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Best Selling Services (Right column, image 3) */}
-              <div className="col-span-12 lg:col-span-5 bg-surface-container-lowest rounded-3xl p-8 border border-outline-variant shadow-sm flex flex-col justify-between">
-                <div>
-                  <h4 className="font-manrope text-[18px] font-bold text-on-surface mb-6">Tratamentos em Destaque</h4>
-                  <div className="space-y-6">
-                    
-                    {/* Botulinic */}
-                    <div className="flex items-center gap-4">
-                      <div className="w-12 h-12 rounded-xl bg-primary/5 flex items-center justify-center text-primary">
-                        <span className="material-symbols-outlined text-[24px]">face</span>
-                      </div>
-                      <div className="flex-1">
-                        <div className="flex justify-between items-center mb-1">
-                          <p className="font-manrope text-[13px] font-bold text-on-surface">Botox® Full Face</p>
-                          <p className="font-manrope text-[11px] font-semibold text-primary">42 Realizados</p>
-                        </div>
-                        <div className="w-full bg-surface-container h-1.5 rounded-full overflow-hidden">
-                          <div className="bg-primary h-full rounded-full" style={{width: '85%'}}></div>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Collagen stimulators */}
-                    <div className="flex items-center gap-4">
-                      <div className="w-12 h-12 rounded-xl bg-secondary/5 flex items-center justify-center text-secondary">
-                        <span className="material-symbols-outlined text-[24px]">spa</span>
-                      </div>
-                      <div className="flex-1">
-                        <div className="flex justify-between items-center mb-1">
-                          <p className="font-manrope text-[13px] font-bold text-on-surface">Bioestimuladores de colágeno</p>
-                          <p className="font-manrope text-[11px] font-semibold text-secondary">31 Realizados</p>
-                        </div>
-                        <div className="w-full bg-surface-container h-1.5 rounded-full overflow-hidden">
-                          <div className="bg-secondary h-full rounded-full" style={{width: '62%'}}></div>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Chemical peeling */}
-                    <div className="flex items-center gap-4">
-                      <div className="w-12 h-12 rounded-xl bg-tertiary/5 flex items-center justify-center text-tertiary">
-                        <span className="material-symbols-outlined text-[24px]">colorize</span>
-                      </div>
-                      <div className="flex-1">
-                        <div className="flex justify-between items-center mb-1">
-                          <p className="font-manrope text-[13px] font-bold text-on-surface">Peeling Químico Premium</p>
-                          <p className="font-manrope text-[11px] font-semibold text-tertiary">18 Realizados</p>
-                        </div>
-                        <div className="w-full bg-surface-container h-1.5 rounded-full overflow-hidden">
-                          <div className="bg-tertiary h-full rounded-full" style={{width: '38%'}}></div>
-                        </div>
-                      </div>
-                    </div>
-
-                  </div>
-                </div>
-
-                <div className="mt-6 pt-4 border-t border-outline-variant/30 flex justify-center">
-                  <button 
-                    onClick={() => setCurrentTab('financeiro')}
-                    className="flex items-center gap-2 text-primary font-manrope text-[13px] font-bold hover:scale-105 transition-transform"
-                  >
-                    Relatório Completo de Procedimentos
-                    <span className="material-symbols-outlined">trending_flat</span>
-                  </button>
-                </div>
-              </div>
-
-            </div>
-
-          </section>
-        )}
-
         {/* 4. Agenda Tab Canvas */}
         {currentTab === 'agenda' && (
           <section className="flex-1 overflow-hidden flex flex-col p-0 lg:p-8 bg-surface select-none relative">
@@ -1479,23 +1186,17 @@ export default function CRMPage() {
                 <div className="flex p-1 bg-surface-container rounded-full border border-outline-variant/60 select-none">
                   <button 
                     onClick={() => setAgendaView('semanal')}
-                    className={`px-4 py-1 rounded-full text-[12px] font-bold transition-all cursor-pointer h-9 flex items-center justify-center min-w-[70px] ${agendaView !== 'mensal' ? 'bg-[#79542e] text-white-pure shadow-sm' : 'text-on-surface-variant'}`}
+                    className={`px-4 py-1 rounded-full text-[12px] font-bold transition-all cursor-pointer h-9 flex items-center justify-center min-w-[70px] ${agendaView !== 'mensal' ? 'bg-[#7B2FBE] text-white-pure shadow-sm' : 'text-on-surface-variant'}`}
                   >
                     Semana
                   </button>
                   <button 
                     onClick={() => setAgendaView('mensal')}
-                    className={`px-4 py-1 rounded-full text-[12px] font-bold transition-all cursor-pointer h-9 flex items-center justify-center min-w-[70px] ${agendaView === 'mensal' ? 'bg-[#79542e] text-white-pure shadow-sm' : 'text-on-surface-variant'}`}
+                    className={`px-4 py-1 rounded-full text-[12px] font-bold transition-all cursor-pointer h-9 flex items-center justify-center min-w-[70px] ${agendaView === 'mensal' ? 'bg-[#7B2FBE] text-white-pure shadow-sm' : 'text-on-surface-variant'}`}
                   >
                     Mês
                   </button>
-                  <button 
-                    onClick={() => setAgendaView('lista')}
-                    className={`px-4 py-1 rounded-full text-[12px] font-bold transition-all cursor-pointer h-9 flex items-center justify-center min-w-[70px] ${agendaView === 'lista' ? 'bg-[#79542e] text-white-pure shadow-sm' : 'text-on-surface-variant'}`}
-                  >
-                    Lista
-                  </button>
-                </div>
+                  </div>
 
                 <button 
                   onClick={() => setIsMobileSearchOpen(true)}
@@ -1565,9 +1266,9 @@ export default function CRMPage() {
                           <span className="text-[10px] text-outline font-bold uppercase tracking-tight mb-1">{day.label}</span>
                           <span className={`w-8 h-8 flex items-center justify-center rounded-full text-[13px] font-bold transition-all ${
                             day.isSelected 
-                              ? 'bg-[#79542e] text-white-pure shadow-sm' 
+                              ? 'bg-[#7B2FBE] text-white-pure shadow-sm' 
                               : day.isToday 
-                                ? 'text-[#79542e] border border-[#79542e]' 
+                                ? 'text-[#7B2FBE] border border-[#7B2FBE]' 
                                 : 'text-on-surface hover:bg-surface-container/50'
                           }`}>
                             {day.dayNum}
@@ -1593,29 +1294,23 @@ export default function CRMPage() {
                   <div className="view-toggle flex p-1 bg-surface-container rounded-full border border-outline-variant/60 select-none">
                     <button 
                       onClick={() => setAgendaView('diaria')}
-                      className={`px-5 py-1.5 rounded-full text-label-md text-[12px] font-bold transition-all cursor-pointer ${agendaView === 'diaria' ? 'bg-[#79542e] text-white-pure shadow-sm' : 'text-on-surface-variant hover:text-primary'}`}
+                      className={`px-5 py-1.5 rounded-full text-label-md text-[12px] font-bold transition-all cursor-pointer ${agendaView === 'diaria' ? 'bg-[#7B2FBE] text-white-pure shadow-sm' : 'text-on-surface-variant hover:text-primary'}`}
                     >
                       Dia
                     </button>
                     <button 
                       onClick={() => setAgendaView('semanal')}
-                      className={`px-5 py-1.5 rounded-full text-label-md text-[12px] font-bold transition-all cursor-pointer ${agendaView === 'semanal' ? 'bg-[#79542e] text-white-pure shadow-sm' : 'text-on-surface-variant hover:text-primary'}`}
+                      className={`px-5 py-1.5 rounded-full text-label-md text-[12px] font-bold transition-all cursor-pointer ${agendaView === 'semanal' ? 'bg-[#7B2FBE] text-white-pure shadow-sm' : 'text-on-surface-variant hover:text-primary'}`}
                     >
                       Semana
                     </button>
                     <button 
                       onClick={() => setAgendaView('mensal')}
-                      className={`px-5 py-1.5 rounded-full text-label-md text-[12px] font-bold transition-all cursor-pointer ${agendaView === 'mensal' ? 'bg-[#79542e] text-white-pure shadow-sm' : 'text-on-surface-variant hover:text-primary'}`}
+                      className={`px-5 py-1.5 rounded-full text-label-md text-[12px] font-bold transition-all cursor-pointer ${agendaView === 'mensal' ? 'bg-[#7B2FBE] text-white-pure shadow-sm' : 'text-on-surface-variant hover:text-primary'}`}
                     >
                       Mês
                     </button>
-                    <button 
-                      onClick={() => setAgendaView('lista')}
-                      className={`px-5 py-1.5 rounded-full text-label-md text-[12px] font-bold transition-all cursor-pointer ${agendaView === 'lista' ? 'bg-[#79542e] text-white-pure shadow-sm' : 'text-on-surface-variant hover:text-primary'}`}
-                    >
-                      Lista
-                    </button>
-                  </div>
+                    </div>
                   
                   <div className="h-6 w-[1px] bg-outline-variant"></div>
                   
@@ -1858,9 +1553,9 @@ export default function CRMPage() {
                             <span className="text-[10px] text-outline font-bold uppercase tracking-tight mb-1">{day.label}</span>
                             <span className={`w-8 h-8 flex items-center justify-center rounded-full text-[13px] font-bold transition-all ${
                               day.isSelected
-                                ? 'bg-[#79542e] text-white-pure shadow-sm'
+                                ? 'bg-[#7B2FBE] text-white-pure shadow-sm'
                                 : day.isToday
-                                  ? 'text-[#79542e] border border-[#79542e]'
+                                  ? 'text-[#7B2FBE] border border-[#7B2FBE]'
                                   : 'text-on-surface hover:bg-surface-container/50'
                             }`}>
                               {day.dayNum}
@@ -1923,11 +1618,11 @@ export default function CRMPage() {
                         const isConsult = appt.category === 'Consulta';
                         
                         // Assign background colors based on professional
-                        let cardColorClass = 'bg-emerald-50/60 border-emerald-300 text-emerald-900';
+                        let cardColorClass = 'bg-surface-container border-outline-variant text-on-surface';
                         if (appt.professional.toLowerCase().includes('ricardo')) {
-                          cardColorClass = 'bg-blue-50/60 border-blue-300 text-blue-900';
+                          cardColorClass = 'bg-card-blue border-transparent';
                         } else if (appt.professional.toLowerCase().includes('helena')) {
-                          cardColorClass = 'bg-pink-50/60 border-pink-300 text-pink-900';
+                          cardColorClass = 'bg-card-pink border-transparent';
                         }
 
                         const badgeBg = appt.status === 'Finalizado' 
@@ -2113,7 +1808,7 @@ export default function CRMPage() {
                               key={dayNum}
                               onClick={() => setAgendaNavDate(new Date(agendaNavDate.getFullYear(), agendaNavDate.getMonth(), dayNum))}
                               className={`aspect-square rounded-2xl flex flex-col items-center justify-center relative cursor-pointer transition-all ${
-                                isSelected ? 'bg-[#79542e] text-white-pure shadow-md font-bold' : 'hover:bg-surface-container text-on-surface'
+                                isSelected ? 'bg-[#7B2FBE] text-white-pure shadow-md font-bold' : 'hover:bg-surface-container text-on-surface'
                               }`}
                             >
                               <span className="text-[12px]">{dayNum}</span>
@@ -2340,7 +2035,7 @@ export default function CRMPage() {
                 setNewApptStatus('Pendente');
                 setIsNewAppointmentOpen(true);
               }}
-              className="lg:hidden fixed bottom-6 right-5 w-14 h-14 bg-[#79542e] text-white-pure rounded-full shadow-2xl flex items-center justify-center z-40 active:scale-95 transition-transform cursor-pointer"
+              className="lg:hidden fixed bottom-6 right-5 w-14 h-14 bg-[#7B2FBE] text-white-pure rounded-full shadow-2xl flex items-center justify-center z-40 active:scale-95 transition-transform cursor-pointer"
             >
               <span className="material-symbols-outlined text-[28px]">add</span>
             </button>
@@ -2708,7 +2403,7 @@ export default function CRMPage() {
                                     
                                     <div className="p-1.5 text-center">
                                       <p className="text-[9px] font-bold text-on-surface truncate">{photo.date}</p>
-                                      <span className={`inline-block mt-0.5 px-2 py-0.2 rounded text-[7px] font-extrabold uppercase ${photo.type === 'Antes' ? 'bg-[#735c00]/10 text-[#735c00]' : (photo.type === 'Depois' ? 'bg-[#79542e]/10 text-[#79542e]' : 'bg-surface-container-highest text-on-surface-variant')}`}>
+                                      <span className={`inline-block mt-0.5 px-2 py-0.2 rounded text-[7px] font-extrabold uppercase ${photo.type === 'Antes' ? 'bg-[#735c00]/10 text-[#735c00]' : (photo.type === 'Depois' ? 'bg-[#7B2FBE]/10 text-[#7B2FBE]' : 'bg-surface-container-highest text-on-surface-variant')}`}>
                                         {photo.type}
                                       </span>
                                     </div>
@@ -2857,15 +2552,15 @@ export default function CRMPage() {
                     <div id="protocolos-section" className="col-span-12 bg-white-pure rounded-3xl p-8 border border-outline-variant shadow-sm">
                       <h3 className="font-manrope text-[16px] font-bold text-primary mb-6">Protocolos</h3>
                       <div className="mb-8 flex flex-col gap-3 p-5 bg-[#fcfaf7] rounded-2xl border border-[#d3c5b8]/50 shadow-sm relative">
-                        <h4 className="font-manrope text-[14px] font-bold text-[#79542e]">Descrever Novo Protocolo de Atendimento</h4>
+                        <h4 className="font-manrope text-[14px] font-bold text-[#7B2FBE]">Descrever Novo Protocolo de Atendimento</h4>
                         <textarea 
                           id="novoProtocolo"
-                          className="w-full h-24 p-3 text-[13px] bg-white-pure border border-[#d3c5b8] rounded-xl focus:outline-none focus:border-[#79542e] resize-none text-on-surface"
+                          className="w-full h-24 p-3 text-[13px] bg-white-pure border border-[#d3c5b8] rounded-xl focus:outline-none focus:border-[#7B2FBE] resize-none text-on-surface"
                           placeholder="Ex: Realizado limpeza profunda, aplicação de peeling 30%, cliente orientada sobre home-care..."
                         ></textarea>
                         <div className="flex justify-end mt-1">
                           <button 
-                            className="px-5 py-2 bg-[#79542e] text-white-pure font-bold font-manrope text-[12px] rounded-xl hover:bg-[#634425] transition-colors shadow-md" 
+                            className="px-5 py-2 bg-[#7B2FBE] text-white-pure font-bold font-manrope text-[12px] rounded-xl hover:bg-[#634425] transition-colors shadow-md" 
                             onClick={async () => {
                               const el = document.getElementById('novoProtocolo') as HTMLTextAreaElement;
                               if (el && el.value.trim() !== '') {
@@ -3526,7 +3221,7 @@ export default function CRMPage() {
                   if (total === 0) {
                     return <p className="text-[12px] text-on-surface-variant text-center py-8">Sem dados de receita ainda.</p>;
                   }
-                  const colors = ['#79542e', '#5a3e22', '#b8855e', '#d4a373', '#8b6f47', '#a89077'];
+                  const colors = ['#7B2FBE', '#5a3e22', '#b8855e', '#d4a373', '#8b6f47', '#a89077'];
                   const hoveredIdx = hoveredCategory !== null ? entries.findIndex(([c]) => c === hoveredCategory) : -1;
                   let offset = 0;
                   return (
@@ -3561,7 +3256,7 @@ export default function CRMPage() {
                             return el;
                           })}
                           <circle cx="18" cy="18" r="10" fill="white" />
-                          <text x="18" y="18" textAnchor="middle" dominantBaseline="central" className="rotate-90 origin-center" fill="#79542e" style={{ fontSize: '3.5px', fontWeight: 700 }}>
+                          <text x="18" y="18" textAnchor="middle" dominantBaseline="central" className="rotate-90 origin-center" fill="#7B2FBE" style={{ fontSize: '3.5px', fontWeight: 700 }}>
                             {`${entries.length} ${entries.length === 1 ? 'cat' : 'cats'}`}
                           </text>
                         </svg>
@@ -4162,7 +3857,7 @@ export default function CRMPage() {
                           <td className="px-6 py-4">
                             <p className="font-medium text-on-surface">{u.phone || '(11) 98921-3942'}</p>
                             <span className={`inline-block mt-1 px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider ${
-                              u.role === 'admin' ? 'bg-primary text-white-pure' : u.role === 'prestador' ? 'bg-[#79542e] text-white-pure' : 'bg-surface-container-highest text-on-surface-variant'
+                              u.role === 'admin' ? 'bg-primary text-white-pure' : u.role === 'prestador' ? 'bg-[#7B2FBE] text-white-pure' : 'bg-surface-container-highest text-on-surface-variant'
                             }`}>
                               {u.role === 'admin' ? 'Administrador' : u.role === 'prestador' ? `Especialista (${u.specialty || 'Geral'})` : 'Assistente'}
                             </span>

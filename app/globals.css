@@ -10,14 +10,14 @@
   --color-surface-tint: #7c5730;
   --color-secondary-fixed: #ffe088;
   --color-on-secondary-fixed-variant: #574500;
-  --color-primary: #79542e;
-  --color-tertiary-container: #916c5b;
-  --color-primary-fixed-dim: #eebd8e;
-  --color-surface-dim: #ddd9d6;
+  --color-primary: #7b2fbe;
+  --color-tertiary-container: #ba8cfa;
+  --color-primary-fixed-dim: #9a4fd9;
+  --color-surface-dim: #f3e8fc;
   --color-on-error: #ffffff;
-  --color-on-surface-variant: #50453b;
-  --color-surface-bright: #fdf9f6;
-  --color-secondary: #735c00;
+  --color-on-surface-variant: #4a3b5c;
+  --color-surface-bright: #faf5ff;
+  --color-secondary: #904ebf;
   --color-tertiary-fixed: #ffdbcc;
   --color-surface-container: #f1edea;
   --color-surface: #fdf9f6;
@@ -57,6 +57,9 @@
 }
 
 /* Custom CSS utilities from the design mockup */
+.bg-card-pink { background-color: #f8bbd0; color: #880e4f; }
+.bg-card-blue { background-color: #b3e5fc; color: #01579b; }
+
 .material-symbols-outlined {
   font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
   vertical-align: middle;
