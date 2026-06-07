@@ -2070,9 +2070,9 @@ export default function CRMPage() {
                     <Image width={500} height={500} unoptimized className="h-10 w-10 rounded-full object-cover" src={patient.avatar} alt={patient.nome} sizes="(max-width: 768px) 100vw, 500px" />
                     <div className="flex-1 min-w-0">
                       <p className="font-manrope text-[13px] font-extrabold text-on-surface truncate">
-                        {patient.pronoun ? patient.pronoun + ' ' : ''}{patient.nome}
+                        {patient.pronome ? patient.pronome + ' ' : ''}{patient.nome}
                       </p>
-                      <p className="text-[10px] text-on-surface-variant truncate mt-0.5">Última consulta: {patient.lastVisit}</p>
+                      <p className="text-[10px] text-on-surface-variant truncate mt-0.5">Última consulta: {patient.ultimaVisita}</p>
                     </div>
                     {patient.status !== 'Inativo' && patient.status !== 'inactive' && (
                       <span className="w-2 h-2 rounded-full bg-tertiary"></span>
@@ -2101,7 +2101,7 @@ export default function CRMPage() {
                   <div className="relative group">
                     <Image width={500} height={500} unoptimized 
                       className="h-28 w-28 rounded-2xl object-cover border-2 border-primary/20 mx-auto lg:mx-0" 
-                      src={selectedPatient.detailsAvatar} 
+                      src={selectedPatient.fotoDetalhes} 
                       alt={selectedPatient.nome} sizes="(max-width: 768px) 100vw, 500px" 
                     />
                     <button 
@@ -2148,7 +2148,7 @@ export default function CRMPage() {
                     <div className="flex flex-col lg:flex-row justify-between items-center lg:items-start gap-4">
                       <div className="flex flex-col items-center lg:items-start">
                         <h1 className="font-manrope text-[24px] font-bold text-on-surface leading-snug">
-                          {selectedPatient.pronoun ? selectedPatient.pronoun + ' ' : ''}{selectedPatient.nome}
+                          {selectedPatient.pronome ? selectedPatient.pronome + ' ' : ''}{selectedPatient.nome}
                         </h1>
                         <p className="text-on-surface-variant text-[13px] mt-1 font-semibold flex items-center gap-1.5">
                           <span className="w-2 h-2 rounded-full bg-primary"></span>
@@ -2183,7 +2183,7 @@ export default function CRMPage() {
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6">
                       <div className="bg-surface rounded-xl p-3 border border-outline-variant/30">
                         <p className="text-[10px] text-outline mb-0.5 uppercase tracking-wider font-semibold">Total Investido</p>
-                        <p className="font-manrope text-[16px] font-black text-primary">R$ {selectedPatient.totalSpent.toLocaleString('pt-BR')}</p>
+                        <p className="font-manrope text-[16px] font-black text-primary">R$ {selectedPatient.totalGasto.toLocaleString('pt-BR')}</p>
                       </div>
                       <div className="bg-surface rounded-xl p-3 border border-outline-variant/30">
                         <p className="text-[10px] text-outline mb-0.5 uppercase tracking-wider font-semibold">Procedimentos</p>
@@ -2191,7 +2191,7 @@ export default function CRMPage() {
                       </div>
                       <div className="bg-surface rounded-xl p-3 border border-outline-variant/30">
                         <p className="text-[10px] text-outline mb-0.5 uppercase tracking-wider font-semibold">Última Foto</p>
-                        <p className="font-manrope text-[16px] font-black text-on-surface">{selectedPatient.lastPhotoDate}</p>
+                        <p className="font-manrope text-[16px] font-black text-on-surface">{selectedPatient.dataUltimaFoto}</p>
                       </div>
                       <div className="bg-surface rounded-xl p-3 border border-outline-variant/30">
                         <p className="text-[10px] text-outline mb-0.5 uppercase tracking-wider font-semibold">Status do Studio</p>
@@ -2264,7 +2264,7 @@ export default function CRMPage() {
                                     };
                                     
                                     try {
-                                      const updatedPhotos = [...(selectedPatient.evolutionPhotos || []), newPhoto];
+                                      const updatedPhotos = [...(selectedPatient.fotosEvolucao || []), newPhoto];
                                       const updateField: any = { evolution_photos: updatedPhotos };
                                       if (photoType === 'Antes') updateField.before_photo = base64String;
                                       if (photoType === 'Depois') updateField.after_photo = base64String;
@@ -2279,8 +2279,8 @@ export default function CRMPage() {
                                         if (p.id === selectedPatient.id) {
                                           return {
                                             ...p,
-                                            beforePhoto: photoType === 'Antes' ? base64String : p.beforePhoto,
-                                            afterPhoto: photoType === 'Depois' ? base64String : p.afterPhoto,
+                                            beforePhoto: photoType === 'Antes' ? base64String : p.fotoAntes,
+                                            afterPhoto: photoType === 'Depois' ? base64String : p.fotoDepois,
                                             evolutionPhotos: updatedPhotos
                                           };
                                         }
@@ -2322,7 +2322,7 @@ export default function CRMPage() {
                             ) : (
                               <div className="grid grid-cols-2 gap-4">
                                 {compareSelectedIds.map(id => {
-                                  const photo = (selectedPatient.evolutionPhotos || []).find(p => p.id === id);
+                                  const photo = (selectedPatient.fotosEvolucao || []).find(p => p.id === id);
                                   if (!photo) return null;
                                   return (
                                     <div key={photo.id} className="relative rounded-2xl overflow-hidden shadow-inner group bg-surface border border-outline-variant/40">
@@ -2343,8 +2343,8 @@ export default function CRMPage() {
                           /* Standard default layout with reduced photo heights */
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
                             <div className="relative rounded-2xl overflow-hidden shadow-inner group bg-surface border border-outline-variant/30">
-                              {selectedPatient.beforePhoto ? (
-                                <Image width={500} height={500} unoptimized className="w-full h-48 sm:h-56 md:h-60 object-cover print-photo" src={selectedPatient.beforePhoto} alt="Evolução Antes" sizes="(max-width: 768px) 100vw, 500px" />
+                              {selectedPatient.fotoAntes ? (
+                                <Image width={500} height={500} unoptimized className="w-full h-48 sm:h-56 md:h-60 object-cover print-photo" src={selectedPatient.fotoAntes} alt="Evolução Antes" sizes="(max-width: 768px) 100vw, 500px" />
                               ) : (
                                 <div className="w-full h-48 sm:h-56 md:h-60 bg-surface-container-highest/30 flex flex-col items-center justify-center text-outline gap-2 border border-dashed border-outline-variant/60 rounded-2xl">
                                   <span className="material-symbols-outlined text-4xl opacity-40">photo_camera</span>
@@ -2352,11 +2352,11 @@ export default function CRMPage() {
                                 </div>
                               )}
                               <div className="absolute bottom-3 left-3 bg-[#1c1b1af0] backdrop-blur-md text-white px-3 py-1 rounded-full text-[10px] font-medium font-manrope uppercase">
-                                Antes {selectedPatient.evolutionPhotos?.find(p => p.type === 'Antes')?.data ? `(${selectedPatient.evolutionPhotos.find(p => p.type === 'Antes')?.data})` : ''}
+                                Antes {selectedPatient.fotosEvolucao?.find(p => p.type === 'Antes')?.data ? `(${selectedPatient.fotosEvolucao.find(p => p.type === 'Antes')?.data})` : ''}
                               </div>
-                              {selectedPatient.beforePhoto && (
+                              {selectedPatient.fotoAntes && (
                                 <button 
-                                  onClick={() => setActiveLightboxImage(selectedPatient.beforePhoto)}
+                                  onClick={() => setActiveLightboxImage(selectedPatient.fotoAntes)}
                                   className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white-pure font-bold text-[12px] gap-1 cursor-pointer print-hidden"
                                 >
                                   <span className="material-symbols-outlined">zoom_in</span> Abrir / Visualizar
@@ -2365,8 +2365,8 @@ export default function CRMPage() {
                             </div>
                             
                             <div className="relative rounded-2xl overflow-hidden shadow-inner group bg-surface border border-outline-variant/30">
-                              {selectedPatient.afterPhoto ? (
-                                <Image width={500} height={500} unoptimized className="w-full h-48 sm:h-56 md:h-60 object-cover print-photo" src={selectedPatient.afterPhoto} alt="Evolução Depois" sizes="(max-width: 768px) 100vw, 500px" />
+                              {selectedPatient.fotoDepois ? (
+                                <Image width={500} height={500} unoptimized className="w-full h-48 sm:h-56 md:h-60 object-cover print-photo" src={selectedPatient.fotoDepois} alt="Evolução Depois" sizes="(max-width: 768px) 100vw, 500px" />
                               ) : (
                                 <div className="w-full h-48 sm:h-56 md:h-60 bg-surface-container-highest/30 flex flex-col items-center justify-center text-outline gap-2 border border-dashed border-outline-variant/60 rounded-2xl">
                                   <span className="material-symbols-outlined text-4xl opacity-40">photo_camera</span>
@@ -2374,11 +2374,11 @@ export default function CRMPage() {
                                 </div>
                               )}
                               <div className="absolute bottom-3 left-3 bg-primary text-white-pure px-3 py-1 rounded-full text-[10px] font-medium font-manrope uppercase">
-                                Depois {selectedPatient.evolutionPhotos?.find(p => p.type === 'Depois')?.data ? `(${selectedPatient.evolutionPhotos.find(p => p.type === 'Depois')?.data})` : ''}
+                                Depois {selectedPatient.fotosEvolucao?.find(p => p.type === 'Depois')?.data ? `(${selectedPatient.fotosEvolucao.find(p => p.type === 'Depois')?.data})` : ''}
                               </div>
-                              {selectedPatient.afterPhoto && (
+                              {selectedPatient.fotoDepois && (
                                 <button 
-                                  onClick={() => setActiveLightboxImage(selectedPatient.afterPhoto)}
+                                  onClick={() => setActiveLightboxImage(selectedPatient.fotoDepois)}
                                   className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white-pure font-bold text-[12px] gap-1 cursor-pointer print-hidden"
                                 >
                                   <span className="material-symbols-outlined">zoom_in</span> Abrir / Visualizar
@@ -2391,11 +2391,11 @@ export default function CRMPage() {
                         {/* Chronological Photo Gallery */}
                         <div className="border-t border-outline-variant/40 pt-6 print-hidden">
                           <h4 className="font-manrope text-[14px] font-bold text-primary mb-4">Galeria de Acompanhamento Cronológico</h4>
-                          {(!selectedPatient.evolutionPhotos || selectedPatient.evolutionPhotos.length === 0) ? (
+                          {(!selectedPatient.fotosEvolucao || selectedPatient.fotosEvolucao.length === 0) ? (
                             <p className="text-[11px] text-on-surface-variant italic">Nenhuma foto carregada na galeria. Clique em "Nova Foto" para começar o histórico do paciente.</p>
                           ) : (
                             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-                              {selectedPatient.evolutionPhotos.map(photo => {
+                              {selectedPatient.fotosEvolucao.map(photo => {
                                 const isSelected = compareSelectedIds.includes(photo.id);
                                 return (
                                   <div key={photo.id} className={`relative rounded-xl overflow-hidden group border transition-all ${isSelected ? 'border-primary ring-2 ring-primary/20 scale-[0.98]' : 'border-outline-variant/40 bg-surface'}`}>
@@ -2447,7 +2447,7 @@ export default function CRMPage() {
                       {/* Observations banner block */}
                       <div className="mt-6 p-5 bg-surface rounded-2xl border border-outline-variant/30">
                         <p className="text-[11px] text-primary font-bold uppercase mb-1.5 tracking-wider font-manrope">Observações Studios da Evolução</p>
-                        <p className="text-[13px] text-on-surface font-medium leading-relaxed bg-transparent">{selectedPatient.evolutionNotes}</p>
+                        <p className="text-[13px] text-on-surface font-medium leading-relaxed bg-transparent">{selectedPatient.notasEvolucao}</p>
                       </div>
                     </div>
 
@@ -2472,7 +2472,7 @@ export default function CRMPage() {
                             <span className="material-symbols-outlined text-error text-[18px] mt-0.5">warning</span>
                             <div>
                               <p className="font-manrope text-[11px] font-bold text-on-surface leading-none">Alergias / Contraindicações</p>
-                              <p className="text-[12px] text-on-surface-variant mt-1">{selectedPatient.allergies}</p>
+                              <p className="text-[12px] text-on-surface-variant mt-1">{selectedPatient.alergias}</p>
                             </div>
                           </div>
 
@@ -2480,7 +2480,7 @@ export default function CRMPage() {
                             <span className="material-symbols-outlined text-primary text-[18px] mt-0.5">medication</span>
                             <div>
                               <p className="font-manrope text-[11px] font-bold text-on-surface leading-none">Uso de Medicamentos</p>
-                              <p className="text-[12px] text-on-surface-variant mt-1">{selectedPatient.medications}</p>
+                              <p className="text-[12px] text-on-surface-variant mt-1">{selectedPatient.medicacoes}</p>
                             </div>
                           </div>
 
@@ -2488,7 +2488,7 @@ export default function CRMPage() {
                             <span className="material-symbols-outlined text-tertiary text-[18px] mt-0.5">history_edu</span>
                             <div>
                               <p className="font-manrope text-[11px] font-bold text-on-surface leading-none">Histórico de Estética</p>
-                              <p className="text-[12px] text-on-surface-variant mt-1">{selectedPatient.previousProcedures}</p>
+                              <p className="text-[12px] text-on-surface-variant mt-1">{selectedPatient.procedimentosAnteriores}</p>
                             </div>
                           </div>
                         </div>
@@ -2660,7 +2660,7 @@ export default function CRMPage() {
                           console.warn('Falha no upload da assinatura, mantendo base64:', uploadErr);
                         }
 
-                        let allergiesStr = selectedPatient.allergies || 'Nenhuma';
+                        let allergiesStr = selectedPatient.alergias || 'Nenhuma';
                         if (data.healthToggles['Possui algum tipo de alergia?']) {
                           allergiesStr = 'Sim (verificar anamnese)';
                         }
@@ -2668,7 +2668,7 @@ export default function CRMPage() {
                           allergiesStr += ` - Outros relatos: ${data.otherHealth}`;
                         }
 
-                        let medicationsStr = selectedPatient.medications || 'Nenhum';
+                        let medicationsStr = selectedPatient.medicacoes || 'Nenhum';
                         if (data.healthToggles['Utiliza anticoncepcional?'] || data.healthToggles['Utiliza cremes ou loções facial?']) {
                           const meds = [];
                           if (data.healthToggles['Utiliza anticoncepcional?']) meds.push('Anticoncepcional');
@@ -2676,7 +2676,7 @@ export default function CRMPage() {
                           medicationsStr = meds.join(', ');
                         }
 
-                        let prevProceduresStr = selectedPatient.previousProcedures || 'Nenhum';
+                        let prevProceduresStr = selectedPatient.procedimentosAnteriores || 'Nenhum';
                         if (data.healthToggles['Tratamento facial anterior?']) {
                           prevProceduresStr = 'Sim (verificar anamnese)';
                         }
@@ -2889,7 +2889,7 @@ export default function CRMPage() {
                                 const { error: patErr } = await supabase
                                   .from('clientes')
                                   .update({
-                                    total_spent: (selectedPatient.totalSpent || 0) + val,
+                                    total_spent: (selectedPatient.totalGasto || 0) + val,
                                     procedures_count: (selectedPatient.procedimentosCount || 0) + 1,
                                     financials: updatedFinancials
                                   })
@@ -2916,7 +2916,7 @@ export default function CRMPage() {
                                   if (p.id === selectedPatient.id) {
                                     return {
                                       ...p,
-                                      totalSpent: (p.totalSpent || 0) + val,
+                                      totalSpent: (p.totalGasto || 0) + val,
                                       proceduresCount: (p.procedimentosCount || 0) + 1
                                     };
                                   }
@@ -3696,7 +3696,7 @@ export default function CRMPage() {
                               <Image width={500} height={500} unoptimized src={p.avatar} alt="avatar" className="w-10 h-10 rounded-full border border-primary/20 object-cover" sizes="(max-width: 768px) 100vw, 500px" />
                               <div className="flex flex-col">
                                 <span className="font-extrabold text-on-surface text-[14px] font-manrope">
-                                  {p.pronoun ? p.pronoun + ' ' : ''}{p.nome}
+                                  {p.pronome ? p.pronome + ' ' : ''}{p.nome}
                                 </span>
                                 <span className="text-[11px] text-on-surface-variant">{p.birthdate || 'Cadastrado Dez 2023'}</span>
                               </div>
@@ -3710,7 +3710,7 @@ export default function CRMPage() {
                             )}
                           </td>
                           <td className="px-4 py-4 text-center">
-                            <span className="text-on-surface font-medium">{p.lastVisit}</span>
+                            <span className="text-on-surface font-medium">{p.ultimaVisita}</span>
                           </td>
                           <td className="px-4 py-4">
                             <span className="font-bold text-[#4c845b]">{p.ltv}</span>
@@ -4534,7 +4534,7 @@ export default function CRMPage() {
                     <label className="block text-on-surface-variant font-bold mb-1 ml-1 text-[11px] uppercase tracking-wider">Pronome</label>
                     <select
                       id="new_pat_pronoun"
-                      defaultValue={editingPatientId ? patients.find(p => p.id === editingPatientId)?.pronoun || '' : ''}
+                      defaultValue={editingPatientId ? patients.find(p => p.id === editingPatientId)?.pronome || '' : ''}
                       className="w-full bg-[#f7f3f0] text-on-surface px-3 py-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20 border border-transparent focus:border-primary transition-all font-medium"
                     >
                       <option value="">Nenhum</option>
