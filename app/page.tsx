@@ -870,7 +870,7 @@ export default function CRMPage() {
       )}
 
       {/* 1. Left SideNavBar */}
-      <aside className={`sidebar fixed left-0 top-0 h-full w-72 flex flex-col border-r border-outline-variant bg-surface-container-low backdrop-blur-md z-40 transition-transform duration-300 ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+      <aside className={`sidebar fixed lg:relative left-0 top-0 h-full w-72 flex flex-col border-r border-outline-variant bg-surface-container-low backdrop-blur-md z-40 transition-transform duration-300 ${isMobileMenuOpen ? 'open translate-x-0' : '-translate-x-full lg:translate-x-0'}`}>
         <div className="p-8 pb-4 flex flex-col">
           <div className="h-16 flex items-center gap-2">
             <span className="material-symbols-outlined text-primary text-3xl">spa</span>
