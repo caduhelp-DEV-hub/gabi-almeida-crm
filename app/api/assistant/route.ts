@@ -13,6 +13,10 @@ export async function POST(request: Request) {
       );
     }
 
+    if (message === 'check_status') {
+      return NextResponse.json({ status: 'ok' });
+    }
+
     const ai = new GoogleGenAI({
       apiKey,
       httpOptions: {

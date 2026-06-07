@@ -153,6 +153,7 @@ export default function CRMPage() {
   const [aiAdvice, setAiAdvice] = useState<string>('Dica Gabi Almeida AI: Você tem 3 clientes com interesse em Bioestimuladores hoje. Que tal oferecer o novo protocolo?');
   const [aiCustomInput, setAiCustomInput] = useState<string>('');
   const [aiLoading, setAiLoading] = useState<boolean>(false);
+  const [apiKeyConfigured, setApiKeyConfigured] = useState<boolean>(true);
 
   // Drawing signature pad states
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -351,6 +352,25 @@ export default function CRMPage() {
       setNewPatAvatar('');
     }
   }, [editingPatientId, isPatientModalOpen, patients]);
+
+  // Check Gemini API Key status on mount
+  useEffect(() => {
+    const checkAI = async () => {
+      try {
+        const res = await fetch('/api/assistant', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ message: 'check_status' })
+        });
+        if (res.status === 500) setApiKeyConfigured(false);
+        else setApiKeyConfigured(true);
+      } catch (err) {
+        console.error('API check failed:', err);
+        setApiKeyConfigured(false);
+      }
+    };
+    checkAI();
+  }, []);
 
   // 1. Session check on mount
   useEffect(() => {
@@ -640,10 +660,12 @@ export default function CRMPage() {
         setAiAdvice(`Dica Gabi Almeida AI: ${data.response}`);
         setAiCustomInput('');
       } else if (data.error) {
-        setAiAdvice(`Erro Gabi Almeida AI: ${data.error}`);
+        console.error('Gemini API Error:', data.error);
+        setApiKeyConfigured(false);
       }
     } catch (err: any) {
-      setAiAdvice(`Erro ao contatar assistência AI: ${err.message || err}`);
+      console.error('AI Fetch Error:', err);
+      setApiKeyConfigured(false);
     } finally {
       setAiLoading(false);
     }
@@ -781,7 +803,7 @@ export default function CRMPage() {
     <div className="bg-background text-on-surface font-sans overflow-hidden h-[100dvh] flex relative">
       
       {/* Mobile Menu Overlay */}
-      {isMobileMenuOpen && (
+      {false && isMobileMenuOpen && (
         <div 
           className="fixed inset-0 bg-black/40 z-30 lg:hidden backdrop-blur-sm transition-opacity"
           onClick={() => setIsMobileMenuOpen(false)}
@@ -789,7 +811,7 @@ export default function CRMPage() {
       )}
 
       {/* 1. Left SideNavBar */}
-      <aside className={`fixed lg:relative left-0 top-0 h-full w-72 flex flex-col border-r border-outline-variant bg-surface-container-low backdrop-blur-md z-40 transition-transform duration-300 ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}>
+      <aside className={`sidebar fixed lg:relative left-0 top-0 h-full w-72 flex flex-col border-r border-outline-variant bg-surface-container-low backdrop-blur-md z-40 transition-transform duration-300 ${isMobileMenuOpen ? 'open translate-x-0' : '-translate-x-full lg:translate-x-0'}`}>
         <div className="p-8 pb-4 flex flex-col">
           <div className="h-16 flex items-center gap-2">
             <span className="material-symbols-outlined text-primary text-3xl">spa</span>
@@ -910,9 +932,13 @@ export default function CRMPage() {
           </button>
         </div>
       </aside>
+      <div 
+        className={`sidebar-overlay ${isMobileMenuOpen ? 'open' : ''}`}
+        onClick={() => setIsMobileMenuOpen(false)}
+      />
 
       {/* 2. Top Header and Main Section */}
-      <main className="flex-1 flex flex-col h-full overflow-hidden relative">
+      <main className="main-content flex-1 flex flex-col h-full overflow-hidden relative">
         
         {/* TopNavBar Shell */}
         <header className="h-16 md:h-20 w-full flex justify-between items-center px-4 md:px-8 bg-white-pure/60 backdrop-blur-xl border-b border-outline-variant z-20 relative gap-4">
@@ -1383,14 +1409,14 @@ export default function CRMPage() {
             {/* Calendar Controls */}
             <div className="flex justify-between items-end mb-6">
               <div className="space-y-3">
-                <h2 className="font-manrope text-headline-md font-bold text-on-surface flex items-center gap-3 text-[26px]">
+                <h2 className="font-manrope text-headline-md font-bold text-on-surface flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3 text-[20px] sm:text-[26px]">
                   <span className="material-symbols-outlined text-primary" style={{fontVariationSettings: "'FILL' 1"}}>calendar_today</span>
                   Agenda Diária Studio
-                  <span className="text-on-surface-variant font-normal text-[15px] ml-2">Quinta-feira, 24 de Outubro, 2023</span>
+                  <span className="date-header text-on-surface-variant font-normal text-[15px] sm:ml-2">Quinta-feira, 24 de Outubro, 2023</span>
                 </h2>
                 
                 <div className="flex items-center gap-3">
-                  <div className="flex p-1 bg-surface-container rounded-full border border-outline-variant/60 select-none">
+                  <div className="view-toggle flex p-1 bg-surface-container rounded-full border border-outline-variant/60 select-none">
                     <button 
                       onClick={() => setAgendaView('diaria')}
                       className={`px-5 py-1.5 rounded-full text-label-md text-[12px] font-bold transition-all cursor-pointer ${agendaView === 'diaria' ? 'bg-[#79542e] text-white-pure shadow-sm' : 'text-on-surface-variant hover:text-primary'}`}
@@ -1469,7 +1495,7 @@ export default function CRMPage() {
                 
                 {/* 4.1 Daily View Layout */}
                 {agendaView === 'diaria' && (
-                  <div className="w-full h-full flex flex-row overflow-hidden">
+                  <div className="agenda-grid w-full h-full flex flex-row overflow-hidden">
                     {/* Clock hours sidebar */}
                     <div className="w-20 sm:w-24 border-r border-outline-variant flex flex-col pt-16 font-manrope bg-surface-container/10">
                       <div className="h-20 flex items-start justify-center text-[11px] text-outline pt-2 font-bold">08:00</div>
@@ -1643,7 +1669,7 @@ export default function CRMPage() {
 
                 {/* 4.2 Weekly View Layout */}
                 {agendaView === 'semanal' && (
-                  <div className="w-full h-full flex flex-col overflow-x-auto overflow-y-hidden bg-white-pure custom-scrollbar">
+                  <div className="agenda-grid w-full h-full flex flex-col overflow-x-auto overflow-y-hidden bg-white-pure custom-scrollbar">
                     <div className="flex flex-col min-w-[800px] h-full overflow-hidden">
                       {/* Header: Weekdays */}
                       <div className="grid grid-cols-7 border-b border-outline-variant bg-surface-container/30">
@@ -1695,7 +1721,7 @@ export default function CRMPage() {
 
                 {/* 4.3 Monthly View Layout */}
                 {agendaView === 'mensal' && (
-                  <div className="w-full h-full flex flex-col md:flex-row overflow-hidden bg-white-pure">
+                  <div className="agenda-grid w-full h-full flex flex-col md:flex-row overflow-hidden bg-white-pure">
                     {/* Left: Dynamic month calendar grid */}
                     <div className="flex-1 p-6 border-b md:border-b-0 md:border-r border-outline-variant overflow-y-auto">
                       <div className="flex justify-between items-center mb-6 select-none font-manrope">
@@ -1863,6 +1889,13 @@ export default function CRMPage() {
                 </div>
 
                 {/* Gemini AI interactive helper (Image 3) */}
+                {!apiKeyConfigured ? (
+                  <div className="p-4 bg-primary/10 border border-primary/20 rounded-2xl text-center space-y-2">
+                    <span className="material-symbols-outlined text-primary text-xl">auto_awesome</span>
+                    <h4 className="font-manrope text-[13px] font-bold text-on-surface">✦ Assistente IA temporariamente indisponível</h4>
+                    <p className="text-[11px] text-on-surface-variant leading-relaxed">Tente novamente em alguns instantes.</p>
+                  </div>
+                ) : (
                 <div className="p-4 bg-[#79542e] text-on-primary rounded-2xl shadow-lg relative overflow-hidden group">
                   <div className="absolute -right-4 -bottom-4 opacity-10">
                     <span className="material-symbols-outlined text-[80px]">auto_awesome</span>
@@ -1899,6 +1932,7 @@ export default function CRMPage() {
                     </div>
                   </div>
                 </div>
+                )}
 
               </div>
 
@@ -2958,7 +2992,7 @@ export default function CRMPage() {
           <section className="flex-1 overflow-y-auto p-6 md:p-8 bg-surface">
             
             {/* Bento cards metric panel (Image 1) */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+            <div className="financeiro-grid grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
               
               {/* Entradas Card */}
               <div className="glass-panel p-6 rounded-3xl relative overflow-hidden group">
@@ -3074,7 +3108,7 @@ export default function CRMPage() {
             </div>
 
             {/* Split layout: Cash flow detailed and commission leaders (Image 1) */}
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch mb-8">
+            <div className="financeiro-grid grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch mb-8">
               
               {/* Detailed Cashflow chart (Left) */}
               <div className="lg:col-span-8 glass-panel p-6 rounded-3xl flex flex-col justify-between">
