@@ -180,6 +180,8 @@ export default function CRMPage() {
 
   // Financeiro module detailed view timeframe
   const [financialTimeframe, setFinancialTimeframe] = useState<'semanal' | 'mensal'>('mensal');
+  const [hoveredCategory, setHoveredCategory] = useState<string | null>(null);
+  const [hoveredDay, setHoveredDay] = useState<number | null>(null);
 
   // Core Patients DB Status
   const [patients, setPatients] = useState<Patient[]>([]);
@@ -3314,6 +3316,15 @@ export default function CRMPage() {
             </div>
 
             {/* Charts: Pizza (Receita por Categoria) + Barras (Movimentação Diária) */}
+            <style dangerouslySetInnerHTML={{ __html: `
+              @keyframes pizza-draw { from { stroke-dasharray: 0 100; } }
+              @keyframes bar-grow { from { transform: scaleY(0); } to { transform: scaleY(1); } }
+              .pizza-slice { transition: stroke-width 0.2s ease, opacity 0.2s ease; transform-origin: 18px 18px; cursor: pointer; }
+              .pizza-slice:hover { stroke-width: 4.5; }
+              .bar-anim { transform-origin: bottom; animation: bar-grow 0.6s ease-out backwards; }
+              .legend-row { transition: opacity 0.2s ease, transform 0.2s ease; cursor: pointer; padding: 4px 6px; border-radius: 8px; }
+              .legend-row:hover { background: rgba(121, 84, 46, 0.06); }
+            `}} />
             <div className="financeiro-grid grid grid-cols-1 lg:grid-cols-2 gap-3 mb-8">
               
               {/* Pizza: Receita por Categoria */}
@@ -3330,34 +3341,57 @@ export default function CRMPage() {
                     return <p className="text-[12px] text-on-surface-variant text-center py-8">Sem dados de receita ainda.</p>;
                   }
                   const colors = ['#79542e', '#5a3e22', '#b8855e', '#d4a373', '#8b6f47', '#a89077'];
+                  const hoveredIdx = hoveredCategory !== null ? entries.findIndex(([c]) => c === hoveredCategory) : -1;
                   let offset = 0;
                   return (
                     <div className="flex flex-col sm:flex-row items-center gap-8">
-                      <svg viewBox="0 0 36 36" className="w-40 h-40 flex-shrink-0 -rotate-90">
-                        {entries.map(([cat, val], idx) => {
-                          const pct = (val / total) * 100;
-                          const dash = `${pct} ${100 - pct}`;
-                          const el = (
-                            <circle
-                              key={cat}
-                              cx="18" cy="18" r="15.9155"
-                              fill="none"
-                              stroke={colors[idx % colors.length]}
-                              strokeWidth="3"
-                              strokeDasharray={dash}
-                              strokeDashoffset={-offset}
-                            />
-                          );
-                          offset += pct;
-                          return el;
-                        })}
-                        <circle cx="18" cy="18" r="10" fill="white" />
-                      </svg>
-                      <div className="space-y-3 w-full sm:w-auto sm:flex-1">
+                      <div className="relative flex-shrink-0">
+                        <svg viewBox="0 0 36 36" className="w-40 h-40 -rotate-90 overflow-visible">
+                          {entries.map(([cat, val], idx) => {
+                            const pct = (val / total) * 100;
+                            const dash = `${pct} ${100 - pct}`;
+                            const isDimmed = hoveredIdx >= 0 && hoveredIdx !== idx;
+                            const el = (
+                              <circle
+                                key={cat}
+                                cx="18" cy="18" r="15.9155"
+                                fill="none"
+                                stroke={colors[idx % colors.length]}
+                                strokeWidth={hoveredIdx === idx ? 5 : 3}
+                                strokeDasharray={dash}
+                                strokeDashoffset={-offset}
+                                style={{
+                                  animation: `pizza-draw 0.8s ease-out ${idx * 120}ms backwards`,
+                                  opacity: isDimmed ? 0.25 : 1
+                                }}
+                                className="pizza-slice"
+                                onMouseEnter={() => setHoveredCategory(cat)}
+                                onMouseLeave={() => setHoveredCategory(null)}
+                              >
+                                <title>{`${cat}: R$ ${val.toLocaleString('pt-BR', { maximumFractionDigits: 0 })} (${pct.toFixed(1)}%)`}</title>
+                              </circle>
+                            );
+                            offset += pct;
+                            return el;
+                          })}
+                          <circle cx="18" cy="18" r="10" fill="white" />
+                          <text x="18" y="18" textAnchor="middle" dominantBaseline="central" className="rotate-90 origin-center" fill="#79542e" style={{ fontSize: '3.5px', fontWeight: 700 }}>
+                            {`${entries.length} ${entries.length === 1 ? 'cat' : 'cats'}`}
+                          </text>
+                        </svg>
+                      </div>
+                      <div className="space-y-1 w-full sm:w-auto sm:flex-1">
                         {entries.map(([cat, val], idx) => {
                           const pct = ((val / total) * 100).toFixed(1);
+                          const isDimmed = hoveredIdx >= 0 && hoveredIdx !== idx;
                           return (
-                            <div key={cat} className="flex items-center justify-between gap-3 text-[13px]">
+                            <div
+                              key={cat}
+                              className="legend-row flex items-center justify-between gap-3 text-[13px]"
+                              style={{ opacity: isDimmed ? 0.4 : 1 }}
+                              onMouseEnter={() => setHoveredCategory(cat)}
+                              onMouseLeave={() => setHoveredCategory(null)}
+                            >
                               <div className="flex items-center gap-2.5 min-w-0">
                                 <span className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: colors[idx % colors.length] }}></span>
                                 <span className="truncate text-on-surface-variant">{cat}</span>
@@ -3408,20 +3442,48 @@ export default function CRMPage() {
                       dayData.push({ day: String(d.getDate()).padStart(2, '0'), receita: rec, despesa: des });
                     }
                     const maxVal = Math.max(...dayData.map(d => Math.max(d.receita, d.despesa)), 1);
-                    return dayData.map((d, idx) => (
-                      <div key={idx} className="flex items-end gap-1 h-full group flex-1 justify-center">
+                    return dayData.map((d, idx) => {
+                      const isHovered = hoveredDay === idx;
+                      const isDimmed = hoveredDay !== null && hoveredDay !== idx;
+                      return (
                         <div
-                          className="w-3 sm:w-4 bg-[#3B6D11]/70 rounded-t-sm transition-all group-hover:bg-[#3B6D11]"
-                          style={{ height: `${(d.receita / maxVal) * 100}%`, minHeight: d.receita > 0 ? '2px' : '0' }}
-                          title={`Receita: R$ ${d.receita.toFixed(0)}`}
-                        ></div>
-                        <div
-                          className="w-3 sm:w-4 bg-[#993C1D]/70 rounded-t-sm transition-all group-hover:bg-[#993C1D]"
-                          style={{ height: `${(d.despesa / maxVal) * 100}%`, minHeight: d.despesa > 0 ? '2px' : '0' }}
-                          title={`Despesa: R$ ${d.despesa.toFixed(0)}`}
-                        ></div>
-                      </div>
-                    ));
+                          key={idx}
+                          className="flex items-end gap-1 h-full flex-1 justify-center relative"
+                          onMouseEnter={() => setHoveredDay(idx)}
+                          onMouseLeave={() => setHoveredDay(null)}
+                        >
+                          <div
+                            className="bar-anim w-3 sm:w-4 rounded-t-sm transition-all"
+                            style={{
+                              height: `${(d.receita / maxVal) * 100}%`,
+                              minHeight: d.receita > 0 ? '2px' : '0',
+                              backgroundColor: isDimmed ? 'rgba(59,109,17,0.25)' : (isHovered ? '#3B6D11' : 'rgba(59,109,17,0.7)'),
+                              animationDelay: `${idx * 25}ms`
+                            }}
+                          >
+                            <title>{`Dia ${d.day}: Receita R$ ${d.receita.toFixed(0)}`}</title>
+                          </div>
+                          <div
+                            className="bar-anim w-3 sm:w-4 rounded-t-sm transition-all"
+                            style={{
+                              height: `${(d.despesa / maxVal) * 100}%`,
+                              minHeight: d.despesa > 0 ? '2px' : '0',
+                              backgroundColor: isDimmed ? 'rgba(153,60,29,0.25)' : (isHovered ? '#993C1D' : 'rgba(153,60,29,0.7)'),
+                              animationDelay: `${idx * 25 + 50}ms`
+                            }}
+                          >
+                            <title>{`Dia ${d.day}: Despesa R$ ${d.despesa.toFixed(0)}`}</title>
+                          </div>
+                          {isHovered && (d.receita > 0 || d.despesa > 0) && (
+                            <div className="absolute -top-12 left-1/2 -translate-x-1/2 bg-[#3d2a1a] text-white-pure text-[11px] font-medium px-2.5 py-1.5 rounded-lg shadow-lg whitespace-nowrap z-10 pointer-events-none">
+                              <div className="font-bold mb-0.5">Dia {d.day}</div>
+                              {d.receita > 0 && <div style={{color: '#7fb86a'}}>+ R$ {d.receita.toFixed(0)}</div>}
+                              {d.despesa > 0 && <div style={{color: '#e8a08a'}}>- R$ {d.despesa.toFixed(0)}</div>}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    });
                   })()}
                 </div>
                 <div className="mt-5 flex justify-center gap-8 text-[12px] font-medium">
