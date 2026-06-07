@@ -2797,7 +2797,7 @@ export default function CRMPage() {
                                 <tr key={item.id} className="hover:bg-surface-container/20 group">
                                   <td className="py-3.5 font-medium text-on-surface-variant">{item.date}</td>
                                   <td className="py-3.5">
-                                    <p className="font-bold text-on-surface font-manrope">{item.procedimento}</p>
+                                    <p className="font-bold text-on-surface font-manrope">{item.procedure}</p>
                                     <p className="text-[10px] text-outline mt-0.5">{item.description}</p>
                                   </td>
                                   <td className="py-3.5 text-on-surface-variant font-medium">{item.method}</td>
