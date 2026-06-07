@@ -3329,7 +3329,7 @@ export default function CRMPage() {
                   if (total === 0) {
                     return <p className="text-[12px] text-on-surface-variant text-center py-8">Sem dados de receita ainda.</p>;
                   }
-                  const colors = ['#79542e', '#3B6D11', '#185FA5', '#993C1D', '#745c00', '#7a1a4a'];
+                  const colors = ['#79542e', '#5a3e22', '#b8855e', '#d4a373', '#8b6f47', '#a89077'];
                   let offset = 0;
                   return (
                     <div className="flex flex-col sm:flex-row items-center gap-6">
