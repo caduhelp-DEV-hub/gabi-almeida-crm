@@ -3022,7 +3022,7 @@ export default function CRMPage() {
                               </p>
                               
                               <div className="flex gap-4 text-[10px] text-outline mt-2 font-semibold">
-                                <span className="flex items-center gap-1"><span className="material-symbols-outlined text-[12px]">calendar_today</span> {doc.data}</span>
+                                <span className="flex items-center gap-1"><span className="material-symbols-outlined text-[12px]">calendar_today</span> {doc.date}</span>
                                 <span className="flex items-center gap-1"><span className="material-symbols-outlined text-[12px]">database</span> {doc.size}</span>
                               </div>
                             </div>
@@ -3125,7 +3125,7 @@ export default function CRMPage() {
                       }
                     }
                     return options.map(opt => (
-                      <option key={opt.valor} value={opt.valor}>{opt.label}</option>
+                      <option key={opt.value} value={opt.value}>{opt.label}</option>
                     ));
                   })()}
                 </select>
@@ -4161,13 +4161,13 @@ export default function CRMPage() {
 
             <form onSubmit={async (e) => {
               e.preventDefault();
-              const name = (document.getElementById('new_user_name') as HTMLInputElement).valor;
-              const username = (document.getElementById('new_user_username') as HTMLInputElement).valor;
-              const phone = (document.getElementById('new_user_phone') as HTMLInputElement).valor;
-              const role = (document.getElementById('new_user_role') as HTMLSelectElement).valor as any;
-              const specialty = (document.getElementById('new_user_specialty') as HTMLInputElement).valor;
-              const commissionRate = parseInt((document.getElementById('new_user_comm') as HTMLInputElement).valor) || 0;
-              const password = (document.getElementById('new_user_pass') as HTMLInputElement).valor;
+              const name = (document.getElementById('new_user_name') as HTMLInputElement).value;
+              const username = (document.getElementById('new_user_username') as HTMLInputElement).value;
+              const phone = (document.getElementById('new_user_phone') as HTMLInputElement).value;
+              const role = (document.getElementById('new_user_role') as HTMLSelectElement).value as any;
+              const specialty = (document.getElementById('new_user_specialty') as HTMLInputElement).value;
+              const commissionRate = parseInt((document.getElementById('new_user_comm') as HTMLInputElement).value) || 0;
+              const password = (document.getElementById('new_user_pass') as HTMLInputElement).value;
 
               const canAccessCRM = (document.getElementById('perm_crm') as HTMLInputElement).checked;
               const canAccessAgenda = (document.getElementById('perm_agenda') as HTMLInputElement).checked;
@@ -4264,7 +4264,7 @@ export default function CRMPage() {
                   ) : editingUser?.avatar ? (
                     <Image width={500} height={500} unoptimized alt="Avatar atual" className="w-full h-full object-cover" src={editingUser.avatar} sizes="(max-width: 768px) 100vw, 500px" />
                   ) : (
-                    <span>{(document.getElementById('new_user_name') as HTMLInputElement)?.valor?.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() || '?'}</span>
+                    <span>{(document.getElementById('new_user_name') as HTMLInputElement)?.value?.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() || '?'}</span>
                   )}
                 </div>
                 <div className="flex-1 min-w-0">
@@ -4429,12 +4429,12 @@ export default function CRMPage() {
 
             <form onSubmit={async (e) => {
               e.preventDefault();
-              const pronoun = (document.getElementById('new_pat_pronoun') as HTMLSelectElement).valor;
-              const name = (document.getElementById('new_pat_name') as HTMLInputElement).valor;
-              const phone = (document.getElementById('new_pat_phone') as HTMLInputElement).valor;
-              const cpf = (document.getElementById('new_pat_cpf') as HTMLInputElement).valor;
+              const pronome = (document.getElementById('new_pat_pronoun') as HTMLSelectElement).value;
+              const nome = (document.getElementById('new_pat_name') as HTMLInputElement).value;
+              const telefone = (document.getElementById('new_pat_phone') as HTMLInputElement).value;
+              const cpf = (document.getElementById('new_pat_cpf') as HTMLInputElement).value;
               
-              if (!name) {
+              if (!nome) {
                 showAlert('Nome é obrigatório.');
                 return;
               }
@@ -4443,7 +4443,7 @@ export default function CRMPage() {
                 if (editingPatientId) {
                   const { data, error } = await supabase
                     .from('clientes')
-                    .update(mapClienteToBackend({ name, phone, cpf, pronoun, avatar: newPatAvatar || undefined, detailsAvatar: newPatAvatar || undefined }))
+                    .update(mapClienteToBackend({ nome, telefone, cpf, pronome, avatar: newPatAvatar || undefined, fotoDetalhes: newPatAvatar || undefined }))
                     .eq('id', editingPatientId)
                     .select();
                   if (error) throw error;
@@ -4452,29 +4452,29 @@ export default function CRMPage() {
                   }
                   showAlert('Cliente atualizado com sucesso!');
                 } else {
-                  const newPatient = {
-                    name,
-                    phone,
+                  const newPatient: Partial<Cliente> = {
+                    nome,
+                    telefone,
                     cpf,
-                    pronoun,
-                    avatar: newPatAvatar || ('https://api.dicebear.com/7.x/notionists/svg?seed=' + name.replace(/\s+/g, '')),
-                    detailsAvatar: newPatAvatar || ('https://api.dicebear.com/7.x/notionists/svg?seed=' + name.replace(/\s+/g, '')),
+                    pronome,
+                    avatar: newPatAvatar || ('https://api.dicebear.com/7.x/notionists/svg?seed=' + nome.replace(/\s+/g, '')),
+                    fotoDetalhes: newPatAvatar || ('https://api.dicebear.com/7.x/notionists/svg?seed=' + nome.replace(/\s+/g, '')),
                     status: 'Standard',
                     tier: 'Cliente Avaliação',
                     since: 'Hoje',
-                    totalSpent: 0,
-                    proceduresCount: 0,
-                    lastPhotoDate: '--',
-                    allergies: 'Nenhuma reportada',
-                    medications: 'Nenhum reportado',
-                    previousProcedures: 'Nenhum',
-                    evolutionNotes: '',
-                    beforePhoto: 'https://images.unsplash.com/photo-1542385151-efd85c07c293?w=500&h=500&fit=crop',
-                    afterPhoto: 'https://images.unsplash.com/photo-1542385151-efd85c07c293?w=500&h=500&fit=crop',
-                    lastVisit: 'Hoje',
+                    totalGasto: 0,
+                    qtdeProcedimentos: 0,
+                    dataUltimaFoto: '--',
+                    alergias: 'Nenhuma reportada',
+                    medicacoes: 'Nenhum reportado',
+                    procedimentosAnteriores: 'Nenhum',
+                    notasEvolucao: '',
+                    fotoAntes: 'https://images.unsplash.com/photo-1542385151-efd85c07c293?w=500&h=500&fit=crop',
+                    fotoDepois: 'https://images.unsplash.com/photo-1542385151-efd85c07c293?w=500&h=500&fit=crop',
+                    ultimaVisita: 'Hoje',
                     birthdate: 'Cadastrado Hoje',
                     ltv: 'R$ 0,00',
-                    timeline: []
+                    historico: []
                   };
                   const { data, error } = await supabase
                     .from('clientes')
@@ -4552,7 +4552,7 @@ export default function CRMPage() {
                         id="new_pat_name"
                         type="text" 
                         placeholder="Ex: Maria Carolina da Silva" 
-                        defaultValue={editingPatientId ? patients.find(p => p.id === editingPatientId)?.name : ''}
+                        defaultValue={editingPatientId ? patients.find(p => p.id === editingPatientId)?.nome : ''}
                         className="w-full bg-[#f7f3f0] text-on-surface pl-10 pr-4 py-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20 border border-transparent focus:border-primary transition-all font-medium"
                       />
                     </div>
@@ -4569,16 +4569,16 @@ export default function CRMPage() {
                           id="new_pat_phone"
                           type="text" 
                           placeholder="(11) 90000-0000" 
-                          defaultValue={editingPatientId ? patients.find(p => p.id === editingPatientId)?.phone || '' : ''}
+                          defaultValue={editingPatientId ? patients.find(p => p.id === editingPatientId)?.telefone || '' : ''}
                           className="w-full bg-[#f7f3f0] text-on-surface pl-10 pr-4 py-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20 border border-transparent focus:border-primary transition-all"
                         />
                       </div>
                       <button type="button" onClick={() => {
                         const input = document.getElementById('new_pat_phone') as HTMLInputElement;
-                        if(input.valor.length > 5) {
+                        if(input.value.length > 5) {
                           const nameInput = document.getElementById('new_pat_name') as HTMLInputElement;
-                          if (nameInput && !nameInput.valor) {
-                             nameInput.valor = 'Cliente (Via WhatsApp)';
+                          if (nameInput && !nameInput.value) {
+                             nameInput.value = 'Cliente (Via WhatsApp)';
                           }
                           showAlert('Cadastros encontrados e vinculados via WhatsApp com sucesso!');
                         } else {
@@ -4678,7 +4678,7 @@ export default function CRMPage() {
             }} className="space-y-4 font-sans text-[13px]">
               <div>
                 <label className="block text-[11px] font-bold text-on-surface-variant uppercase tracking-wider mb-2">Nome do Serviço</label>
-                <input required name="name" defaultValue={editingService?.name || ''} type="text" className="w-full bg-surface-container px-4 py-3 rounded-xl border border-outline-variant focus:outline-primary placeholder:text-on-surface-variant/50" placeholder="ex: Peeling Químico" />
+                <input required name="name" defaultValue={editingService?.nome || ''} type="text" className="w-full bg-surface-container px-4 py-3 rounded-xl border border-outline-variant focus:outline-primary placeholder:text-on-surface-variant/50" placeholder="ex: Peeling Químico" />
               </div>
               <div className="grid grid-cols-2 gap-4">
                  <div>
@@ -4691,12 +4691,12 @@ export default function CRMPage() {
                  </div>
                  <div>
                    <label className="block text-[11px] font-bold text-on-surface-variant uppercase tracking-wider mb-2">Duração (Ex: 40 min)</label>
-                   <input required name="duration" defaultValue={editingService?.duration || ''} type="text" className="w-full bg-surface-container px-4 py-3 rounded-xl border border-outline-variant focus:outline-primary placeholder:text-on-surface-variant/50" placeholder="ex: 45 min" />
+                   <input required name="duration" defaultValue={editingService?.duracao || ''} type="text" className="w-full bg-surface-container px-4 py-3 rounded-xl border border-outline-variant focus:outline-primary placeholder:text-on-surface-variant/50" placeholder="ex: 45 min" />
                  </div>
               </div>
               <div>
                 <label className="block text-[11px] font-bold text-on-surface-variant uppercase tracking-wider mb-2">Preço Base (R$)</label>
-                <input required name="price" defaultValue={editingService?.price || ''} type="number" step="0.01" className="w-full bg-surface-container px-4 py-3 rounded-xl border border-outline-variant focus:outline-primary placeholder:text-on-surface-variant/50" placeholder="ex: 120.00" />
+                <input required name="price" defaultValue={editingService?.preco || ''} type="number" step="0.01" className="w-full bg-surface-container px-4 py-3 rounded-xl border border-outline-variant focus:outline-primary placeholder:text-on-surface-variant/50" placeholder="ex: 120.00" />
               </div>
               <div className="pt-4 pb-2 flex gap-4">
                   <button type="button" onClick={() => setIsServiceModalOpen(false)} className="flex-1 py-3 text-[12px] font-bold text-on-surface border border-outline-variant rounded-xl hover:bg-surface transition-all">Cancelar</button>
@@ -4798,32 +4798,32 @@ export default function CRMPage() {
             <form onSubmit={async (e) => {
               e.preventDefault();
               const formData = new FormData(e.currentTarget);
-              const description = formData.get('description') as string;
-              const date = formData.get('date') as string;
-              const category = formData.get('category') as string;
+              const descricao = formData.get('descricao') as string;
+              const data = formData.get('data') as string;
+              const categoria = formData.get('categoria') as string;
               const status = formData.get('status') as 'Confirmado' | 'Pago' | 'Pendente';
-              const valueStr = formData.get('value') as string;
-              const value = parseFloat(valueStr.replace(/[^0-9,.-]/g, '').replace(',', '.'));
+              const valorStr = formData.get('valor') as string;
+              const valor = parseFloat(valorStr.replace(/[^0-9,.-]/g, '').replace(',', '.'));
               
               try {
-                if(editingTransaction) {
-                  const { data, error } = await supabase
+                if(editingCobranca) {
+                  const { data: result, error } = await supabase
                     .from('cobrancas')
-                    .update({ description, date, category, status, value })
-                    .eq('id', editingTransaction.id)
+                    .update({ descricao, data, categoria, status, valor })
+                    .eq('id', editingCobranca.id)
                     .select();
                   if (error) throw error;
-                  if (data && data[0]) {
-                    setTransactions(prev => prev.map(t => t.id === editingTransaction.id ? data[0] : t));
+                  if (result && result[0]) {
+                    setTransactions(prev => prev.map(t => t.id === editingCobranca.id ? result[0] : t));
                   }
                 } else {
-                  const { data, error } = await supabase
+                  const { data: result, error } = await supabase
                     .from('cobrancas')
-                    .insert([{ description, date, category, status, value }])
+                    .insert([{ descricao, data, categoria, status, valor }])
                     .select();
                   if (error) throw error;
-                  if (data && data[0]) {
-                    setTransactions(prev => [...prev, data[0]]);
+                  if (result && result[0]) {
+                    setTransactions(prev => [...prev, result[0]]);
                   }
                 }
                 setIsTransactionModalOpen(false);
@@ -4834,22 +4834,22 @@ export default function CRMPage() {
             }} className="space-y-4 font-sans text-[13px]">
               <div>
                 <label className="block text-[11px] font-bold text-on-surface-variant uppercase tracking-wider mb-2">Descrição</label>
-                <input required name="description" defaultValue={editingTransaction?.descricao || ''} type="text" className="w-full bg-surface-container px-4 py-3 rounded-xl border border-outline-variant focus:outline-primary placeholder:text-on-surface-variant/50" placeholder="ex: Compra de materiais" />
+                <input required name="descricao" defaultValue={editingCobranca?.descricao || ''} type="text" className="w-full bg-surface-container px-4 py-3 rounded-xl border border-outline-variant focus:outline-primary placeholder:text-on-surface-variant/50" placeholder="ex: Compra de materiais" />
               </div>
               <div className="grid grid-cols-2 gap-4">
                  <div>
                    <label className="block text-[11px] font-bold text-on-surface-variant uppercase tracking-wider mb-2">Data</label>
-                   <input required name="date" defaultValue={editingTransaction?.data || 'Hoje, 10:00'} type="text" className="w-full bg-surface-container px-4 py-3 rounded-xl border border-outline-variant focus:outline-primary placeholder:text-on-surface-variant/50" />
+                    <input required name="data" defaultValue={editingCobranca?.data || 'Hoje, 10:00'} type="text" className="w-full bg-surface-container px-4 py-3 rounded-xl border border-outline-variant focus:outline-primary placeholder:text-on-surface-variant/50" />
                  </div>
                  <div>
                    <label className="block text-[11px] font-bold text-on-surface-variant uppercase tracking-wider mb-2">Valor (R$)</label>
-                   <input required name="value" defaultValue={editingTransaction?.valor || ''} type="number" step="0.01" className="w-full bg-surface-container px-4 py-3 rounded-xl border border-outline-variant focus:outline-primary placeholder:text-on-surface-variant/50" placeholder="-150.00" />
+                    <input required name="valor" defaultValue={editingCobranca?.valor || ''} type="number" step="0.01" className="w-full bg-surface-container px-4 py-3 rounded-xl border border-outline-variant focus:outline-primary placeholder:text-on-surface-variant/50" placeholder="-150.00" />
                  </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
                  <div>
                    <label className="block text-[11px] font-bold text-on-surface-variant uppercase tracking-wider mb-2">Categoria</label>
-                   <select required name="category" defaultValue={editingTransaction?.categoria || 'Procedimento'} className="w-full bg-surface-container px-4 py-3 rounded-xl border border-outline-variant focus:outline-primary appearance-none custom-select-arrow">
+                    <select required name="categoria" defaultValue={editingCobranca?.categoria || 'Procedimento'} className="w-full bg-surface-container px-4 py-3 rounded-xl border border-outline-variant focus:outline-primary appearance-none custom-select-arrow">
                      <option value="Procedimento">Procedimento (Ganho)</option>
                      <option value="Insumos">Insumos (Despesa)</option>
                      <option value="Aluguel">Aluguel (Despesa)</option>
@@ -4859,7 +4859,7 @@ export default function CRMPage() {
                  </div>
                  <div>
                    <label className="block text-[11px] font-bold text-on-surface-variant uppercase tracking-wider mb-2">Status</label>
-                   <select required name="status" defaultValue={editingTransaction?.status || 'Confirmado'} className="w-full bg-surface-container px-4 py-3 rounded-xl border border-outline-variant focus:outline-primary appearance-none custom-select-arrow">
+                    <select required name="status" defaultValue={editingCobranca?.status || 'Confirmado'} className="w-full bg-surface-container px-4 py-3 rounded-xl border border-outline-variant focus:outline-primary appearance-none custom-select-arrow">
                      <option value="Confirmado">Confirmado</option>
                      <option value="Pago">Pago</option>
                      <option value="Pendente">Pendente</option>
