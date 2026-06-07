@@ -3317,8 +3317,8 @@ export default function CRMPage() {
             <div className="financeiro-grid grid grid-cols-1 lg:grid-cols-2 gap-3 mb-8">
               
               {/* Pizza: Receita por Categoria */}
-              <div className="bg-white-pure rounded-3xl border border-outline-variant/40 p-6">
-                <h3 className="text-[13px] font-medium text-on-surface mb-4">Receita por Categoria</h3>
+              <div className="bg-white-pure rounded-3xl border border-outline-variant/40 p-7">
+                <h3 className="text-[15px] font-semibold text-on-surface mb-6">Receita por Categoria</h3>
                 {(() => {
                   const byCategory: { [key: string]: number } = {};
                   transactions.filter(t => t.value > 0).forEach(t => {
@@ -3332,8 +3332,8 @@ export default function CRMPage() {
                   const colors = ['#79542e', '#5a3e22', '#b8855e', '#d4a373', '#8b6f47', '#a89077'];
                   let offset = 0;
                   return (
-                    <div className="flex flex-col sm:flex-row items-center gap-6">
-                      <svg viewBox="0 0 36 36" className="w-32 h-32 flex-shrink-0 -rotate-90">
+                    <div className="flex flex-col sm:flex-row items-center gap-8">
+                      <svg viewBox="0 0 36 36" className="w-40 h-40 flex-shrink-0 -rotate-90">
                         {entries.map(([cat, val], idx) => {
                           const pct = (val / total) * 100;
                           const dash = `${pct} ${100 - pct}`;
@@ -3353,17 +3353,17 @@ export default function CRMPage() {
                         })}
                         <circle cx="18" cy="18" r="10" fill="white" />
                       </svg>
-                      <div className="space-y-2 w-full sm:w-auto sm:flex-1">
+                      <div className="space-y-3 w-full sm:w-auto sm:flex-1">
                         {entries.map(([cat, val], idx) => {
                           const pct = ((val / total) * 100).toFixed(1);
                           return (
-                            <div key={cat} className="flex items-center justify-between gap-3 text-[12px]">
-                              <div className="flex items-center gap-2 min-w-0">
-                                <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: colors[idx % colors.length] }}></span>
+                            <div key={cat} className="flex items-center justify-between gap-3 text-[13px]">
+                              <div className="flex items-center gap-2.5 min-w-0">
+                                <span className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: colors[idx % colors.length] }}></span>
                                 <span className="truncate text-on-surface-variant">{cat}</span>
                               </div>
-                              <div className="flex items-center gap-2 flex-shrink-0">
-                                <span className="text-outline">{pct}%</span>
+                              <div className="flex items-center gap-2.5 flex-shrink-0">
+                                <span className="text-outline text-[12px]">{pct}%</span>
                                 <span className="font-bold text-[#3B6D11]">R$ {val.toLocaleString('pt-BR', { maximumFractionDigits: 0 })}</span>
                               </div>
                             </div>
@@ -3376,25 +3376,25 @@ export default function CRMPage() {
               </div>
 
               {/* Barras: Movimentação Diária */}
-              <div className="bg-white-pure rounded-3xl border border-outline-variant/40 p-6">
-                <div className="flex justify-between items-center mb-4">
-                  <h3 className="text-[13px] font-medium text-on-surface">Movimentação Diária</h3>
+              <div className="bg-white-pure rounded-3xl border border-outline-variant/40 p-7">
+                <div className="flex justify-between items-center mb-6">
+                  <h3 className="text-[15px] font-semibold text-on-surface">Movimentação Diária</h3>
                   <div className="flex gap-2">
                     <button
                       onClick={() => setFinancialTimeframe('semanal')}
-                      className={`px-3 py-1 border rounded-lg text-[11px] font-bold transition-all cursor-pointer ${financialTimeframe === 'semanal' ? 'bg-primary text-white-pure border-primary' : 'border-outline-variant/60 text-on-surface-variant hover:bg-surface-container'}`}
+                      className={`px-3.5 py-1.5 border rounded-lg text-[12px] font-bold transition-all cursor-pointer ${financialTimeframe === 'semanal' ? 'bg-primary text-white-pure border-primary' : 'border-outline-variant/60 text-on-surface-variant hover:bg-surface-container'}`}
                     >
                       Semanal
                     </button>
                     <button
                       onClick={() => setFinancialTimeframe('mensal')}
-                      className={`px-3 py-1 border rounded-lg text-[11px] font-bold transition-all cursor-pointer ${financialTimeframe === 'mensal' ? 'bg-primary text-white-pure border-primary' : 'border-outline-variant/60 text-on-surface-variant hover:bg-surface-container'}`}
+                      className={`px-3.5 py-1.5 border rounded-lg text-[12px] font-bold transition-all cursor-pointer ${financialTimeframe === 'mensal' ? 'bg-primary text-white-pure border-primary' : 'border-outline-variant/60 text-on-surface-variant hover:bg-surface-container'}`}
                     >
                       Mensal
                     </button>
                   </div>
                 </div>
-                <div className="relative h-48 w-full flex items-end justify-between px-2 mt-4">
+                <div className="relative h-56 w-full flex items-end justify-between px-2 mt-6">
                   {(() => {
                     const days = financialTimeframe === 'semanal' ? 7 : 30;
                     const today = new Date();
@@ -3409,14 +3409,14 @@ export default function CRMPage() {
                     }
                     const maxVal = Math.max(...dayData.map(d => Math.max(d.receita, d.despesa)), 1);
                     return dayData.map((d, idx) => (
-                      <div key={idx} className="flex items-end gap-0.5 h-full group flex-1 justify-center">
+                      <div key={idx} className="flex items-end gap-1 h-full group flex-1 justify-center">
                         <div
-                          className="w-2 sm:w-3 bg-[#3B6D11]/70 rounded-t-sm transition-all group-hover:bg-[#3B6D11]"
+                          className="w-3 sm:w-4 bg-[#3B6D11]/70 rounded-t-sm transition-all group-hover:bg-[#3B6D11]"
                           style={{ height: `${(d.receita / maxVal) * 100}%`, minHeight: d.receita > 0 ? '2px' : '0' }}
                           title={`Receita: R$ ${d.receita.toFixed(0)}`}
                         ></div>
                         <div
-                          className="w-2 sm:w-3 bg-[#993C1D]/70 rounded-t-sm transition-all group-hover:bg-[#993C1D]"
+                          className="w-3 sm:w-4 bg-[#993C1D]/70 rounded-t-sm transition-all group-hover:bg-[#993C1D]"
                           style={{ height: `${(d.despesa / maxVal) * 100}%`, minHeight: d.despesa > 0 ? '2px' : '0' }}
                           title={`Despesa: R$ ${d.despesa.toFixed(0)}`}
                         ></div>
@@ -3424,13 +3424,13 @@ export default function CRMPage() {
                     ));
                   })()}
                 </div>
-                <div className="mt-3 flex justify-center gap-6 text-[11px] font-medium">
-                  <div className="flex items-center gap-1.5">
-                    <span className="w-2.5 h-2.5 rounded-full bg-[#3B6D11]"></span>
+                <div className="mt-5 flex justify-center gap-8 text-[12px] font-medium">
+                  <div className="flex items-center gap-2">
+                    <span className="w-3 h-3 rounded-full bg-[#3B6D11]"></span>
                     <span className="text-on-surface-variant">Receitas</span>
                   </div>
-                  <div className="flex items-center gap-1.5">
-                    <span className="w-2.5 h-2.5 rounded-full bg-[#993C1D]"></span>
+                  <div className="flex items-center gap-2">
+                    <span className="w-3 h-3 rounded-full bg-[#993C1D]"></span>
                     <span className="text-on-surface-variant">Despesas</span>
                   </div>
                 </div>
@@ -3439,30 +3439,30 @@ export default function CRMPage() {
             </div>
 
             {/* Commission Leaders (Repasses) */}
-            <div className="bg-white-pure rounded-3xl border border-outline-variant/40 p-6 mb-8">
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="text-[13px] font-medium text-on-surface">Repasses de Comissão</h3>
-                <span className="text-[11px] text-on-surface-variant">
+            <div className="bg-white-pure rounded-3xl border border-outline-variant/40 p-7 mb-8">
+              <div className="flex justify-between items-center mb-6">
+                <h3 className="text-[15px] font-semibold text-on-surface">Repasses de Comissão</h3>
+                <span className="text-[12px] text-on-surface-variant">
                   Total a repassar: <strong className="text-primary">R$ {commissionsToPay.toLocaleString('pt-BR', { maximumFractionDigits: 0 })}</strong>
                 </span>
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
                 {commissionLeaders.map((lead, idx) => (
-                  <div key={idx} className="flex items-center justify-between p-3 rounded-2xl border border-outline-variant/30 hover:bg-surface-container transition-colors">
-                    <div className="flex items-center gap-3 min-w-0">
-                      <Image width={500} height={500} unoptimized className="w-10 h-10 rounded-full object-cover flex-shrink-0" src={lead.avatar} alt={lead.name} sizes="(max-width: 768px) 100vw, 500px" />
+                  <div key={idx} className="flex items-center justify-between p-4 rounded-2xl border border-outline-variant/30 hover:bg-surface-container transition-colors">
+                    <div className="flex items-center gap-3.5 min-w-0">
+                      <Image width={500} height={500} unoptimized className="w-11 h-11 rounded-full object-cover flex-shrink-0" src={lead.avatar} alt={lead.name} sizes="(max-width: 768px) 100vw, 500px" />
                       <div className="min-w-0">
-                        <p className="text-[13px] font-bold text-on-surface truncate">{lead.name}</p>
-                        <p className="text-[11px] text-on-surface-variant uppercase tracking-wider">Fat: R$ {lead.revenue.toLocaleString('pt-BR')}</p>
+                        <p className="text-[14px] font-bold text-on-surface truncate">{lead.name}</p>
+                        <p className="text-[12px] text-on-surface-variant uppercase tracking-wider">Fat: R$ {lead.revenue.toLocaleString('pt-BR')}</p>
                       </div>
                     </div>
-                    <p className="text-[13px] font-extrabold text-primary flex-shrink-0">R$ {lead.commission.toLocaleString('pt-BR')}</p>
+                    <p className="text-[14px] font-extrabold text-primary flex-shrink-0">R$ {lead.commission.toLocaleString('pt-BR')}</p>
                   </div>
                 ))}
               </div>
               <button
                 onClick={() => showAlert('Relatório fiscal de Repasses e Lançamentos gerado para download!')}
-                className="w-full mt-4 py-2.5 border border-primary text-primary rounded-xl font-bold text-[12px] hover:bg-primary/5 transition-all cursor-pointer text-center"
+                className="w-full mt-5 py-3 border border-primary text-primary rounded-xl font-bold text-[13px] hover:bg-primary/5 transition-all cursor-pointer text-center"
               >
                 Relatório de Repasse Completo
               </button>
