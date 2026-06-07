@@ -2933,8 +2933,8 @@ export default function CRMPage() {
                                 setTransactions(prev => [newTx, ...prev]);
 
                                 showAlert('Lançamento registrado e integrado ao prontuário de atendimento com sucesso!');
-                                ((document.getElementById('new_proc_name') as HTMLInputElement).valor = '');
-                                ((document.getElementById('new_proc_val') as HTMLInputElement).valor = '');
+                                ((document.getElementById('new_proc_name') as HTMLInputElement).value = '');
+                                ((document.getElementById('new_proc_val') as HTMLInputElement).value = '');
                               } catch (err: any) {
                                 console.error('Error registering financial/transaction:', err);
                                 showAlert(`Erro ao salvar lançamentos: ${err.message || err}`);
