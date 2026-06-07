@@ -154,6 +154,9 @@ export default function CRMPage() {
   const [aiCustomInput, setAiCustomInput] = useState<string>('');
   const [aiLoading, setAiLoading] = useState<boolean>(false);
   const [apiKeyConfigured, setApiKeyConfigured] = useState<boolean>(true);
+  const [selectedProfessional, setSelectedProfessional] = useState<string>('todos');
+  const [selectedCategoryFilter, setSelectedCategoryFilter] = useState<string>('todos');
+  const [selectedStatusFilter, setSelectedStatusFilter] = useState<string>('todos');
 
   // Drawing signature pad states
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -958,7 +961,7 @@ export default function CRMPage() {
       <main className="main-content flex-1 flex flex-col h-full overflow-hidden relative">
         
         {/* TopNavBar Shell */}
-        <header className={`h-16 md:h-20 w-full flex justify-between items-center px-4 md:px-8 bg-white-pure/60 backdrop-blur-xl border-b border-outline-variant z-20 relative gap-4 ${currentTab === 'agenda' ? 'hidden lg:flex' : 'flex'}`}>
+        <header className="h-16 md:h-20 w-full flex justify-between items-center px-4 md:px-8 bg-white-pure/60 backdrop-blur-xl border-b border-outline-variant z-20 relative gap-4">
           
           <button
             onClick={() => setIsMobileMenuOpen(true)}
@@ -1619,9 +1622,36 @@ export default function CRMPage() {
               {/* Main Schedule Container */}
               <div className="flex-1 bg-white-pure rounded-3xl border border-outline-variant shadow-sm overflow-hidden flex flex-col">
                 
-                {/* Mobile View: Vertical list of cards (Timeline replacement) */}
+                {/* Card list view (replaces timeline on desktop) */}
                 {agendaView !== 'mensal' && (
-                  <div className="flex-1 overflow-y-auto p-4 space-y-3 lg:hidden bg-[#fbfaf8]">
+                  <div className="flex-1 overflow-y-auto p-4 lg:p-6 space-y-3 bg-[#fbfaf8] flex flex-col">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-2">
+                      <p className="text-[14px] font-medium text-primary text-center sm:text-left">
+                        {(() => {
+                          const d = agendaNavDate;
+                          const isToday = d.toDateString() === new Date().toDateString();
+                          const weekday = d.toLocaleDateString('pt-BR', { weekday: 'long' });
+                          const day = d.getDate();
+                          const month = d.toLocaleDateString('pt-BR', { month: 'long' });
+                          const year = d.getFullYear();
+                          return `${isToday ? 'Hoje, ' : ''}${day} de ${month.charAt(0).toUpperCase() + month.slice(1)}, ${year}`;
+                        })()}
+                      </p>
+                      <button
+                        onClick={() => {
+                          setEditingAppointment(null);
+                          setNewApptPatient(patients[0]?.name || '');
+                          setNewApptProcedure(services[0]?.name || '');
+                          setNewApptTime('09:00');
+                          setNewApptDate(agendaNavDate.toISOString().split('T')[0]);
+                          setIsNewAppointmentOpen(true);
+                        }}
+                        className="self-center sm:self-auto flex items-center gap-2 bg-primary text-white-pure px-4 py-2 rounded-xl font-bold text-[13px] hover:opacity-90 transition-opacity shadow-sm min-h-[36px]"
+                      >
+                        <span className="material-symbols-outlined text-[18px]">add</span>
+                        Novo agendamento
+                      </button>
+                    </div>
                     {(() => {
                       const formattedDay = String(agendaNavDate.getDate()).padStart(2, '0');
                       const formattedMonth = String(agendaNavDate.getMonth() + 1).padStart(2, '0');
@@ -1741,180 +1771,6 @@ export default function CRMPage() {
                   </div>
                 )}
                 
-                {/* 4.1 Daily View Layout */}
-                {agendaView === 'diaria' && (
-                  <div className="agenda-grid w-full h-full hidden lg:flex flex-row overflow-hidden">
-                    {/* Clock hours sidebar */}
-                    <div className="w-20 sm:w-24 border-r border-outline-variant flex flex-col pt-16 font-manrope bg-surface-container/10">
-                      <div className="h-20 flex items-start justify-center text-[11px] text-outline pt-2 font-bold">08:00</div>
-                      <div className="h-20 flex items-start justify-center text-[11px] text-outline pt-2 font-bold">09:00</div>
-                      <div className="h-20 flex items-start justify-center text-[11px] text-outline pt-2 font-bold">10:00</div>
-                      <div className="h-20 flex items-start justify-center text-[11px] text-outline pt-2 font-bold">11:00</div>
-                      <div className="h-20 flex items-start justify-center text-[11px] text-outline pt-2 font-bold">12:00</div>
-                      <div className="h-20 flex items-start justify-center text-[11px] text-outline pt-2 font-bold">13:00</div>
-                      <div className="h-20 flex items-start justify-center text-[11px] text-outline pt-2 font-bold">14:00</div>
-                    </div>
-
-                    {/* Day Area */}
-                    <div className="flex-1 flex flex-col overflow-y-auto custom-scrollbar relative">
-                      
-                      {/* Calendar Column Day title */}
-                      <div className="sticky top-0 z-10 bg-white-pure/95 backdrop-blur-md border-b border-outline-variant h-14 flex items-center px-6 justify-between select-none">
-                        <div className="flex items-center gap-3">
-                          <span className="w-9 h-9 bg-primary text-on-primary rounded-full flex items-center justify-center font-bold font-manrope text-[14px]">{selectedCalendarDay}</span>
-                          <span className="font-manrope text-[14px] font-bold text-on-surface">
-                            {(() => {
-                              const activeDate = new Date(agendaNavDate.getFullYear(), agendaNavDate.getMonth(), selectedCalendarDay);
-                              const weekdayName = activeDate.toLocaleDateString('pt-BR', { weekday: 'long' });
-                              return weekdayName.charAt(0).toUpperCase() + weekdayName.slice(1) + ' (Dia Ativo)';
-                            })()}
-                          </span>
-                        </div>
-                        {(() => {
-                          const activeDate = new Date(agendaNavDate.getFullYear(), agendaNavDate.getMonth(), selectedCalendarDay);
-                          const isToday = activeDate.toDateString() === new Date().toDateString();
-                          return isToday ? (
-                            <span className="text-[11px] bg-tertiary/10 text-tertiary px-3 py-1 rounded-full font-bold">Hoje</span>
-                          ) : null;
-                        })()}
-                      </div>
-
-                      {/* Operational appointment slots */}
-                      <div className="p-4 relative min-h-[580px] select-text" id="appointments-drop-zone">
-                        <div className="absolute inset-x-0 top-0 pointer-events-none space-y-20 pt-6">
-                          <div className="border-b border-outline-variant/10 w-full h-0"></div>
-                          <div className="border-b border-outline-variant/10 w-full h-0"></div>
-                          <div className="border-b border-outline-variant/10 w-full h-0"></div>
-                          <div className="border-b border-outline-variant/10 w-full h-0"></div>
-                          <div className="border-b border-outline-variant/10 w-full h-0"></div>
-                          <div className="border-b border-outline-variant/10 w-full h-0"></div>
-                        </div>
-
-                        {appointments
-                          .filter(appt => {
-                            const formattedDay = String(selectedCalendarDay).padStart(2, '0');
-                            const formattedMonth = String(agendaNavDate.getMonth() + 1).padStart(2, '0');
-                            const dateStr = `${agendaNavDate.getFullYear()}-${formattedMonth}-${formattedDay}`;
-                            return appt.date === dateStr;
-                          })
-                          .map((appt) => {
-                          // Calcular posicionamento aproximado na agenda baseando-se no horário
-                          // 08:00 é top=0, e cada hora tem aproximadamente 80px
-                          const [hour, minute] = appt.time.split(':').map(Number);
-                          const startHour = 8;
-                          const relativeHour = (hour + (minute / 60)) - startHour;
-                          const topPos = Math.max(10, Math.round(relativeHour * 80 + 10));
-
-                          const isConsult = appt.category === 'Consulta';
-                          const appointmentColorClass = getAppointmentColorClass(appt.status);
-
-                          const labelBg = appt.status === 'Finalizado' 
-                             ? 'bg-emerald-600 text-white-pure' 
-                             : appt.status === 'Em Atendimento' 
-                               ? 'bg-cyan-600 text-white-pure' 
-                               : appt.status === 'Confirmado' 
-                                 ? 'bg-amber-500 text-white-pure' 
-                                 : 'bg-slate-400 text-white-pure';
-
-                          return (
-                            <div 
-                              key={appt.id} 
-                              style={{ top: `${topPos}px` }} 
-                              className={`absolute left-4 right-4 h-20 border-l-4 rounded-r-xl p-3 flex items-center justify-between group hover:shadow-md transition-all ${appointmentColorClass}`}
-                            >
-                              <div className="flex items-center gap-3">
-                                {appt.patientAvatar ? (
-                                  <Image width={500} height={500} unoptimized className="w-8 h-8 rounded-full object-cover" src={appt.patientAvatar} alt={appt.patientName} sizes="(max-width: 768px) 100vw, 500px"/>
-                                ) : (
-                                  <div className="w-8 h-8 rounded-full bg-surface-container flex items-center justify-center font-bold text-[10px] font-manrope">
-                                    {appt.patientName.charAt(0)}
-                                  </div>
-                                )}
-                                <div>
-                                  <p className="font-manrope text-[12px] font-bold text-on-surface">{appt.patientName}</p>
-                                  <p className="text-[10px] text-on-surface-variant flex items-center gap-1 mt-0.5">
-                                    <span className="material-symbols-outlined text-[13px]">
-                                      {isConsult ? 'event_note' : 'face'}
-                                    </span> 
-                                    {appt.procedure}
-                                  </p>
-                                </div>
-                              </div>
-                              <div className="flex items-center gap-4">
-                                <div className="text-right">
-                                  <p className="font-manrope text-[11px] font-bold text-on-surface">{appt.time}</p>
-                                  <span className={`text-[8px] px-2 py-0.5 rounded-full font-bold uppercase ${labelBg}`}>
-                                    {appt.status}
-                                  </span>
-                                </div>
-                                <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                  <button 
-                                    onClick={() => {
-                                      setEditingAppointment(appt);
-                                      setNewApptPatient(appt.patientName);
-                                      setNewApptProcedure(appt.procedure);
-                                      setNewApptProfessional(appt.professional);
-                                      setNewApptTime(appt.time);
-                                      setNewApptDate(appt.date);
-                                      setNewApptCategory(appt.category);
-                                      setNewApptStatus(appt.status);
-                                      setIsNewAppointmentOpen(true);
-                                    }}
-                                    className="p-1 hover:text-primary transition-colors material-symbols-outlined text-[16px]"
-                                    title="Editar Agendamento"
-                                  >
-                                    edit
-                                  </button>
-                                  <button 
-                                    onClick={() => {
-                                      showConfirm(`Remover agendamento de ${appt.patientName}?`, async () => {
-                                        try {
-                                          const { error } = await supabase.from('appointments').delete().eq('id', appt.id);
-                                          if (error) throw error;
-                                          setAppointments(prev => prev.filter(a => a.id !== appt.id));
-                                          showAlert('Agendamento removido.');
-                                        } catch (err: any) {
-                                          console.error('Delete appt error:', err);
-                                          showAlert(`Erro ao excluir: ${err.message}`);
-                                        }
-                                      });
-                                    }}
-                                    className="p-1 hover:text-error transition-colors material-symbols-outlined text-[16px]"
-                                    title="Remover Agendamento"
-                                  >
-                                    delete
-                                  </button>
-                                </div>
-                              </div>
-                            </div>
-                          );
-                        })}
-
-                        {appointments.length === 0 && (
-                          <div className="py-20 flex flex-col items-center justify-center text-outline gap-2 text-center select-none">
-                            <span className="material-symbols-outlined text-4xl opacity-30">calendar_today</span>
-                            <p className="text-[12px] font-bold">Nenhum agendamento para este dia.</p>
-                            <button 
-                              onClick={() => {
-                                setEditingAppointment(null);
-                                setNewApptPatient(patients[0]?.name || '');
-                                setNewApptProcedure(services[0]?.name || '');
-                                setNewApptTime('09:00');
-                                setNewApptDate(new Date().toISOString().split('T')[0]);
-                                setIsNewAppointmentOpen(true);
-                              }}
-                              className="mt-2 text-[11px] bg-primary text-white-pure px-4 py-1.5 rounded-xl font-bold hover:opacity-90 shadow-sm"
-                            >
-                              Novo Agendamento
-                            </button>
-                          </div>
-                        )}
-
-                      </div>
-                    </div>
-                  </div>
-                )}
-
                 {/* 4.2 Weekly View Layout */}
                 {agendaView === 'semanal' && (
                   <div className="agenda-grid w-full h-full hidden lg:flex flex-col overflow-x-auto overflow-y-hidden bg-white-pure custom-scrollbar">
@@ -3325,118 +3181,31 @@ export default function CRMPage() {
                 </span>
               </div>
             </div>
-            <div className="financeiro-grid hidden lg:grid grid-cols-3 gap-6 mb-8">
+            <div className="financeiro-grid hidden lg:grid grid-cols-3 gap-3 mb-4">
               
-              {/* Entradas Card */}
-              <div className="glass-panel p-6 rounded-3xl relative overflow-hidden group">
-                <div className="absolute -right-10 -top-10 w-40 h-40 bg-primary/5 rounded-full blur-3xl"></div>
-                <div className="flex justify-between items-start mb-6">
-                  <div className="p-3 bg-primary/10 rounded-2xl text-primary">
-                    <span className="material-symbols-outlined">trending_up</span>
-                  </div>
-                  <span className="text-[#745c00] font-bold text-[11px] bg-[#fed65b] px-3 py-1 rounded-full">+12.5%</span>
-                </div>
-                <p className="font-manrope text-[11px] text-on-surface-variant uppercase tracking-widest font-bold">Entradas Mensais</p>
-                <h2 className="font-manrope text-[28px] font-extrabold text-on-surface tracking-tight mt-1">
-                  R$ {totalRevenueThisMonth.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                </h2>
-                <div className="mt-6 h-12 w-full flex items-end gap-1 px-1">
-                  <div className="flex-1 bg-primary/25 h-[40%] rounded-t-sm"></div>
-                  <div className="flex-1 bg-primary/25 h-[60%] rounded-t-sm"></div>
-                  <div className="flex-1 bg-primary/25 h-[45%] rounded-t-sm"></div>
-                  <div className="flex-1 bg-primary/25 h-[80%] rounded-t-sm"></div>
-                  <div className="flex-1 bg-primary/25 h-[70%] rounded-t-sm"></div>
-                  <div className="flex-1 bg-primary h-[95%] rounded-t-sm"></div>
-                </div>
+              {/* Receita Esperada */}
+              <div className="bg-surface-container-lowest border border-outline-variant/40 rounded-[10px] p-[14px] px-4 flex flex-col gap-1">
+                <span className="text-[12px] text-on-surface-variant font-medium">Receita Esperada</span>
+                <span className="font-manrope text-[20px] font-medium" style={{ color: '#185FA5' }}>
+                  R$ {receitaEsperada.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </span>
               </div>
 
-              {/* Paying commissions metrics */}
-              <div className="glass-panel p-6 rounded-3xl relative overflow-hidden">
-                <div className="flex justify-between items-start mb-6">
-                  <div className="p-3 bg-secondary/10 rounded-2xl text-secondary">
-                    <span className="material-symbols-outlined">account_balance_wallet</span>
-                  </div>
-                  <span className="text-on-surface-variant font-bold text-[11px] bg-surface-container px-3 py-1 rounded-full">Projetado</span>
-                </div>
-                <p className="font-manrope text-[11px] text-on-surface-variant uppercase tracking-widest font-bold">Comissões a Pagar</p>
-                <h2 className="font-manrope text-[28px] font-extrabold text-on-surface tracking-tight mt-1">
-                  R$ {commissionsToPay.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                </h2>
-                
-                <div className="mt-4 space-y-2 max-h-[100px] overflow-y-auto custom-scrollbar">
-                  {commissionLeaders.length === 0 ? (
-                    <div className="text-[11px] text-on-surface-variant/75 font-medium">Nenhum repasse projetado.</div>
-                  ) : (
-                    commissionLeaders.slice(0, 2).map((lead, idx) => {
-                      const percentage = Math.min(100, Math.round((lead.commission / (commissionsToPay || 1)) * 100));
-                      return (
-                        <div key={idx} className="space-y-1">
-                          <div className="flex justify-between items-center text-[11px] font-medium text-on-surface-variant">
-                            <span>{lead.name}</span>
-                            <span className="font-extrabold">R$ {lead.commission.toLocaleString('pt-BR')}</span>
-                          </div>
-                          <div className="w-full bg-surface-container h-1 rounded-full overflow-hidden">
-                            <div className="bg-[#eebd8e] h-full" style={{ width: `${percentage}%` }}></div>
-                          </div>
-                        </div>
-                      );
-                    })
-                  )}
-                </div>
+              {/* Receita Recebida */}
+              <div className="bg-surface-container-lowest border border-outline-variant/40 rounded-[10px] p-[14px] px-4 flex flex-col gap-1">
+                <span className="text-[12px] text-on-surface-variant font-medium">Receita Recebida</span>
+                <span className="font-manrope text-[20px] font-medium" style={{ color: '#3B6D11' }}>
+                  R$ {receitaRecebida.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </span>
               </div>
 
-              {/* Monthly target layout image 1 card */}
-              <div className="bg-[#79542e] text-white-pure p-6 rounded-3xl shadow-xl flex flex-col justify-between">
-                <div>
-                  <div className="flex justify-between items-center mb-4">
-                    <p className="font-manrope text-[11px] text-primary-fixed uppercase tracking-widest font-bold">Meta de Faturamento</p>
-                    <span className="material-symbols-outlined text-primary-fixed">ads_click</span>
-                  </div>
-                  <h2 className="font-manrope text-[40px] font-black leading-tight">
-                    {currentRevenuePercent}%
-                  </h2>
-                  <p className="text-[12px] opacity-95 text-primary-fixed mt-1.5">
-                    {primaryRevenueTarget - totalRevenueThisMonth > 0 
-                      ? `Faltam R$ ${(primaryRevenueTarget - totalRevenueThisMonth).toLocaleString('pt-BR', { minimumFractionDigits: 2 })} para atingir a meta.`
-                      : "Meta atingida com sucesso!"}
-                  </p>
-                </div>
-                <div className="mt-4 space-y-3">
-                  <div className="w-full bg-white-pure/20 h-2 rounded-full overflow-hidden">
-                    <div className="bg-white-pure h-full" style={{ width: `${currentRevenuePercent}%` }}></div>
-                  </div>
-                  <div className="flex justify-between text-[10px] font-bold uppercase tracking-wider text-primary-fixed-dim">
-                    <span>R$ 0</span>
-                    <span>R$ {(primaryRevenueTarget / 1000).toFixed(0)}K META</span>
-                  </div>
-
-                  {/* Input de meta para administrador */}
-                  <div className="pt-2 border-t border-white/20 flex gap-2 items-center">
-                    <input 
-                      type="number"
-                      placeholder="Nova Meta (R$)"
-                      defaultValue={primaryRevenueTarget}
-                      id="input_revenue_target"
-                      className="bg-white/10 text-white-pure placeholder:text-white/40 border border-white/20 rounded-lg px-2 py-1 text-[11px] font-bold w-full focus:outline-none focus:bg-white/20"
-                    />
-                    <button 
-                      type="button"
-                      onClick={() => {
-                        const val = parseFloat((document.getElementById('input_revenue_target') as HTMLInputElement)?.value);
-                        if (!isNaN(val) && val > 0) {
-                          setPrimaryRevenueTarget(val);
-                          localStorage.setItem('primaryRevenueTarget', val.toString());
-                          showAlert('Meta de faturamento atualizada com sucesso!');
-                        }
-                      }}
-                      className="px-3 py-1 bg-white-pure text-[#79542e] rounded-lg text-[10px] font-black hover:opacity-90 transition-opacity border-none cursor-pointer"
-                    >
-                      Definir
-                    </button>
-                  </div>
-                </div>
+              {/* A Receber */}
+              <div className="bg-surface-container-lowest border border-outline-variant/40 rounded-[10px] p-[14px] px-4 flex flex-col gap-1">
+                <span className="text-[12px] text-on-surface-variant font-medium">A Receber</span>
+                <span className="font-manrope text-[20px] font-medium" style={{ color: '#993C1D' }}>
+                  R$ {aReceber.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </span>
               </div>
-
 
             </div>
 
