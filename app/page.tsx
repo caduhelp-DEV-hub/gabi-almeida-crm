@@ -124,24 +124,10 @@ export default function CRMPage() {
     avatar: 'https://lh3.googleusercontent.com/aida-public/AB6AXuAT08URyhdfggkdZ7ICFiM_aQytGw7uUJWUutntKzSZ2THn_qUatoCkxPlUDBzFo87XxXHDIl7bCPEF2zrZVbTVxZ6-ljXhgCjobz-tjjXWRgRPn8QgwKryuOkx4g6g_vI6k7ReJVAlRtFVi6oS_cA6ulr-fFIr2DH5ORI4qFAGBjKPoXtENy5oCT-Oi75JuN0RlQBMgw7dzZwQ5Fis2TriJ2rG67NgCQN4Hi2OzqyWrFUUPWiR2Dp4895lJRurxR0r_L6Qa600ado'
   });
 
-  // Professionals Database for header switching
-  const professionals = [
-    {
-      name: 'Gabi Almeida',
-      role: 'Especialista em Estética',
-      avatar: 'https://lh3.googleusercontent.com/aida-public/AB6AXuAT08URyhdfggkdZ7ICFiM_aQytGw7uUJWUutntKzSZ2THn_qUatoCkxPlUDBzFo87XxXHDIl7bCPEF2zrZVbTVxZ6-ljXhgCjobz-tjjXWRgRPn8QgwKryuOkx4g6g_vI6k7ReJVAlRtFVi6oS_cA6ulr-fFIr2DH5ORI4qFAGBjKPoXtENy5oCT-Oi75JuN0RlQBMgw7dzZwQ5Fis2TriJ2rG67NgCQN4Hi2OzqyWrFUUPWiR2Dp4895lJRurxR0r_L6Qa600ado'
-    },
-    {
-      name: 'Isabella Rose',
-      role: 'Master Injector',
-      avatar: 'https://lh3.googleusercontent.com/aida-public/AB6AXuADwr1ObfSJUgydcL7PHjSKoqnO196ABFeWsdSt6YhNHDeEOFz-y_JD6GG3pWkN68tnE1-s063un2xBQALOj4AkROm8wVbDDzwanl_TmCKzYQle7KVp_za4fgkU9dN8D-RAynszmfWSUX36eWFcqojk7aiRss-BO9EEGlTyHs3v19wbtQrPNN1IJet6-mwqCSqoVGJSrBvaaMks8EOfFjHfE8GLJkqQmOTiHxCjosKWLBffQQtI4UlJXEXGxtUU3jkOcrFHYPwlLkg'
-    },
-    {
-      name: 'Ricardo Silva',
-      role: 'Diretor Clínico',
-      avatar: 'https://lh3.googleusercontent.com/aida-public/AB6AXuByvB-wQG87z1_3zlQXV52c6s-FUG-KVyeJ6AiND9whxeCuJ6OG177GS-IzCthCMsslpHGcE0_e03imkYqDEl2-6XtUYb1-Cqod27zUDWg-Gzp8AGYCvZEWaJ3JgIUc0mbIbjtXs8tcZkN3usDylUuQn5xowrCsy3UiYjpB38S80HOpMxeJZo4Ap2gjSwLCvurMm0wuqUL5iVHgfQmMjYZ6m_UJkaA6IqefJOo83zu_Tq9PUw0VRdYkzSi6rmc2PKHQhnG7LcP2L9U'
-    }
-  ];
+  // Professionals derived from DB users (active only) - synced with CRUD de usuários
+  const professionals = appUsers
+    .filter(u => u.status === 'active')
+    .map(u => ({ id: u.id, name: u.name, role: u.specialty || u.role, avatar: u.avatar }));
 
   // Active Dropdowns state
   const [isProfDropdownOpen, setIsProfDropdownOpen] = useState(false);
@@ -320,7 +306,7 @@ export default function CRMPage() {
         return descLower.includes(patNameLower) || patNameLower.includes(descLower);
       });
 
-      const profName = matchedAppt ? matchedAppt.professional : 'Gabi Almeida';
+      const profName = matchedAppt ? matchedAppt.professional : (currentUser?.name || appUsers[0]?.name || 'Profissional');
       const profUser = appUsers.find(u => u.name === profName);
       const rate = profUser && profUser.commissionRate !== undefined ? profUser.commissionRate : 25;
       const commVal = t.value * (rate / 100);
@@ -1192,7 +1178,7 @@ export default function CRMPage() {
                 <div className="w-[1px] h-6 bg-outline-variant mx-1 hidden sm:block"></div>
                 <span className="flex items-center gap-2 px-3 py-1.5 lg:px-4 lg:py-2 bg-secondary/10 text-secondary rounded-full font-manrope text-[11px] lg:text-[12px] font-semibold border border-secondary/20">
                   <span className="w-2 h-2 bg-secondary rounded-full animate-pulse"></span>
-                  3 Profissionais Ativos
+                  {professionals.length} {professionals.length === 1 ? 'Profissional Ativo' : 'Profissionais Ativos'}
                 </span>
                 <span className="flex items-center gap-2 px-3 py-1.5 lg:px-4 lg:py-2 bg-tertiary/10 text-tertiary rounded-full font-manrope text-[11px] lg:text-[12px] font-semibold">
                   <span className="material-symbols-outlined text-[16px] lg:text-[18px]">verified</span>
@@ -5124,10 +5110,9 @@ export default function CRMPage() {
                     onChange={(e) => setNewApptProfessional(e.target.value)}
                     className="w-full p-2.5 bg-surface rounded-xl border border-outline-variant/60 focus:outline-none focus:ring-1 focus:ring-primary/40 font-medium font-sans text-[13px]"
                   >
-                    <option value="Gabi Almeida">Gabi Almeida</option>
-                    <option value="Isabella Rose">Isabella Rose</option>
-                    <option value="Ricardo Silva">Ricardo Silva</option>
-                    <option value="Fabio">Fabio Responsável</option>
+                    {appUsers.filter(u => u.status === 'active').map(u => (
+                      <option key={u.id} value={u.name}>{u.name}</option>
+                    ))}
                   </select>
                 </div>
 
