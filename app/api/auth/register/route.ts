@@ -12,7 +12,7 @@ export async function POST(request: NextRequest) {
   if (auth instanceof NextResponse) return auth;
 
   try {
-    const { name, username, role, specialty, phone, commissionRate, permissions, password } = await request.json();
+    const { name, username, role, specialty, phone, commissionRate, permissions, password, avatar } = await request.json();
 
     if (!name || !username || !role) {
       return NextResponse.json(
@@ -46,7 +46,7 @@ export async function POST(request: NextRequest) {
       status: 'active',
       specialty: specialty || null,
       phone,
-      avatar: `https://api.dicebear.com/7.x/notionists/svg?seed=${encodeURIComponent(username)}`,
+      avatar: avatar && avatar.trim() !== '' ? avatar : `https://api.dicebear.com/7.x/notionists/svg?seed=${encodeURIComponent(username)}`,
       commission_rate: commissionRate || 0,
       permissions: permissions || {}
     };

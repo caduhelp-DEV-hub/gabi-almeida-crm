@@ -52,6 +52,8 @@ export default function CRMPage() {
   // Agenda View Control (Diária / Semanal / Mensal)
   const [agendaView, setAgendaView] = useState<'diaria' | 'semanal' | 'mensal' | 'lista'>('diaria');
   const [isNewUserModalOpen, setIsNewUserModalOpen] = useState<boolean>(false);
+  const [newUserAvatarUrl, setNewUserAvatarUrl] = useState<string>('');
+  const [newUserAvatarUploading, setNewUserAvatarUploading] = useState<boolean>(false);
   const [editingUser, setEditingUser] = useState<AppUser | null>(null);
   const [editingAppointment, setEditingAppointment] = useState<Appointment | null>(null);
   
@@ -724,6 +726,32 @@ export default function CRMPage() {
 
   const printTransactions = () => {
     window.print();
+  };
+
+  const fileToBase64 = (file: File): Promise<string> =>
+    new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+
+  const uploadUserAvatar = async (file: File): Promise<string> => {
+    const base64 = await fileToBase64(file);
+    const ext = file.name.split('.').pop()?.toLowerCase() || 'png';
+    const contentType = file.type || `image/${ext === 'jpg' ? 'jpeg' : ext}`;
+    const path = `users/${crypto.randomUUID()}.${ext === 'jpg' ? 'jpg' : ext}`;
+    const res = await fetch('/api/storage/upload', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ bucket: 'avatars', path, base64, contentType })
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || 'Falha no upload do avatar.');
+    }
+    const data = await res.json();
+    return data.url;
   };
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -4061,8 +4089,12 @@ export default function CRMPage() {
                     Centralize toda equipe (Recepção, Especialistas, Médicos e Prestadores). Atribua permissões e comissões.
                   </p>
                 </div>
-                <button 
-                  onClick={() => setIsNewUserModalOpen(true)}
+                <button
+                  onClick={() => {
+                    setEditingUser(null);
+                    setNewUserAvatarUrl('');
+                    setIsNewUserModalOpen(true);
+                  }}
                   className="bg-primary text-white-pure px-5 py-2.5 rounded-xl font-bold font-manrope text-[14px] flex items-center gap-2 hover:opacity-90 transition-all cursor-pointer shadow-sm active:scale-95"
                 >
                   <span className="material-symbols-outlined text-[20px]">person_add</span>
@@ -4164,9 +4196,10 @@ export default function CRMPage() {
                             </span>
                           </td>
                           <td className="px-6 py-4 text-right space-x-1.5">
-                            <button 
+                            <button
                               onClick={() => {
                                 setEditingUser(u);
+                                setNewUserAvatarUrl('');
                                 setIsNewUserModalOpen(true);
                               }}
                               className="p-2 text-on-surface-variant hover:text-primary transition-colors text-[18px] material-symbols-outlined rounded-lg hover:bg-surface-container"
@@ -4256,8 +4289,8 @@ export default function CRMPage() {
       {isEditProfileModalOpen && currentUser && (
         <div className="fixed inset-0 bg-[#31302fd0] backdrop-blur-md flex items-center justify-center z-50 p-0 sm:p-4 animate-fade-in">
           <div className="bg-white-pure sm:rounded-3xl border border-outline-variant w-full max-w-lg p-5 sm:p-8 shadow-2xl relative h-full sm:h-auto sm:max-h-[90vh] overflow-y-auto">
-            <button 
-              onClick={() => setIsEditProfileModalOpen(false)}
+            <button
+              onClick={() => { setIsEditProfileModalOpen(false); setNewUserAvatarUrl(''); }}
               className="absolute top-6 right-6 p-2 rounded-full hover:bg-surface-container/50 text-on-surface transition-colors"
             >
               <span className="material-symbols-outlined text-[20px]">close</span>
@@ -4270,15 +4303,16 @@ export default function CRMPage() {
               const d = new FormData(e.currentTarget);
               const name = d.get('name') as string;
               const phone = d.get('phone') as string;
-              const avatar = d.get('avatar') as string;
-              
+              const avatar = (newUserAvatarUrl || (d.get('avatar') as string) || '').trim();
+
               if(name) {
-                const upd = { ...currentUser, name, phone, avatar };
+                const upd = { ...currentUser, name, phone, avatar: avatar || currentUser.avatar };
                 try {
-                  const { error } = await supabase.from('users').update({ name, phone, avatar }).eq('id', currentUser.id);
+                  const { error } = await supabase.from('users').update({ name, phone, avatar: upd.avatar }).eq('id', currentUser.id);
                   if (error) throw error;
                   setCurrentUser(upd);
                   setIsEditProfileModalOpen(false);
+                  setNewUserAvatarUrl('');
                   showAlert('Perfil atualizado com sucesso!');
                 } catch (err: any) {
                   console.error('Error updating profile:', err);
@@ -4286,6 +4320,56 @@ export default function CRMPage() {
                 }
               }
             }} className="space-y-4 font-sans text-[13px]">
+              <div className="flex items-center gap-4 bg-[#fcfaf7] border border-outline-variant/60 rounded-2xl p-4">
+                <div className="w-16 h-16 rounded-full overflow-hidden bg-primary/10 flex items-center justify-center text-primary font-black text-[18px] flex-shrink-0 border-2 border-outline-variant/40">
+                  {newUserAvatarUrl || currentUser.avatar ? (
+                    <Image width={500} height={500} unoptimized alt="Avatar preview" className="w-full h-full object-cover" src={newUserAvatarUrl || currentUser.avatar || ''} sizes="(max-width: 768px) 100vw, 500px" />
+                  ) : (
+                    <span>{currentUser.name?.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() || '?'}</span>
+                  )}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <label className="block text-[11px] font-bold text-on-surface-variant mb-1">Foto de Perfil</label>
+                  <div className="flex gap-2 flex-wrap">
+                    <label className="cursor-pointer px-3 py-1.5 bg-primary text-white-pure rounded-lg text-[11px] font-bold hover:opacity-90 transition-all inline-flex items-center gap-1.5">
+                      <span className="material-symbols-outlined text-[14px]">upload</span>
+                      {newUserAvatarUploading ? 'Enviando...' : 'Escolher Foto'}
+                      <input
+                        type="file"
+                        accept="image/png,image/jpeg,image/webp"
+                        className="hidden"
+                        onChange={async (e) => {
+                          const file = e.target.files?.[0];
+                          if (!file) return;
+                          if (file.size > 5 * 1024 * 1024) {
+                            showAlert('Arquivo muito grande. Máximo 5MB.');
+                            return;
+                          }
+                          try {
+                            setNewUserAvatarUploading(true);
+                            const url = await uploadUserAvatar(file);
+                            setNewUserAvatarUrl(url);
+                          } catch (err: any) {
+                            showAlert(`Erro no upload: ${err.message}`);
+                          } finally {
+                            setNewUserAvatarUploading(false);
+                            e.target.value = '';
+                          }
+                        }}
+                      />
+                    </label>
+                    {(newUserAvatarUrl || currentUser.avatar) && (
+                      <button
+                        type="button"
+                        onClick={() => setNewUserAvatarUrl('')}
+                        className="px-3 py-1.5 border border-outline-variant rounded-lg text-[11px] font-bold text-on-surface-variant hover:bg-surface transition-all"
+                      >
+                        Remover
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
               <div>
                 <label className="block text-[11px] font-bold text-on-surface-variant mb-2">Nome Completo</label>
                 <input required name="name" defaultValue={currentUser.name} className="w-full bg-surface-container px-4 py-3 rounded-xl border border-outline-variant focus:outline-primary" />
@@ -4295,12 +4379,12 @@ export default function CRMPage() {
                 <input name="phone" defaultValue={currentUser.phone || ''} className="w-full bg-surface-container px-4 py-3 rounded-xl border border-outline-variant focus:outline-primary" />
               </div>
               <div>
-                <label className="block text-[11px] font-bold text-on-surface-variant mb-2">URL da Foto de Perfil (Opcional)</label>
-                <input name="avatar" defaultValue={currentUser.avatar || ''} className="w-full bg-surface-container px-4 py-3 rounded-xl border border-outline-variant focus:outline-primary" placeholder="URL da imagem (https://...)" />
+                <label className="block text-[11px] font-bold text-on-surface-variant mb-2">ou URL da Foto (opcional)</label>
+                <input name="avatar" defaultValue={currentUser.avatar || ''} className="w-full bg-surface-container px-4 py-3 rounded-xl border border-outline-variant focus:outline-primary" placeholder="https://..." />
               </div>
               
               <div className="pt-4 flex gap-4">
-                <button type="button" onClick={() => setIsEditProfileModalOpen(false)} className="flex-1 py-3 border border-outline-variant rounded-xl font-bold">Cancelar</button>
+                <button type="button" onClick={() => { setIsEditProfileModalOpen(false); setNewUserAvatarUrl(''); }} className="flex-1 py-3 border border-outline-variant rounded-xl font-bold">Cancelar</button>
                 <button type="submit" className="flex-1 py-3 bg-primary text-white-pure rounded-xl font-bold shadow-md hover:opacity-90">Salvar Mudanças</button>
               </div>
             </form>
@@ -4359,10 +4443,11 @@ export default function CRMPage() {
         <div className="fixed inset-0 bg-[#31302fd0] backdrop-blur-md flex items-center justify-center z-50 p-0 sm:p-4 animate-fade-in">
           <div className="bg-white-pure sm:rounded-3xl border border-outline-variant w-full max-w-xl p-5 sm:p-8 shadow-2xl relative h-full sm:h-auto sm:max-h-[90vh] overflow-y-auto select-none">
             
-            <button 
+            <button
               onClick={() => {
                 setIsNewUserModalOpen(false);
                 setEditingUser(null);
+                setNewUserAvatarUrl('');
               }}
               className="absolute top-6 right-6 text-on-surface-variant hover:text-primary transition-all p-2 font-black"
             >
@@ -4388,7 +4473,7 @@ export default function CRMPage() {
               const specialty = (document.getElementById('new_user_specialty') as HTMLInputElement).value;
               const commissionRate = parseInt((document.getElementById('new_user_comm') as HTMLInputElement).value) || 0;
               const password = (document.getElementById('new_user_pass') as HTMLInputElement).value;
-              
+
               const canAccessCRM = (document.getElementById('perm_crm') as HTMLInputElement).checked;
               const canAccessAgenda = (document.getElementById('perm_agenda') as HTMLInputElement).checked;
               const canAccessFinanceiro = (document.getElementById('perm_fin') as HTMLInputElement).checked;
@@ -4402,7 +4487,6 @@ export default function CRMPage() {
 
               try {
                 if (editingUser) {
-                  // Editar usuário existente
                   const res = await fetch('/api/auth/users/update', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -4416,6 +4500,7 @@ export default function CRMPage() {
                       phone,
                       commissionRate,
                       password,
+                      avatar: newUserAvatarUrl,
                       permissions: {
                         accessCRM: canAccessCRM,
                         accessAgenda: canAccessAgenda,
@@ -4437,7 +4522,6 @@ export default function CRMPage() {
                   }
                   showAlert(`Cadastro de ${name} atualizado com sucesso!`);
                 } else {
-                  // Cadastrar novo usuário
                   const res = await fetch('/api/auth/register', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -4449,6 +4533,7 @@ export default function CRMPage() {
                       phone,
                       commissionRate,
                       password,
+                      avatar: newUserAvatarUrl,
                       permissions: {
                         accessCRM: canAccessCRM,
                         accessAgenda: canAccessAgenda,
@@ -4470,12 +4555,67 @@ export default function CRMPage() {
 
                 setIsNewUserModalOpen(false);
                 setEditingUser(null);
+                setNewUserAvatarUrl('');
               } catch (err: any) {
                 console.error('Error saving team member:', err);
                 showAlert(`Erro ao salvar integrante: ${err.message || err}`);
               }
             }} className="space-y-4 text-[12px] font-bold text-on-surface-variant">
-              
+
+              <div className="flex items-center gap-4 bg-[#fcfaf7] border border-outline-variant/60 rounded-2xl p-4">
+                <div className="w-16 h-16 rounded-full overflow-hidden bg-primary/10 flex items-center justify-center text-primary font-black text-[18px] flex-shrink-0 border-2 border-outline-variant/40">
+                  {newUserAvatarUrl ? (
+                    <Image width={500} height={500} unoptimized alt="Avatar preview" className="w-full h-full object-cover" src={newUserAvatarUrl} sizes="(max-width: 768px) 100vw, 500px" />
+                  ) : editingUser?.avatar ? (
+                    <Image width={500} height={500} unoptimized alt="Avatar atual" className="w-full h-full object-cover" src={editingUser.avatar} sizes="(max-width: 768px) 100vw, 500px" />
+                  ) : (
+                    <span>{(document.getElementById('new_user_name') as HTMLInputElement)?.value?.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() || '?'}</span>
+                  )}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <label className="block mb-1 text-[11px]">Foto de Perfil</label>
+                  <div className="flex gap-2 flex-wrap">
+                    <label className="cursor-pointer px-3 py-1.5 bg-primary text-white-pure rounded-lg text-[11px] font-bold hover:opacity-90 transition-all inline-flex items-center gap-1.5">
+                      <span className="material-symbols-outlined text-[14px]">upload</span>
+                      {newUserAvatarUploading ? 'Enviando...' : 'Escolher Foto'}
+                      <input
+                        type="file"
+                        accept="image/png,image/jpeg,image/webp"
+                        className="hidden"
+                        onChange={async (e) => {
+                          const file = e.target.files?.[0];
+                          if (!file) return;
+                          if (file.size > 5 * 1024 * 1024) {
+                            showAlert('Arquivo muito grande. Máximo 5MB.');
+                            return;
+                          }
+                          try {
+                            setNewUserAvatarUploading(true);
+                            const url = await uploadUserAvatar(file);
+                            setNewUserAvatarUrl(url);
+                          } catch (err: any) {
+                            showAlert(`Erro no upload: ${err.message}`);
+                          } finally {
+                            setNewUserAvatarUploading(false);
+                            e.target.value = '';
+                          }
+                        }}
+                      />
+                    </label>
+                    {newUserAvatarUrl && (
+                      <button
+                        type="button"
+                        onClick={() => setNewUserAvatarUrl('')}
+                        className="px-3 py-1.5 border border-outline-variant rounded-lg text-[11px] font-bold text-on-surface-variant hover:bg-surface transition-all"
+                      >
+                        Remover
+                      </button>
+                    )}
+                  </div>
+                  <p className="text-[10px] text-outline mt-1.5">PNG, JPEG ou WebP. Máx 5MB.</p>
+                </div>
+              </div>
+
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block mb-1">Nome Completo</label>
@@ -4548,11 +4688,12 @@ export default function CRMPage() {
               </div>
 
               <div className="pt-4 flex gap-3">
-                <button 
+                <button
                   type="button"
                   onClick={() => {
                     setIsNewUserModalOpen(false);
                     setEditingUser(null);
+                    setNewUserAvatarUrl('');
                   }}
                   className="flex-1 py-3 text-[12px] font-bold text-on-surface border border-outline-variant rounded-xl hover:bg-surface transition-all cursor-pointer"
                 >

@@ -12,7 +12,7 @@ export async function POST(request: NextRequest) {
   if (auth instanceof NextResponse) return auth;
 
   try {
-    const { id, name, username, role, status, phone, specialty, commissionRate, permissions, password } = await request.json();
+    const { id, name, username, role, status, phone, specialty, commissionRate, permissions, password, avatar } = await request.json();
 
     if (!id || !name || !username || !role) {
       return NextResponse.json(
@@ -46,6 +46,10 @@ export async function POST(request: NextRequest) {
       commission_rate: commissionRate || 0,
       permissions: permissions || {}
     };
+
+    if (avatar && avatar.trim() !== '') {
+      updateData.avatar = avatar;
+    }
 
     if (password && password.trim() !== '') {
       updateData.password_hash = await bcrypt.hash(password, SALT_ROUNDS);
