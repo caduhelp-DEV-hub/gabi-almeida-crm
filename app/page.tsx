@@ -2187,7 +2187,7 @@ export default function CRMPage() {
                       </div>
                       <div className="bg-surface rounded-xl p-3 border border-outline-variant/30">
                         <p className="text-[10px] text-outline mb-0.5 uppercase tracking-wider font-semibold">Procedimentos</p>
-                        <p className="font-manrope text-[16px] font-black text-on-surface">{(selectedPatient.procedimentosCount).toString().padStart(2, '0')}</p>
+                        <p className="font-manrope text-[16px] font-black text-on-surface">{(selectedPatient.qtdeProcedimentos).toString().padStart(2, '0')}</p>
                       </div>
                       <div className="bg-surface rounded-xl p-3 border border-outline-variant/30">
                         <p className="text-[10px] text-outline mb-0.5 uppercase tracking-wider font-semibold">Última Foto</p>
@@ -2890,7 +2890,7 @@ export default function CRMPage() {
                                   .from('clientes')
                                   .update({
                                     total_spent: (selectedPatient.totalGasto || 0) + val,
-                                    procedures_count: (selectedPatient.procedimentosCount || 0) + 1,
+                                    procedures_count: (selectedPatient.qtdeProcedimentos || 0) + 1,
                                     financials: updatedFinancials
                                   })
                                   .eq('id', selectedPatient.id);
@@ -2917,7 +2917,7 @@ export default function CRMPage() {
                                     return {
                                       ...p,
                                       totalSpent: (p.totalGasto || 0) + val,
-                                      proceduresCount: (p.procedimentosCount || 0) + 1
+                                      proceduresCount: (p.qtdeProcedimentos || 0) + 1
                                     };
                                   }
                                   return p;
