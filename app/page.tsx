@@ -2563,12 +2563,12 @@ export default function CRMPage() {
                             className="px-5 py-2 bg-[#7B2FBE] text-white-pure font-bold font-manrope text-[12px] rounded-xl hover:bg-[#634425] transition-colors shadow-md" 
                             onClick={async () => {
                               const el = document.getElementById('novoProtocolo') as HTMLTextAreaElement;
-                              if (el && el.valor.trim() !== '') {
+                              if (el && el.value.trim() !== '') {
                                 if (!selectedPatient.id) {
                                   showAlert('Selecione um cliente para adicionar o protocolo.');
                                   return;
                                 }
-                                const text = el.valor.trim();
+                                const text = el.value.trim();
                                 const newTimelineItem = {
                                   id: Date.now().toString(),
                                   date: new Date().toLocaleDateString('pt-BR'),
@@ -2587,7 +2587,7 @@ export default function CRMPage() {
                                   
                                   setPatients(prev => prev.map(p => p.id === selectedPatient.id ? { ...p, timeline: updatedTimeline } : p));
                                   showAlert('Protocolo adicionado ao prontuário do cliente!');
-                                  el.valor = '';
+                                  el.value = '';
                                 } catch (err: any) {
                                   console.error('Error adding protocol:', err);
                                   showAlert(`Erro ao salvar protocolo: ${err.message}`);
