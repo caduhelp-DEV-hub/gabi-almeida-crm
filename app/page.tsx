@@ -55,7 +55,7 @@ export default function CRMPage() {
   const [newUserAvatarUrl, setNewUserAvatarUrl] = useState<string>('');
   const [newUserAvatarUploading, setNewUserAvatarUploading] = useState<boolean>(false);
   const [editingUser, setEditingUser] = useState<AppUser | null>(null);
-  const [editingAgendamento, setEditingAppointment] = useState<Agendamento | null>(null);
+  const [editingAppointment, setEditingAppointment] = useState<Agendamento | null>(null);
   
   // Perfil / Menu
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
@@ -153,7 +153,7 @@ export default function CRMPage() {
 
   // New appointment dialog options
   const [isNewAppointmentOpen, setIsNewAppointmentOpen] = useState(false);
-  const [newApptCliente, setNewApptPatient] = useState('');
+  const [newApptPatient, setNewApptPatient] = useState('');
   const [newApptProcedure, setNewApptProcedure] = useState('Limpeza de Pele Profunda');
   const [newApptProfessional, setNewApptProfessional] = useState('Gabi Almeida');
   const [newApptTime, setNewApptTime] = useState('09:00');
@@ -176,7 +176,7 @@ export default function CRMPage() {
 
   // Selected patient on detail panel (default Isabella Albuquerque)
   const [selectedPatientId, setSelectedPatientId] = useState<string>('');
-  const selectedCliente = patients.find(p => p.id === selectedPatientId) || patients[0] || {
+  const selectedPatient = patients.find(p => p.id === selectedPatientId) || patients[0] || {
     id: '',
     name: 'Nenhum Paciente',
     avatar: '',
@@ -303,12 +303,12 @@ export default function CRMPage() {
       const descLower = t.descricao.toLowerCase();
       // Match appointment by name
       const matchedAppt = appointments.find(a => {
-        if (!a.patientName) return false;
-        const patNameLower = a.patientName.toLowerCase();
+        if (!a.clienteNome) return false;
+        const patNameLower = a.clienteNome.toLowerCase();
         return descLower.includes(patNameLower) || patNameLower.includes(descLower);
       });
 
-      const profName = matchedAppt ? matchedAppt.professional : (currentUser?.name || appUsers[0]?.name || 'Profissional');
+      const profName = matchedAppt ? matchedAppt.profissional : (currentUser?.name || appUsers[0]?.name || 'Profissional');
       const profUser = appUsers.find(u => u.name === profName);
       const rate = profUser && profUser.commissionRate !== undefined ? profUser.commissionRate : 25;
       const commVal = t.valor * (rate / 100);
@@ -504,7 +504,7 @@ export default function CRMPage() {
     const apptData = {
       time: newApptTime,
       patientId: selectedPat?.id,
-      patientName: newApptCliente,
+      clienteNome: newApptPatient,
       patientAvatar: selectedPat?.avatar || '',
       procedure: newApptProcedure,
       status: newApptStatus,
@@ -522,9 +522,9 @@ export default function CRMPage() {
         if (error) throw error;
         
         const updatedAppt = {
-          ...editingAgendamento,
+          ...editingAppointment,
           time: newApptTime,
-          patientName: newApptCliente,
+          clienteNome: newApptPatient,
           patientAvatar: selectedPat?.avatar || '',
           procedure: newApptProcedure,
           professional: newApptProfessional,
@@ -626,7 +626,7 @@ export default function CRMPage() {
       status: 'Concluído'
     };
 
-    const updatedTimeline = [newTimelineItem, ...(selectedPatient.timeline || [])];
+    const updatedTimeline = [newTimelineItem, ...(selectedPatient.historico || [])];
 
     try {
       const { error } = await supabase
@@ -658,7 +658,7 @@ export default function CRMPage() {
           message: aiCustomInput,
           context: {
             currentTab,
-            selectedPatientName: selectedPatient.name,
+            selectedPatientName: selectedPatient.nome,
             totalRevenue: totalRevenueThisMonth,
             percentTarget: currentRevenuePercent
           }
@@ -815,7 +815,7 @@ export default function CRMPage() {
                   <input 
                     type="text" 
                     value={loginUsername}
-                    onChange={(e) => setLoginUsername(e.target.valor)}
+                    onChange={(e) => setLoginUsername(e.target.value)}
                     className="w-full bg-surface-container-lowest border border-outline-variant rounded-xl pl-11 pr-4 py-3 placeholder:text-on-surface-variant/40 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary text-[14px]"
                     placeholder="Ex: admin"
                     suppressHydrationWarning
@@ -830,7 +830,7 @@ export default function CRMPage() {
                   <input 
                     type="password" 
                     value={loginPassword}
-                    onChange={(e) => setLoginPassword(e.target.valor)}
+                    onChange={(e) => setLoginPassword(e.target.value)}
                     className="w-full bg-surface-container-lowest border border-outline-variant rounded-xl pl-11 pr-4 py-3 placeholder:text-on-surface-variant/40 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary text-[14px]"
                     placeholder="••••••••"
                     suppressHydrationWarning
@@ -943,8 +943,8 @@ export default function CRMPage() {
             id="sidebar-new-appointment"
             onClick={() => {
               setEditingAppointment(null);
-              setNewApptPatient(patients[0]?.name || '');
-              setNewApptProcedure(services[0]?.name || '');
+              setNewApptPatient(patients[0]?.nome || '');
+              setNewApptProcedure(services[0]?.nome || '');
               setNewApptTime('09:00');
               setNewApptDate(new Date().toISOString().split('T')[0]);
               setIsNewAppointmentOpen(true);
@@ -1015,7 +1015,7 @@ export default function CRMPage() {
                 id="search-input"
                 type="text"
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.valor)}
+                onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder={
                   currentTab === 'clientes' ? 'Buscar cliente por nome...' :
                   currentTab === 'financeiro' ? 'Buscar transações por descrição ou categoria...' :
@@ -1155,7 +1155,7 @@ export default function CRMPage() {
               autoFocus
               type="text"
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.valor)}
+              onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Buscar..."
               className="flex-1 bg-[#f7f3f0] border-none rounded-full font-sans text-[14px] focus:ring-1 focus:ring-primary/40 focus:outline-none placeholder:text-on-surface-variant/50 px-4 py-2.5"
             />
@@ -1260,7 +1260,7 @@ export default function CRMPage() {
                       return days.map((day, idx) => (
                         <div 
                           key={idx} 
-                          onClick={() => setAgendaNavDate(day.dataObject)}
+                          onClick={() => setAgendaNavDate(day.dateObject)}
                           className="flex flex-col items-center cursor-pointer py-1"
                         >
                           <span className="text-[10px] text-outline font-bold uppercase tracking-tight mb-1">{day.label}</span>
@@ -1318,14 +1318,14 @@ export default function CRMPage() {
                   <div className="flex -space-x-2">
                     {professionals.slice(0, 3).map((prof) => (
                       <div
-                        key={prof.id || prof.nome}
-                        title={prof.nome}
+                        key={prof.id || prof.name}
+                        title={prof.name}
                         className="w-8 h-8 rounded-full border-2 border-surface bg-primary/10 flex items-center justify-center text-[10px] font-bold text-primary hover:z-10 transition-transform hover:scale-110"
                       >
                         {prof.avatar ? (
-                          <Image width={500} height={500} unoptimized alt={prof.nome} className="w-8 h-8 rounded-full object-cover" src={prof.avatar} sizes="(max-width: 768px) 100vw, 500px" />
+                          <Image width={500} height={500} unoptimized alt={prof.name} className="w-8 h-8 rounded-full object-cover" src={prof.avatar} sizes="(max-width: 768px) 100vw, 500px" />
                         ) : (
-                          prof.nome.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()
+                          prof.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()
                         )}
                       </div>
                     ))}
@@ -1402,15 +1402,15 @@ export default function CRMPage() {
                           { bg: '#d4f5e5', text: '#0a4a2a' }
                         ];
                         const c = colors[idx % colors.length];
-                        const isActive = selectedProfessional === prof.nome;
+                        const isActive = selectedProfessional === prof.name;
                         return (
                           <button
-                            key={prof.nome}
-                            onClick={() => setSelectedProfessional(isActive ? 'todos' : prof.nome)}
+                            key={prof.name}
+                            onClick={() => setSelectedProfessional(isActive ? 'todos' : prof.name)}
                             className={`w-full flex items-center gap-2 p-1.5 rounded-lg text-left transition-colors ${isActive ? 'bg-primary/10' : 'hover:bg-surface-container'}`}
                           >
                             <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: c.text }}></span>
-                            <span className={`text-[12px] truncate ${isActive ? 'font-bold text-primary' : 'text-on-surface-variant'}`}>{prof.nome}</span>
+                            <span className={`text-[12px] truncate ${isActive ? 'font-bold text-primary' : 'text-on-surface-variant'}`}>{prof.name}</span>
                           </button>
                         );
                       })}
@@ -1547,7 +1547,7 @@ export default function CRMPage() {
                         return days.map((day, idx) => (
                           <div
                             key={idx}
-                            onClick={() => setAgendaNavDate(day.dataObject)}
+                            onClick={() => setAgendaNavDate(day.dateObject)}
                             className="flex flex-col items-center cursor-pointer py-1"
                           >
                             <span className="text-[10px] text-outline font-bold uppercase tracking-tight mb-1">{day.label}</span>
@@ -1586,8 +1586,8 @@ export default function CRMPage() {
                       <button
                         onClick={() => {
                           setEditingAppointment(null);
-                          setNewApptPatient(patients[0]?.name || '');
-                          setNewApptProcedure(services[0]?.name || '');
+                          setNewApptPatient(patients[0]?.nome || '');
+                          setNewApptProcedure(services[0]?.nome || '');
                           setNewApptTime('09:00');
                           setNewApptDate(agendaNavDate.toISOString().split('T')[0]);
                           setIsNewAppointmentOpen(true);
@@ -1664,10 +1664,10 @@ export default function CRMPage() {
                             </p>
 
                             {/* Notes */}
-                            {appt.notes && (
+                            {appt.notas && (
                               <p className="text-[12px] opacity-80 italic flex items-start gap-1.5 mt-1 pt-1 border-t border-black/5">
                                 <span className="material-symbols-outlined text-[14px] mt-0.5">chat_bubble</span>
-                                {appt.notes}
+                                {appt.notas}
                               </p>
                             )}
 
@@ -1726,7 +1726,7 @@ export default function CRMPage() {
                         {weekDays.map((day, idx) => (
                           <div key={idx} className={`p-3 text-center border-r border-outline-variant/60 relative ${day.active ? 'bg-primary/5' : ''}`}>
                             <p className="text-[10px] text-outline font-extrabold uppercase tracking-wider">{day.label}</p>
-                            <p className={`font-manrope text-[14px] font-bold mt-1 ${day.active ? 'text-primary' : 'text-on-surface'}`}>{day.data}</p>
+                            <p className={`font-manrope text-[14px] font-bold mt-1 ${day.active ? 'text-primary' : 'text-on-surface'}`}>{day.date}</p>
                             {day.active && <span className="absolute bottom-0 inset-x-0 h-1 bg-primary"></span>}
                           </div>
                         ))}
@@ -1735,7 +1735,7 @@ export default function CRMPage() {
                       {/* Columns grid body */}
                       <div className="grid grid-cols-7 flex-1 divide-x divide-outline-variant/40 overflow-y-auto custom-scrollbar p-2 bg-[#fbfaf8]">
                         {weekDays.map((day, idx) => {
-                          const dayAppts = appointments.filter(appt => appt.data === day.dataString);
+                          const dayAppts = appointments.filter(appt => appt.data === day.dateString);
                           return (
                             <div key={idx} className={`p-1.5 space-y-3 ${day.active ? 'bg-primary/[0.01]' : ''}`}>
                               {dayAppts.map(appt => {
@@ -1747,7 +1747,7 @@ export default function CRMPage() {
                                   <div 
                                     key={appt.id} 
                                     onClick={() => {
-                                      setNewApptDate(day.dataString);
+                                      setNewApptDate(day.dateString);
                                       setAgendaView('diaria');
                                     }}
                                     className={`border-l-2 p-2 rounded-lg relative hover:shadow-sm transition-all cursor-pointer ${cardClass}`}
@@ -1876,8 +1876,8 @@ export default function CRMPage() {
                                   const formattedMonth = String(agendaNavDate.getMonth() + 1).padStart(2, '0');
                                   const dateStr = `${agendaNavDate.getFullYear()}-${formattedMonth}-${formattedDay}`;
                                   setEditingAppointment(null);
-                                  setNewApptPatient(patients[0]?.name || '');
-                                  setNewApptProcedure(services[0]?.name || '');
+                                  setNewApptPatient(patients[0]?.nome || '');
+                                  setNewApptProcedure(services[0]?.nome || '');
                                   setNewApptTime('10:00');
                                   setNewApptDate(dateStr);
                                   setIsNewAppointmentOpen(true);
@@ -1946,8 +1946,8 @@ export default function CRMPage() {
                           const dateStr = `${year}-${formattedMonth}-${formattedDay}`;
                           const dayAppts = appointments
                             .filter(a => a.data === dateStr)
-                            .filter(a => selectedProfessional === 'todos' || a.professional === selectedProfessional)
-                            .sort((a, b) => a.time.localeCompare(b.time));
+                            .filter(a => selectedProfessional === 'todos' || a.profissional === selectedProfessional)
+                            .sort((a, b) => a.hora.localeCompare(b.hora));
                           if (dayAppts.length > 0) {
                             daysWithAppts.push({ day, dateStr, appts: dayAppts });
                           }
@@ -2067,10 +2067,10 @@ export default function CRMPage() {
                     {selectedPatientId === patient.id && (
                       <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary"></div>
                     )}
-                    <Image width={500} height={500} unoptimized className="h-10 w-10 rounded-full object-cover" src={patient.avatar} alt={patient.name} sizes="(max-width: 768px) 100vw, 500px" />
+                    <Image width={500} height={500} unoptimized className="h-10 w-10 rounded-full object-cover" src={patient.avatar} alt={patient.nome} sizes="(max-width: 768px) 100vw, 500px" />
                     <div className="flex-1 min-w-0">
                       <p className="font-manrope text-[13px] font-extrabold text-on-surface truncate">
-                        {patient.pronoun ? patient.pronoun + ' ' : ''}{patient.name}
+                        {patient.pronoun ? patient.pronoun + ' ' : ''}{patient.nome}
                       </p>
                       <p className="text-[10px] text-on-surface-variant truncate mt-0.5">Última consulta: {patient.lastVisit}</p>
                     </div>
@@ -2084,7 +2084,7 @@ export default function CRMPage() {
 
             {/* Selected Cliente details column (Image 2 layout) */}
             <div className={`flex-1 overflow-y-auto custom-scrollbar ${!selectedPatientId ? 'hidden lg:block' : 'block'}`}>
-              {selectedCliente ? (
+              {selectedPatient ? (
                 <div className="max-w-6xl mx-auto p-4 sm:p-6 xl:p-8 space-y-4 xl:space-y-6">
                   
                   {/* Mobile Back Button */}
@@ -2102,7 +2102,7 @@ export default function CRMPage() {
                     <Image width={500} height={500} unoptimized 
                       className="h-28 w-28 rounded-2xl object-cover border-2 border-primary/20 mx-auto lg:mx-0" 
                       src={selectedPatient.detailsAvatar} 
-                      alt={selectedPatient.name} sizes="(max-width: 768px) 100vw, 500px" 
+                      alt={selectedPatient.nome} sizes="(max-width: 768px) 100vw, 500px" 
                     />
                     <button 
                       onClick={() => document.getElementById('patient_details_avatar_upload')?.click()}
@@ -2148,7 +2148,7 @@ export default function CRMPage() {
                     <div className="flex flex-col lg:flex-row justify-between items-center lg:items-start gap-4">
                       <div className="flex flex-col items-center lg:items-start">
                         <h1 className="font-manrope text-[24px] font-bold text-on-surface leading-snug">
-                          {selectedPatient.pronoun ? selectedPatient.pronoun + ' ' : ''}{selectedPatient.name}
+                          {selectedPatient.pronoun ? selectedPatient.pronoun + ' ' : ''}{selectedPatient.nome}
                         </h1>
                         <p className="text-on-surface-variant text-[13px] mt-1 font-semibold flex items-center gap-1.5">
                           <span className="w-2 h-2 rounded-full bg-primary"></span>
@@ -2187,7 +2187,7 @@ export default function CRMPage() {
                       </div>
                       <div className="bg-surface rounded-xl p-3 border border-outline-variant/30">
                         <p className="text-[10px] text-outline mb-0.5 uppercase tracking-wider font-semibold">Procedimentos</p>
-                        <p className="font-manrope text-[16px] font-black text-on-surface">{(selectedPatient.proceduresCount).toString().padStart(2, '0')}</p>
+                        <p className="font-manrope text-[16px] font-black text-on-surface">{(selectedPatient.procedimentosCount).toString().padStart(2, '0')}</p>
                       </div>
                       <div className="bg-surface rounded-xl p-3 border border-outline-variant/30">
                         <p className="text-[10px] text-outline mb-0.5 uppercase tracking-wider font-semibold">Última Foto</p>
@@ -2577,7 +2577,7 @@ export default function CRMPage() {
                                   category: 'Procedimento',
                                   status: 'Concluído'
                                 };
-                                const updatedTimeline = [newTimelineItem, ...(selectedPatient.timeline || [])];
+                                const updatedTimeline = [newTimelineItem, ...(selectedPatient.historico || [])];
                                 try {
                                   const { error } = await supabase
                                     .from('clientes')
@@ -2602,7 +2602,7 @@ export default function CRMPage() {
                       <div className="relative">
                         <div className="absolute left-[24px] top-2 bottom-2 w-[1px] bg-surface-container-high"></div>
                         <div className="space-y-8">
-                          {selectedPatient.timeline.map((item, index) => (
+                          {selectedPatient.historico.map((item, index) => (
                             <div key={item.id} className="relative flex gap-6 items-start">
                               <div className="z-10 bg-primary w-12 h-12 rounded-full flex items-center justify-center shadow border-4 border-white-pure text-white-pure">
                                 <span className="material-symbols-outlined text-[18px]">
@@ -2636,7 +2636,7 @@ export default function CRMPage() {
                 {/* Anamnese */}
                 {activePatientSubTab === 'anamnese' && (
                   <AnamneseLimpezaDePele 
-                    patientName={selectedPatient.name} 
+                    patientName={selectedPatient.nome} 
                     onCancel={() => setActivePatientSubTab('evolution')} 
                     onSave={async (data) => {
                       try {
@@ -2704,7 +2704,7 @@ export default function CRMPage() {
                           status: 'Concluído'
                         };
 
-                        const updatedTimeline = [newTimelineItem, ...(selectedPatient.timeline || [])];
+                        const updatedTimeline = [newTimelineItem, ...(selectedPatient.historico || [])];
 
                         // 6. Atualizar no Supabase
                         const { error } = await supabase
@@ -2797,7 +2797,7 @@ export default function CRMPage() {
                                 <tr key={item.id} className="hover:bg-surface-container/20 group">
                                   <td className="py-3.5 font-medium text-on-surface-variant">{item.data}</td>
                                   <td className="py-3.5">
-                                    <p className="font-bold text-on-surface font-manrope">{item.procedure}</p>
+                                    <p className="font-bold text-on-surface font-manrope">{item.procedimento}</p>
                                     <p className="text-[10px] text-outline mt-0.5">{item.descricao}</p>
                                   </td>
                                   <td className="py-3.5 text-on-surface-variant font-medium">{item.method}</td>
@@ -2890,7 +2890,7 @@ export default function CRMPage() {
                                   .from('clientes')
                                   .update({
                                     total_spent: (selectedPatient.totalSpent || 0) + val,
-                                    procedures_count: (selectedPatient.proceduresCount || 0) + 1,
+                                    procedures_count: (selectedPatient.procedimentosCount || 0) + 1,
                                     financials: updatedFinancials
                                   })
                                   .eq('id', selectedPatient.id);
@@ -2899,7 +2899,7 @@ export default function CRMPage() {
                                 const { error: txErr } = await supabase
                                   .from('cobrancas')
                                   .insert([{
-                                    description: `${proc} - ${selectedPatient.name}`,
+                                    description: `${proc} - ${selectedPatient.nome}`,
                                     date: new Date().toLocaleDateString('pt-BR'),
                                     category: 'Procedimento',
                                     status: status === 'Pago' ? 'Pago' : 'Pendente',
@@ -2917,14 +2917,14 @@ export default function CRMPage() {
                                     return {
                                       ...p,
                                       totalSpent: (p.totalSpent || 0) + val,
-                                      proceduresCount: (p.proceduresCount || 0) + 1
+                                      proceduresCount: (p.procedimentosCount || 0) + 1
                                     };
                                   }
                                   return p;
                                 }));
                                 const newTx: Cobranca = {
                                   id: Math.random().toString(),
-                                  description: `${proc} - ${selectedPatient.name}`,
+                                  description: `${proc} - ${selectedPatient.nome}`,
                                   date: new Date().toLocaleDateString('pt-BR'),
                                   category: 'Procedimento',
                                   status: status === 'Pago' ? 'Pago' : 'Pendente',
@@ -3053,7 +3053,7 @@ export default function CRMPage() {
                                         ...prev,
                                         [selectedPatient.id]: updatedDocs
                                       }));
-                                      showAlert(`Sucesso! O documento foi assinado por ${selectedPatient.name} via iPad/tablet integrado com certificado ICP-Brasil e carimbo de data/hora válido!`);
+                                      showAlert(`Sucesso! O documento foi assinado por ${selectedPatient.nome} via iPad/tablet integrado com certificado ICP-Brasil e carimbo de data/hora válido!`);
                                     } catch (err: any) {
                                       console.error('Error signing document:', err);
                                       showAlert(`Erro ao assinar documento: ${err.message}`);
@@ -3101,7 +3101,7 @@ export default function CRMPage() {
                 <select 
                   value={`${agendaNavDate.getMonth() + 1}/${agendaNavDate.getFullYear()}`}
                   onChange={(e) => {
-                    const [m, y] = e.target.valor.split('/').map(Number);
+                    const [m, y] = e.target.value.split('/').map(Number);
                     const d = new Date(agendaNavDate);
                     d.setMonth(m - 1);
                     d.setFullYear(y);
@@ -4048,7 +4048,7 @@ export default function CRMPage() {
                             showAlert(`Erro no upload: ${err.message}`);
                           } finally {
                             setNewUserAvatarUploading(false);
-                            e.target.valor = '';
+                            e.target.value = '';
                           }
                         }}
                       />
@@ -4292,7 +4292,7 @@ export default function CRMPage() {
                             showAlert(`Erro no upload: ${err.message}`);
                           } finally {
                             setNewUserAvatarUploading(false);
-                            e.target.valor = '';
+                            e.target.value = '';
                           }
                         }}
                       />
@@ -4452,7 +4452,7 @@ export default function CRMPage() {
                   }
                   showAlert('Cliente atualizado com sucesso!');
                 } else {
-                  const newCliente = {
+                  const newPatient = {
                     name,
                     phone,
                     cpf,
@@ -4894,10 +4894,10 @@ export default function CRMPage() {
               <span className="material-symbols-outlined text-primary text-3xl">spa</span>
               <div>
                 <h3 className="font-manrope text-[20px] font-bold text-primary">
-                  {editingAgendamento ? 'Editar Agendamento' : 'Novo Agendamento'}
+                  {editingAppointment ? 'Editar Agendamento' : 'Novo Agendamento'}
                 </h3>
                 <p className="text-[12px] text-on-surface-variant">
-                  {editingAgendamento ? 'Altere as informações do procedimento da agenda' : 'Lançamento de novo procedimento no fluxo principal'}
+                  {editingAppointment ? 'Altere as informações do procedimento da agenda' : 'Lançamento de novo procedimento no fluxo principal'}
                 </p>
               </div>
             </div>
@@ -4909,8 +4909,8 @@ export default function CRMPage() {
                 <label className="font-bold text-on-surface-variant">Cliente</label>
                 <div className="flex gap-2">
                   <select 
-                    value={newApptCliente}
-                    onChange={(e) => setNewApptPatient(e.target.valor)}
+                    value={newApptPatient}
+                    onChange={(e) => setNewApptPatient(e.target.value)}
                     className="w-full p-2.5 bg-surface rounded-xl border border-outline-variant/60 focus:outline-none focus:ring-1 focus:ring-primary/40 font-medium flex-1"
                     required
                   >
@@ -4935,8 +4935,8 @@ export default function CRMPage() {
                 <select
                   value={newApptProcedure}
                   onChange={(e) => {
-                     setNewApptProcedure(e.target.valor);
-                     const sel = services.find(s => s.nome === e.target.valor);
+                     setNewApptProcedure(e.target.value);
+                     const sel = services.find(s => s.nome === e.target.value);
                      if(sel) {
                        setNewApptCategory(sel.categoria as any);
                      }
@@ -4958,7 +4958,7 @@ export default function CRMPage() {
                   <label className="font-bold text-on-surface-variant">Profissional</label>
                   <select
                     value={newApptProfessional}
-                    onChange={(e) => setNewApptProfessional(e.target.valor)}
+                    onChange={(e) => setNewApptProfessional(e.target.value)}
                     className="w-full p-2.5 bg-surface rounded-xl border border-outline-variant/60 focus:outline-none focus:ring-1 focus:ring-primary/40 font-medium font-sans text-[13px]"
                   >
                     {appUsers.filter(u => u.status === 'active').map(u => (
@@ -4971,7 +4971,7 @@ export default function CRMPage() {
                   <label className="font-bold text-on-surface-variant">Status</label>
                   <select
                     value={newApptStatus}
-                    onChange={(e) => setNewApptStatus(e.target.valor as any)}
+                    onChange={(e) => setNewApptStatus(e.target.value as any)}
                     className="w-full p-2.5 bg-surface rounded-xl border border-outline-variant/60 focus:outline-none focus:ring-1 focus:ring-primary/40 font-medium font-sans text-[13px]"
                   >
                     <option value="Confirmado">Confirmado</option>
@@ -4986,7 +4986,7 @@ export default function CRMPage() {
                   <input 
                     type="date"
                     value={newApptDate}
-                    onChange={(e)=>setNewApptDate(e.target.valor)}
+                    onChange={(e)=>setNewApptDate(e.target.value)}
                     className="w-full p-2.5 bg-surface rounded-xl border border-outline-variant/60 focus:outline-none focus:ring-1 focus:ring-primary/40 font-medium font-sans text-[13px]"
                     required
                   />
@@ -4997,7 +4997,7 @@ export default function CRMPage() {
                   <input 
                     type="time"
                     value={newApptTime}
-                    onChange={(e)=>setNewApptTime(e.target.valor)}
+                    onChange={(e)=>setNewApptTime(e.target.value)}
                     className="w-full p-2.5 bg-surface rounded-xl border border-outline-variant/60 focus:outline-none font-sans text-[13px]"
                     required
                   />
@@ -5019,7 +5019,7 @@ export default function CRMPage() {
                   type="submit"
                   className="flex-1 py-3 text-[12px] font-bold text-white-pure bg-primary rounded-xl hover:opacity-95 transition-all cursor-pointer shadow-md"
                 >
-                  {editingAgendamento ? 'Salvar Alterações' : 'Salvar na Agenda'}
+                  {editingAppointment ? 'Salvar Alterações' : 'Salvar na Agenda'}
                 </button>
               </div>
 
