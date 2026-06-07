@@ -2331,7 +2331,7 @@ export default function CRMPage() {
                                         {photo.type}
                                       </div>
                                       <div className="absolute bottom-2 left-2 bg-[#1c1b1af0] backdrop-blur-md text-white-pure px-3 py-1 rounded-full text-[10px] font-semibold">
-                                        {photo.data}
+                                        {photo.date}
                                       </div>
                                     </div>
                                   );
@@ -2402,7 +2402,7 @@ export default function CRMPage() {
                                     <Image width={500} height={500} unoptimized src={photo.url} className="w-full h-24 object-cover" alt="Histórico" sizes="(max-width: 768px) 100vw, 500px" />
                                     
                                     <div className="p-1.5 text-center">
-                                      <p className="text-[9px] font-bold text-on-surface truncate">{photo.data}</p>
+                                      <p className="text-[9px] font-bold text-on-surface truncate">{photo.date}</p>
                                       <span className={`inline-block mt-0.5 px-2 py-0.2 rounded text-[7px] font-extrabold uppercase ${photo.type === 'Antes' ? 'bg-[#735c00]/10 text-[#735c00]' : (photo.type === 'Depois' ? 'bg-[#7B2FBE]/10 text-[#7B2FBE]' : 'bg-surface-container-highest text-on-surface-variant')}`}>
                                         {photo.type}
                                       </span>
@@ -2612,7 +2612,7 @@ export default function CRMPage() {
                               <div className="flex-1 pt-1 bg-surface-container/10 p-4 rounded-xl border border-outline-variant/30">
                                 <div className="flex justify-between items-center mb-1 flex-wrap gap-2">
                                   <h4 className="font-manrope text-[13px] font-bold text-on-surface">{item.title}</h4>
-                                  <span className="text-[11px] text-on-surface-variant font-medium">{item.data}</span>
+                                  <span className="text-[11px] text-on-surface-variant font-medium">{item.date}</span>
                                 </div>
                                 <p className="text-[12px] text-on-surface-variant leading-relaxed mt-1">{item.descricao}</p>
                                 <div className="flex gap-2 mt-3">
@@ -2795,7 +2795,7 @@ export default function CRMPage() {
                             <tbody className="divide-y divide-outline-variant/30 text-[12px]">
                               {((patientFinancials[selectedPatient.id] || [])).map((item) => (
                                 <tr key={item.id} className="hover:bg-surface-container/20 group">
-                                  <td className="py-3.5 font-medium text-on-surface-variant">{item.data}</td>
+                                  <td className="py-3.5 font-medium text-on-surface-variant">{item.date}</td>
                                   <td className="py-3.5">
                                     <p className="font-bold text-on-surface font-manrope">{item.procedimento}</p>
                                     <p className="text-[10px] text-outline mt-0.5">{item.descricao}</p>
