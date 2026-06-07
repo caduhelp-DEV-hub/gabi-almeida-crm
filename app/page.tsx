@@ -2352,7 +2352,7 @@ export default function CRMPage() {
                                 </div>
                               )}
                               <div className="absolute bottom-3 left-3 bg-[#1c1b1af0] backdrop-blur-md text-white px-3 py-1 rounded-full text-[10px] font-medium font-manrope uppercase">
-                                Antes {selectedPatient.fotosEvolucao?.find(p => p.type === 'Antes')?.data ? `(${selectedPatient.fotosEvolucao.find(p => p.type === 'Antes')?.data})` : ''}
+                                Antes {selectedPatient.fotosEvolucao?.find(p => p.type === 'Antes')?.date ? `(${selectedPatient.fotosEvolucao.find(p => p.type === 'Antes')?.date})` : ''}
                               </div>
                               {selectedPatient.fotoAntes && (
                                 <button 
@@ -2374,7 +2374,7 @@ export default function CRMPage() {
                                 </div>
                               )}
                               <div className="absolute bottom-3 left-3 bg-primary text-white-pure px-3 py-1 rounded-full text-[10px] font-medium font-manrope uppercase">
-                                Depois {selectedPatient.fotosEvolucao?.find(p => p.type === 'Depois')?.data ? `(${selectedPatient.fotosEvolucao.find(p => p.type === 'Depois')?.data})` : ''}
+                                Depois {selectedPatient.fotosEvolucao?.find(p => p.type === 'Depois')?.date ? `(${selectedPatient.fotosEvolucao.find(p => p.type === 'Depois')?.date})` : ''}
                               </div>
                               {selectedPatient.fotoDepois && (
                                 <button 
