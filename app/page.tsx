@@ -744,6 +744,7 @@ export default function CRMPage() {
     const res = await fetch('/api/storage/upload', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
       body: JSON.stringify({ bucket: 'avatars', path, base64, contentType })
     });
     if (!res.ok) {
@@ -1039,7 +1040,7 @@ export default function CRMPage() {
             <div className="flex items-center gap-4 text-on-surface-variant">
               
               {/* Notifications Dropdown trigger */}
-              <div className="relative">
+              <div className="relative hidden sm:block">
                 <button 
                   id="notif-bell"
                   onClick={() => setIsAlertNotificationOpen(!isAlertNotificationOpen)}
@@ -1078,7 +1079,7 @@ export default function CRMPage() {
                 )}
               </div>
 
-              <button onClick={() => setCurrentTab('agenda')} className="p-2 hover:text-primary transition-colors cursor-pointer" title="Histórico da Studio">
+              <button onClick={() => setCurrentTab('agenda')} className="hidden sm:block p-2 hover:text-primary transition-colors cursor-pointer" title="Histórico da Studio">
                 <span className="material-symbols-outlined">history</span>
               </button>
               
@@ -1087,14 +1088,14 @@ export default function CRMPage() {
                   setCurrentTab('clientes');
                   setSelectedPatientId('p1');
                 }} 
-                className="p-2 hover:text-primary transition-colors cursor-pointer" 
+                className="hidden sm:block p-2 hover:text-primary transition-colors cursor-pointer" 
                 title="Mensagens do CRM"
               >
                 <span className="material-symbols-outlined">chat_bubble</span>
               </button>
             </div>
 
-            <div className="h-8 w-[1px] bg-outline-variant"></div>
+            <div className="hidden sm:block h-8 w-[1px] bg-outline-variant"></div>
 
             {/* User Profile */}
             <div className="relative">
