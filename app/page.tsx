@@ -1616,12 +1616,197 @@ export default function CRMPage() {
               </div>
             </div>
 
-            {/* Split layout: Agenda Left / CRM AI Advisor Right */}
-            <div className="flex-1 overflow-hidden flex gap-6">
+            {/* Split layout: Sidebar Left / Main Schedule Right */}
+            <div className="flex-1 overflow-hidden flex gap-4">
               
+              {/* Agenda Sidebar (240px) */}
+              <aside className="hidden lg:block w-60 flex-shrink-0 sticky top-20 self-start max-h-[calc(100vh-6rem)] overflow-y-auto custom-scrollbar">
+                <div className="bg-white-pure rounded-3xl border border-outline-variant/60 shadow-sm p-4 space-y-5">
+                  
+                  {/* Profissionais */}
+                  <div>
+                    <p className="text-[10px] text-outline font-extrabold uppercase tracking-widest mb-3">Profissionais</p>
+                    <div className="space-y-1.5">
+                      <button
+                        onClick={() => setSelectedProfessional('todos')}
+                        className={`w-full flex items-center gap-2 p-1.5 rounded-lg text-left transition-colors ${selectedProfessional === 'todos' ? 'bg-primary/10' : 'hover:bg-surface-container'}`}
+                      >
+                        <span className="w-2.5 h-2.5 rounded-full bg-outline flex-shrink-0"></span>
+                        <span className={`text-[12px] ${selectedProfessional === 'todos' ? 'font-bold text-primary' : 'text-on-surface-variant'}`}>Todos</span>
+                      </button>
+                      {professionals.map((prof, idx) => {
+                        const colors = [
+                          { bg: '#fce4f0', text: '#7a1a4a' },
+                          { bg: '#daeeff', text: '#0c4478' },
+                          { bg: '#d4f5e5', text: '#0a4a2a' }
+                        ];
+                        const c = colors[idx % colors.length];
+                        const isActive = selectedProfessional === prof.name;
+                        return (
+                          <button
+                            key={prof.name}
+                            onClick={() => setSelectedProfessional(isActive ? 'todos' : prof.name)}
+                            className={`w-full flex items-center gap-2 p-1.5 rounded-lg text-left transition-colors ${isActive ? 'bg-primary/10' : 'hover:bg-surface-container'}`}
+                          >
+                            <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: c.text }}></span>
+                            <span className={`text-[12px] truncate ${isActive ? 'font-bold text-primary' : 'text-on-surface-variant'}`}>{prof.name}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Filtros: Categorias */}
+                  <div>
+                    <p className="text-[10px] text-outline font-extrabold uppercase tracking-widest mb-2">Categorias</p>
+                    <div className="space-y-1.5">
+                      {['todos', 'Estética', 'Consulta'].map(cat => {
+                        const isActive = selectedCategoryFilter === cat;
+                        return (
+                          <button
+                            key={cat}
+                            onClick={() => setSelectedCategoryFilter(cat)}
+                            className={`w-full flex items-center gap-2 p-1.5 rounded-lg text-left transition-colors ${isActive ? 'bg-primary/10' : 'hover:bg-surface-container'}`}
+                          >
+                            <span className={`text-[12px] ${isActive ? 'font-bold text-primary' : 'text-on-surface-variant'}`}>
+                              {cat === 'todos' ? 'Todas' : cat}
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Filtros: Status */}
+                  <div>
+                    <p className="text-[10px] text-outline font-extrabold uppercase tracking-widest mb-2">Status</p>
+                    <div className="space-y-1.5">
+                      {['todos', 'Confirmado', 'Em Atendimento', 'Finalizado', 'Pendente'].map(st => {
+                        const isActive = selectedStatusFilter === st;
+                        const statusColor = st === 'Confirmado' ? 'bg-amber-500' : st === 'Em Atendimento' ? 'bg-cyan-500' : st === 'Finalizado' ? 'bg-emerald-500' : st === 'Pendente' ? 'bg-slate-400' : 'bg-outline';
+                        return (
+                          <button
+                            key={st}
+                            onClick={() => setSelectedStatusFilter(st)}
+                            className={`w-full flex items-center gap-2 p-1.5 rounded-lg text-left transition-colors ${isActive ? 'bg-primary/10' : 'hover:bg-surface-container'}`}
+                          >
+                            <span className={`w-2 h-2 rounded-full flex-shrink-0 ${statusColor}`}></span>
+                            <span className={`text-[12px] ${isActive ? 'font-bold text-primary' : 'text-on-surface-variant'}`}>
+                              {st === 'todos' ? 'Todos' : st}
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Métricas Resumidas */}
+                  <div className="pt-3 border-t border-outline-variant/40 space-y-3">
+                    <p className="text-[10px] text-outline font-extrabold uppercase tracking-widest">Métricas do Dia</p>
+                    <div className="flex gap-3 items-center">
+                      <div className="w-8 h-8 rounded-xl bg-primary/10 flex items-center justify-center text-primary flex-shrink-0">
+                        <span className="material-symbols-outlined text-[16px]">trending_up</span>
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-[10px] text-on-surface-variant leading-tight">Faturamento Estimado</p>
+                        <p className="font-bold text-[13px] text-primary truncate">R$ 16.700,00</p>
+                      </div>
+                    </div>
+                    <div className="flex gap-3 items-center">
+                      <div className="w-8 h-8 rounded-xl bg-secondary/10 flex items-center justify-center text-secondary flex-shrink-0">
+                        <span className="material-symbols-outlined text-[16px]">person_check</span>
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-[10px] text-on-surface-variant leading-tight">Taxa Ocupacional</p>
+                        <p className="font-bold text-[13px] text-on-surface">92%</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </aside>
+
               {/* Main Schedule Container */}
-              <div className="flex-1 bg-white-pure rounded-3xl border border-outline-variant shadow-sm overflow-hidden flex flex-col">
+              <div className="flex-1 min-w-0 bg-white-pure rounded-3xl border border-outline-variant shadow-sm overflow-hidden flex flex-col">
                 
+                {/* Compact Weekly Calendar (desktop) */}
+                {agendaView !== 'mensal' && (
+                  <div className="hidden lg:flex flex-col bg-white-pure pt-3 pb-3 px-4 border-b border-outline-variant/30 select-none">
+                    <div className="flex justify-between items-center mb-2">
+                      <button
+                        onClick={() => {
+                          const newDate = new Date(agendaNavDate);
+                          newDate.setDate(newDate.getDate() - 7);
+                          setAgendaNavDate(newDate);
+                        }}
+                        className="text-on-surface-variant hover:text-primary transition-colors flex items-center justify-center p-1 min-h-[36px] min-w-[36px]"
+                      >
+                        <span className="material-symbols-outlined text-[18px]">chevron_left</span>
+                      </button>
+                      <span className="font-manrope text-[12px] font-black uppercase tracking-wider text-primary">
+                        {agendaNavDate.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' }).toUpperCase()}
+                      </span>
+                      <button
+                        onClick={() => {
+                          const newDate = new Date(agendaNavDate);
+                          newDate.setDate(newDate.getDate() + 7);
+                          setAgendaNavDate(newDate);
+                        }}
+                        className="text-on-surface-variant hover:text-primary transition-colors flex items-center justify-center p-1 min-h-[36px] min-w-[36px]"
+                      >
+                        <span className="material-symbols-outlined text-[18px]">chevron_right</span>
+                      </button>
+                    </div>
+
+                    <div className="grid grid-cols-7 gap-1 text-center">
+                      {(() => {
+                        const activeDate = new Date(agendaNavDate);
+                        const dayOfWeek = activeDate.getDay();
+                        const sunday = new Date(activeDate);
+                        sunday.setDate(activeDate.getDate() - dayOfWeek);
+
+                        const days = [];
+                        const labels = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+                        for (let i = 0; i < 7; i++) {
+                          const d = new Date(sunday);
+                          d.setDate(sunday.getDate() + i);
+                          const fDay = String(d.getDate()).padStart(2, '0');
+                          const fMonth = String(d.getMonth() + 1).padStart(2, '0');
+                          const dateStr = `${d.getFullYear()}-${fMonth}-${fDay}`;
+                          const hasAppt = appointments.some(a => a.date === dateStr);
+                          days.push({
+                            label: labels[i],
+                            dayNum: d.getDate(),
+                            dateObject: d,
+                            isToday: d.toDateString() === new Date().toDateString(),
+                            isSelected: d.toDateString() === agendaNavDate.toDateString(),
+                            hasAppt
+                          });
+                        }
+
+                        return days.map((day, idx) => (
+                          <div
+                            key={idx}
+                            onClick={() => setAgendaNavDate(day.dateObject)}
+                            className="flex flex-col items-center cursor-pointer py-1"
+                          >
+                            <span className="text-[10px] text-outline font-bold uppercase tracking-tight mb-1">{day.label}</span>
+                            <span className={`w-8 h-8 flex items-center justify-center rounded-full text-[13px] font-bold transition-all ${
+                              day.isSelected
+                                ? 'bg-[#79542e] text-white-pure shadow-sm'
+                                : day.isToday
+                                  ? 'text-[#79542e] border border-[#79542e]'
+                                  : 'text-on-surface hover:bg-surface-container/50'
+                            }`}>
+                              {day.dayNum}
+                            </span>
+                            <span className={`w-1 h-1 rounded-full mt-1 ${day.hasAppt ? 'bg-primary' : 'bg-transparent'}`}></span>
+                          </div>
+                        ));
+                      })()}
+                    </div>
+                  </div>
+                )}
+
                 {/* Card list view (replaces timeline on desktop) */}
                 {agendaView !== 'mensal' && (
                   <div className="flex-1 overflow-y-auto p-4 lg:p-6 space-y-3 bg-[#fbfaf8] flex flex-col">
@@ -1955,87 +2140,6 @@ export default function CRMPage() {
                       </div>
                     </div>
                   </div>
-                )}
-
-              </div>
-
-              {/* Dynamic Gabi Almeida AI Widget column (Image 3) */}
-              <div className="hidden lg:flex w-80 border-l border-outline-variant bg-surface-container-lowest p-6 flex flex-col gap-6 rounded-3xl">
-                <div className="flex items-center justify-between">
-                  <h3 className="font-manrope font-bold text-[16px]">Próximos hoje</h3>
-                  <span className="text-[11px] bg-primary/10 text-primary px-2 py-0.5 rounded-full font-bold">2 Clientes</span>
-                </div>
-                
-                <div className="space-y-4 overflow-y-auto custom-scrollbar flex-1">
-                  <div className="mt-6 pt-4 border-t border-outline-variant/30">
-                    <p className="text-[10px] text-outline uppercase font-bold tracking-widest mb-3">Métricas Estimadas</p>
-                    <div className="space-y-3">
-                      <div className="flex gap-3 items-center">
-                        <div className="w-9 h-9 rounded-xl bg-surface-container flex items-center justify-center text-primary">
-                          <span className="material-symbols-outlined text-[18px]">trending_up</span>
-                        </div>
-                        <div>
-                          <p className="text-[10px] text-on-surface-variant">Faturamento Estimado</p>
-                          <p className="font-bold text-[13px] text-primary">R$ 16.700,00</p>
-                        </div>
-                      </div>
-                      <div className="flex gap-3 items-center">
-                        <div className="w-9 h-9 rounded-xl bg-secondary/10 flex items-center justify-center text-secondary">
-                          <span className="material-symbols-outlined text-[18px]">person_check</span>
-                        </div>
-                        <div>
-                          <p className="text-[10px] text-on-surface-variant">Taxa Ocupacional</p>
-                          <p className="font-bold text-[13px] text-on-surface">92%</p>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Gemini AI interactive helper (Image 3) */}
-                {!apiKeyConfigured ? (
-                  <div className="p-4 bg-primary/10 border border-primary/20 rounded-2xl text-center space-y-2">
-                    <span className="material-symbols-outlined text-primary text-xl">auto_awesome</span>
-                    <h4 className="font-manrope text-[13px] font-bold text-on-surface">✦ Assistente IA temporariamente indisponível</h4>
-                    <p className="text-[11px] text-on-surface-variant leading-relaxed">Tente novamente em alguns instantes.</p>
-                  </div>
-                ) : (
-                <div className="p-4 bg-[#79542e] text-on-primary rounded-2xl shadow-lg relative overflow-hidden group">
-                  <div className="absolute -right-4 -bottom-4 opacity-10">
-                    <span className="material-symbols-outlined text-[80px]">auto_awesome</span>
-                  </div>
-                  
-                  <div className="relative z-10 space-y-3">
-                    <p className="font-manrope text-[11px] font-bold text-primary-fixed uppercase tracking-wider flex items-center gap-1">
-                      <span className="material-symbols-outlined text-[14px]">auto_awesome</span>
-                      Dica Gabi Almeida AI
-                    </p>
-                    <p className="font-sans text-[11px] text-white-pure/90 leading-relaxed font-medium">
-                      {aiAdvice}
-                    </p>
-
-                    {/* AI customized request box */}
-                    <div className="mt-3 pt-3 border-t border-white-pure/20 flex gap-2">
-                      <input 
-                        type="text"
-                        value={aiCustomInput}
-                        onChange={(e)=>setAiCustomInput(e.target.value)}
-                        placeholder="Perguntar dica studio..."
-                        className="flex-1 bg-white-pure/10 text-[10px] rounded-lg px-2.5 py-1.5 text-white-pure placeholder:text-white-pure/50 border-none focus:outline-none focus:ring-1 focus:ring-white-pure/30"
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter') handleQueryAI();
-                        }}
-                      />
-                      <button 
-                        onClick={handleQueryAI}
-                        disabled={aiLoading}
-                        className="bg-white-pure text-primary px-2.5 rounded-lg hover:opacity-90 font-bold text-[10px] flex items-center justify-center cursor-pointer disabled:opacity-50"
-                      >
-                        {aiLoading ? '...' : 'Ir'}
-                      </button>
-                    </div>
-                  </div>
-                </div>
                 )}
 
               </div>
@@ -3209,126 +3313,159 @@ export default function CRMPage() {
 
             </div>
 
-            {/* Split layout: Cash flow detailed and commission leaders (Image 1) */}
-            <div className="financeiro-grid grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch mb-8">
+            {/* Charts: Pizza (Receita por Categoria) + Barras (Movimentação Diária) */}
+            <div className="financeiro-grid grid grid-cols-1 lg:grid-cols-2 gap-3 mb-8">
               
-              {/* Detailed Cashflow chart (Left) */}
-              <div className="lg:col-span-8 glass-panel p-6 rounded-3xl flex flex-col justify-between">
-                <div className="flex justify-between items-center mb-6">
-                  <div>
-                    <h3 className="font-manrope text-[16px] font-bold text-on-surface">Fluxo de Caixa Detalhado</h3>
-                    <p className="text-[12px] text-on-surface-variant mt-0.5">Visão comparativa de entradas e saídas nos últimos 30 dias</p>
-                  </div>
+              {/* Pizza: Receita por Categoria */}
+              <div className="bg-white-pure rounded-3xl border border-outline-variant/40 p-6">
+                <h3 className="text-[13px] font-medium text-on-surface mb-4">Receita por Categoria</h3>
+                {(() => {
+                  const byCategory: { [key: string]: number } = {};
+                  transactions.filter(t => t.value > 0).forEach(t => {
+                    byCategory[t.category] = (byCategory[t.category] || 0) + t.value;
+                  });
+                  const entries = Object.entries(byCategory).sort((a, b) => b[1] - a[1]);
+                  const total = entries.reduce((s, [, v]) => s + v, 0);
+                  if (total === 0) {
+                    return <p className="text-[12px] text-on-surface-variant text-center py-8">Sem dados de receita ainda.</p>;
+                  }
+                  const colors = ['#79542e', '#3B6D11', '#185FA5', '#993C1D', '#745c00', '#7a1a4a'];
+                  let offset = 0;
+                  return (
+                    <div className="flex flex-col sm:flex-row items-center gap-6">
+                      <svg viewBox="0 0 36 36" className="w-32 h-32 flex-shrink-0 -rotate-90">
+                        {entries.map(([cat, val], idx) => {
+                          const pct = (val / total) * 100;
+                          const dash = `${pct} ${100 - pct}`;
+                          const el = (
+                            <circle
+                              key={cat}
+                              cx="18" cy="18" r="15.9155"
+                              fill="none"
+                              stroke={colors[idx % colors.length]}
+                              strokeWidth="3"
+                              strokeDasharray={dash}
+                              strokeDashoffset={-offset}
+                            />
+                          );
+                          offset += pct;
+                          return el;
+                        })}
+                        <circle cx="18" cy="18" r="10" fill="white" />
+                      </svg>
+                      <div className="space-y-2 w-full sm:w-auto sm:flex-1">
+                        {entries.map(([cat, val], idx) => {
+                          const pct = ((val / total) * 100).toFixed(1);
+                          return (
+                            <div key={cat} className="flex items-center justify-between gap-3 text-[12px]">
+                              <div className="flex items-center gap-2 min-w-0">
+                                <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: colors[idx % colors.length] }}></span>
+                                <span className="truncate text-on-surface-variant">{cat}</span>
+                              </div>
+                              <div className="flex items-center gap-2 flex-shrink-0">
+                                <span className="text-outline">{pct}%</span>
+                                <span className="font-bold text-[#3B6D11]">R$ {val.toLocaleString('pt-BR', { maximumFractionDigits: 0 })}</span>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })()}
+              </div>
+
+              {/* Barras: Movimentação Diária */}
+              <div className="bg-white-pure rounded-3xl border border-outline-variant/40 p-6">
+                <div className="flex justify-between items-center mb-4">
+                  <h3 className="text-[13px] font-medium text-on-surface">Movimentação Diária</h3>
                   <div className="flex gap-2">
-                    <button 
+                    <button
                       onClick={() => setFinancialTimeframe('semanal')}
-                      className={`px-4 py-1.5 border rounded-xl font-manrope text-[11px] font-bold transition-all cursor-pointer ${financialTimeframe === 'semanal' ? 'bg-[#79542e] text-white-pure border-primary' : 'border-outline hover:bg-surface'}`}
+                      className={`px-3 py-1 border rounded-lg text-[11px] font-bold transition-all cursor-pointer ${financialTimeframe === 'semanal' ? 'bg-primary text-white-pure border-primary' : 'border-outline-variant/60 text-on-surface-variant hover:bg-surface-container'}`}
                     >
                       Semanal
                     </button>
-                    <button 
+                    <button
                       onClick={() => setFinancialTimeframe('mensal')}
-                      className={`px-4 py-1.5 border rounded-xl font-manrope text-[11px] font-bold transition-all cursor-pointer ${financialTimeframe === 'mensal' ? 'bg-[#79542e] text-white-pure border-primary' : 'border-outline hover:bg-surface'}`}
+                      className={`px-3 py-1 border rounded-lg text-[11px] font-bold transition-all cursor-pointer ${financialTimeframe === 'mensal' ? 'bg-primary text-white-pure border-primary' : 'border-outline-variant/60 text-on-surface-variant hover:bg-surface-container'}`}
                     >
                       Mensal
                     </button>
                   </div>
                 </div>
-
-                {/* Highly aesthetic interactive bars chart representing image 1 meticulously */}
-                <div className="relative h-48 lg:h-60 w-full flex items-end justify-between px-4 mt-4">
-                  <div className="absolute inset-0 flex flex-col justify-between pointer-events-none pb-1">
-                    <div className="border-b border-outline-variant/20 w-full h-0"></div>
-                    <div className="border-b border-outline-variant/20 w-full h-0"></div>
-                    <div className="border-b border-outline-variant/20 w-full h-0"></div>
-                    <div className="border-b border-outline-variant/20 w-full h-0"></div>
-                    <div className="w-full h-0"></div>
-                  </div>
-
-                  {/* Dual Bar 1 */}
-                  <div className="flex items-end gap-1.5 h-full group pb-1">
-                    <div className="w-4 bg-primary-container/40 h-[40%] rounded-t-sm transition-all group-hover:bg-primary-container group-hover:scale-y-105" title="Entradas Sem 1"></div>
-                    <div className="w-4 bg-secondary-container h-[25%] rounded-t-sm transition-all group-hover:bg-secondary-container/80 group-hover:scale-y-105" title="Saídas Sem 1"></div>
-                  </div>
-
-                  {/* Dual Bar 2 */}
-                  <div className="flex items-end gap-1.5 h-full group pb-1">
-                    <div className="w-4 bg-primary-container/40 h-[55%] rounded-t-sm transition-all group-hover:bg-primary-container group-hover:scale-y-105" title="Entradas Sem 2"></div>
-                    <div className="w-4 bg-secondary-container h-[30%] rounded-t-sm transition-all group-hover:bg-secondary-container/80 group-hover:scale-y-105" title="Saídas Sem 2"></div>
-                  </div>
-
-                  {/* Dual Bar 3 */}
-                  <div className="flex items-end gap-1.5 h-full group pb-1">
-                    <div className="w-4 bg-primary-container/40 h-[75%] rounded-t-sm transition-all group-hover:bg-primary-container group-hover:scale-y-105" title="Entradas Sem 3"></div>
-                    <div className="w-4 bg-secondary-container h-[45%] rounded-t-sm transition-all group-hover:bg-secondary-container/80 group-hover:scale-y-105" title="Saídas Sem 3"></div>
-                  </div>
-
-                  {/* Dual Bar 4 */}
-                  <div className="flex items-end gap-1.5 h-full group pb-1">
-                    <div className="w-4 bg-primary-container/40 h-[60%] rounded-t-sm transition-all group-hover:bg-primary-container group-hover:scale-y-105" title="Entradas Sem 4"></div>
-                    <div className="w-4 bg-secondary-container h-[40%] rounded-t-sm transition-all group-hover:bg-secondary-container/80 group-hover:scale-y-105" title="Saídas Sem 4"></div>
-                  </div>
-
-                  {/* Dual Bar 5 */}
-                  <div className="flex items-end gap-1.5 h-full group pb-1">
-                    <div className="w-4 bg-primary-container/50 h-[90%] rounded-t-sm transition-all group-hover:bg-primary-container group-hover:scale-y-105" title="Entradas Sem 5"></div>
-                    <div className="w-4 bg-secondary-container h-[20%] rounded-t-sm transition-all group-hover:bg-secondary-container/80 group-hover:scale-y-105" title="Saídas Sem 5"></div>
-                  </div>
-
-                  {/* Dual Bar 6 */}
-                  <div className="flex items-end gap-1.5 h-full group pb-1">
-                    <div className="w-4 bg-primary-container/60 h-[85%] rounded-t-sm transition-all group-hover:bg-primary-container group-hover:scale-y-105" title="Entradas Sem 6"></div>
-                    <div className="w-4 bg-secondary-container h-[55%] rounded-t-sm transition-all group-hover:bg-secondary-container/80 group-hover:scale-y-105" title="Saídas Sem 6"></div>
-                  </div>
-
-                  {/* Dual Bar 7 */}
-                  <div className="flex items-end gap-1.5 h-full group pb-1">
-                    <div className="w-4 bg-primary h-[100%] rounded-t-sm transition-all group-hover:scale-y-105" title="Picos do mês: Entradas R$ 142K"></div>
-                    <div className="w-4 bg-secondary h-[40%] rounded-t-sm transition-all group-hover:scale-y-105" title="Saídas R$ 38K"></div>
-                  </div>
-
-                </div>
-
-                <div className="mt-4 flex justify-center gap-8 text-[11px] font-semibold">
-                  <div className="flex items-center gap-1.5">
-                    <span className="w-2.5 h-2.5 rounded-full bg-[#956c44]"></span>
-                    <span className="text-on-surface-variant">Fluxo de Entradas (Faturamento)</span>
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    <span className="w-2.5 h-2.5 rounded-full bg-[#fed65b]"></span>
-                    <span className="text-on-surface-variant">Fluxo de Saídas (Despesas/Insumos)</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Commission Leaders (Right) */}
-              <div className="lg:col-span-4 glass-panel p-6 rounded-3xl flex flex-col justify-between">
-                <div>
-                  <h3 className="font-manrope text-[16px] font-bold text-on-surface mb-6">Repasse de Comissões</h3>
-                  <div className="space-y-4">
-                    {commissionLeaders.map((lead, idx) => (
-                      <div key={idx} className="flex items-center justify-between py-3 border-b border-outline-variant/30 lg:border-none lg:bg-white-pure/40 lg:rounded-xl lg:p-2 lg:hover:bg-white-pure transition-colors">
-                        <div className="flex items-center gap-3">
-                          <Image width={500} height={500} unoptimized className="w-10 h-10 rounded-full object-cover" src={lead.avatar} alt={lead.name} sizes="(max-width: 768px) 100vw, 500px" />
-                          <div className="min-w-0">
-                            <p className="font-manrope text-[13px] lg:text-[12px] font-bold text-on-surface truncate">{lead.name}</p>
-                            <p className="text-[11px] lg:text-[10px] text-on-surface-variant tracking-wider uppercase">Faturamento: R$ {lead.revenue.toLocaleString('pt-BR')}</p>
-                          </div>
-                        </div>
-                        <p className="font-manrope text-[13px] lg:text-[12px] font-extrabold text-primary">R$ {lead.commission.toLocaleString('pt-BR')}</p>
+                <div className="relative h-48 w-full flex items-end justify-between px-2 mt-4">
+                  {(() => {
+                    const days = financialTimeframe === 'semanal' ? 7 : 30;
+                    const today = new Date();
+                    const dayData: { day: string; receita: number; despesa: number }[] = [];
+                    for (let i = days - 1; i >= 0; i--) {
+                      const d = new Date(today);
+                      d.setDate(today.getDate() - i);
+                      const ds = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+                      const rec = transactions.filter(t => t.date === ds && t.value > 0).reduce((s, t) => s + t.value, 0);
+                      const des = transactions.filter(t => t.date === ds && t.value < 0).reduce((s, t) => s + Math.abs(t.value), 0);
+                      dayData.push({ day: String(d.getDate()).padStart(2, '0'), receita: rec, despesa: des });
+                    }
+                    const maxVal = Math.max(...dayData.map(d => Math.max(d.receita, d.despesa)), 1);
+                    return dayData.map((d, idx) => (
+                      <div key={idx} className="flex items-end gap-0.5 h-full group flex-1 justify-center">
+                        <div
+                          className="w-2 sm:w-3 bg-[#3B6D11]/70 rounded-t-sm transition-all group-hover:bg-[#3B6D11]"
+                          style={{ height: `${(d.receita / maxVal) * 100}%`, minHeight: d.receita > 0 ? '2px' : '0' }}
+                          title={`Receita: R$ ${d.receita.toFixed(0)}`}
+                        ></div>
+                        <div
+                          className="w-2 sm:w-3 bg-[#993C1D]/70 rounded-t-sm transition-all group-hover:bg-[#993C1D]"
+                          style={{ height: `${(d.despesa / maxVal) * 100}%`, minHeight: d.despesa > 0 ? '2px' : '0' }}
+                          title={`Despesa: R$ ${d.despesa.toFixed(0)}`}
+                        ></div>
                       </div>
-                    ))}
+                    ));
+                  })()}
+                </div>
+                <div className="mt-3 flex justify-center gap-6 text-[11px] font-medium">
+                  <div className="flex items-center gap-1.5">
+                    <span className="w-2.5 h-2.5 rounded-full bg-[#3B6D11]"></span>
+                    <span className="text-on-surface-variant">Receitas</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <span className="w-2.5 h-2.5 rounded-full bg-[#993C1D]"></span>
+                    <span className="text-on-surface-variant">Despesas</span>
                   </div>
                 </div>
-
-                <button 
-                  onClick={() => showAlert('Relatório fiscal de Repasses e Lançamentos gerado para download!')}
-                  className="w-full mt-6 py-2.5 border border-primary text-primary rounded-xl font-bold font-manrope text-[12px] hover:bg-primary/5 transition-all cursor-pointer text-center"
-                >
-                  Relatório de Repasse Completo
-                </button>
               </div>
 
+            </div>
+
+            {/* Commission Leaders (Repasses) */}
+            <div className="bg-white-pure rounded-3xl border border-outline-variant/40 p-6 mb-8">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-[13px] font-medium text-on-surface">Repasses de Comissão</h3>
+                <span className="text-[11px] text-on-surface-variant">
+                  Total a repassar: <strong className="text-primary">R$ {commissionsToPay.toLocaleString('pt-BR', { maximumFractionDigits: 0 })}</strong>
+                </span>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {commissionLeaders.map((lead, idx) => (
+                  <div key={idx} className="flex items-center justify-between p-3 rounded-2xl border border-outline-variant/30 hover:bg-surface-container transition-colors">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <Image width={500} height={500} unoptimized className="w-10 h-10 rounded-full object-cover flex-shrink-0" src={lead.avatar} alt={lead.name} sizes="(max-width: 768px) 100vw, 500px" />
+                      <div className="min-w-0">
+                        <p className="text-[13px] font-bold text-on-surface truncate">{lead.name}</p>
+                        <p className="text-[11px] text-on-surface-variant uppercase tracking-wider">Fat: R$ {lead.revenue.toLocaleString('pt-BR')}</p>
+                      </div>
+                    </div>
+                    <p className="text-[13px] font-extrabold text-primary flex-shrink-0">R$ {lead.commission.toLocaleString('pt-BR')}</p>
+                  </div>
+                ))}
+              </div>
+              <button
+                onClick={() => showAlert('Relatório fiscal de Repasses e Lançamentos gerado para download!')}
+                className="w-full mt-4 py-2.5 border border-primary text-primary rounded-xl font-bold text-[12px] hover:bg-primary/5 transition-all cursor-pointer text-center"
+              >
+                Relatório de Repasse Completo
+              </button>
             </div>
 
             {/* Bottom Transações Recentes block (Image 1) */}
