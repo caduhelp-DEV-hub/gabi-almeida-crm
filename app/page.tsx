@@ -619,7 +619,7 @@ export default function CRMPage() {
     
     const newTimelineItem = {
       id: Date.now().toString(),
-      date: new Date().toLocaleDateString('pt-BR'),
+      data: new Date().toLocaleDateString('pt-BR'),
       title: 'Validação de Protocolo',
       description: 'Protocolo de atendimento clínico assinado e validado com sucesso pelo cliente.',
       category: 'Validação',
@@ -2574,7 +2574,7 @@ export default function CRMPage() {
                                   date: new Date().toLocaleDateString('pt-BR'),
                                   title: 'Procedimento Clínico',
                                   description: text,
-                                  category: 'Procedimento',
+                                  categoria: 'Procedimento',
                                   status: 'Concluído'
                                 };
                                 const updatedTimeline = [newTimelineItem, ...(selectedPatient.historico || [])];
@@ -2863,10 +2863,10 @@ export default function CRMPage() {
                           
                           <button 
                             onClick={async () => {
-                              const proc = (document.getElementById('new_proc_name') as HTMLInputElement)?.valor;
-                              const val = parseFloat((document.getElementById('new_proc_val') as HTMLInputElement)?.valor);
-                              const method = (document.getElementById('new_proc_method') as HTMLSelectElement)?.valor;
-                              const status = (document.getElementById('new_proc_status') as HTMLSelectElement)?.valor as 'Pago' | 'Pendente';
+                              const proc = (document.getElementById('new_proc_name') as HTMLInputElement)?.value;
+                              const val = parseFloat((document.getElementById('new_proc_val') as HTMLInputElement)?.value);
+                              const method = (document.getElementById('new_proc_method') as HTMLSelectElement)?.value;
+                              const status = (document.getElementById('new_proc_status') as HTMLSelectElement)?.value as 'Pago' | 'Pendente';
                               
                               if (!proc || isNaN(val)) {
                                 showAlert('Por favor, preencha o nome do procedimento e valor válidos!');
@@ -2903,7 +2903,7 @@ export default function CRMPage() {
                                     date: new Date().toLocaleDateString('pt-BR'),
                                     category: 'Procedimento',
                                     status: status === 'Pago' ? 'Pago' : 'Pendente',
-                                    value: val
+                                    valor: val
                                   }]);
                                 if (txErr) throw txErr;
 
