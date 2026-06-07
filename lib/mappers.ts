@@ -1,4 +1,4 @@
-import type { AppUser, Patient, Appointment, InventoryItem } from './types';
+import type { AppUser, Cliente, Agendamento, InventoryItem, Servico, Cobranca, Despesa } from './types';
 
 export const mapUserToFrontend = (u: any): AppUser => ({
   id: u.id,
@@ -28,85 +28,85 @@ export const mapUserToBackend = (u: Partial<AppUser>): Record<string, unknown> =
   return res;
 };
 
-export const mapPatientToFrontend = (p: any): Patient => ({
-  id: p.id,
-  name: p.name,
-  avatar: p.avatar,
-  detailsAvatar: p.details_avatar,
-  lastVisit: p.last_visit,
-  tier: p.tier,
-  since: p.since,
-  totalSpent: Number(p.total_spent || 0),
-  proceduresCount: Number(p.procedures_count || 0),
-  lastPhotoDate: p.last_photo_date,
-  status: p.status,
-  allergies: p.allergies,
-  medications: p.medications,
-  previousProcedures: p.previous_procedures,
-  evolutionNotes: p.evolution_notes,
-  beforePhoto: p.before_photo,
-  afterPhoto: p.after_photo,
-  evolutionPhotos: p.evolution_photos || [],
-  timeline: p.timeline || [],
-  phone: p.phone,
-  cpf: p.cpf,
-  pronoun: p.pronoun
+export const mapClienteToFrontend = (c: any): Cliente => ({
+  id: c.id,
+  nome: c.nome || c.name,
+  avatar: c.avatar,
+  fotoDetalhes: c.foto_detalhes,
+  ultimaVisita: c.ultima_visita,
+  tier: c.tier,
+  since: c.since,
+  totalGasto: Number(c.total_gasto || 0),
+  qtdeProcedimentos: Number(c.qtde_procedimentos || 0),
+  dataUltimaFoto: c.data_ultima_foto,
+  status: c.status,
+  alergias: c.alergias,
+  medicacoes: c.medicacoes,
+  procedimentosAnteriores: c.procedimentos_anteriores,
+  notasEvolucao: c.notas_evolucao,
+  fotoAntes: c.foto_antes,
+  fotoDepois: c.foto_depois,
+  fotosEvolucao: c.fotos_evolucao || [],
+  historico: c.historico || [],
+  telefone: c.telefone,
+  cpf: c.cpf,
+  pronome: c.pronome
 });
 
-export const mapPatientToBackend = (p: Partial<Patient>): Record<string, unknown> => {
+export const mapClienteToBackend = (c: Partial<Cliente>): Record<string, unknown> => {
   const res: Record<string, unknown> = {};
-  if (p.id !== undefined) res.id = p.id;
-  if (p.name !== undefined) res.name = p.name;
-  if (p.avatar !== undefined) res.avatar = p.avatar;
-  if (p.detailsAvatar !== undefined) res.details_avatar = p.detailsAvatar;
-  if (p.lastVisit !== undefined) res.last_visit = p.lastVisit;
-  if (p.tier !== undefined) res.tier = p.tier;
-  if (p.since !== undefined) res.since = p.since;
-  if (p.totalSpent !== undefined) res.total_spent = p.totalSpent;
-  if (p.proceduresCount !== undefined) res.procedures_count = p.proceduresCount;
-  if (p.lastPhotoDate !== undefined) res.last_photo_date = p.lastPhotoDate;
-  if (p.status !== undefined) res.status = p.status;
-  if (p.allergies !== undefined) res.allergies = p.allergies;
-  if (p.medications !== undefined) res.medications = p.medications;
-  if (p.previousProcedures !== undefined) res.previous_procedures = p.previousProcedures;
-  if (p.evolutionNotes !== undefined) res.evolution_notes = p.evolutionNotes;
-  if (p.beforePhoto !== undefined) res.before_photo = p.beforePhoto;
-  if (p.afterPhoto !== undefined) res.after_photo = p.afterPhoto;
-  if (p.evolutionPhotos !== undefined) res.evolution_photos = p.evolutionPhotos;
-  if (p.timeline !== undefined) res.timeline = p.timeline;
-  if (p.phone !== undefined) res.phone = p.phone;
-  if (p.cpf !== undefined) res.cpf = p.cpf;
-  if (p.pronoun !== undefined) res.pronoun = p.pronoun;
+  if (c.id !== undefined) res.id = c.id;
+  if (c.nome !== undefined) res.nome = c.nome;
+  if (c.avatar !== undefined) res.avatar = c.avatar;
+  if (c.fotoDetalhes !== undefined) res.foto_detalhes = c.fotoDetalhes;
+  if (c.ultimaVisita !== undefined) res.ultima_visita = c.ultimaVisita;
+  if (c.tier !== undefined) res.tier = c.tier;
+  if (c.since !== undefined) res.since = c.since;
+  if (c.totalGasto !== undefined) res.total_gasto = c.totalGasto;
+  if (c.qtdeProcedimentos !== undefined) res.qtde_procedimentos = c.qtdeProcedimentos;
+  if (c.dataUltimaFoto !== undefined) res.data_ultima_foto = c.dataUltimaFoto;
+  if (c.status !== undefined) res.status = c.status;
+  if (c.alergias !== undefined) res.alergias = c.alergias;
+  if (c.medicacoes !== undefined) res.medicacoes = c.medicacoes;
+  if (c.procedimentosAnteriores !== undefined) res.procedimentos_anteriores = c.procedimentosAnteriores;
+  if (c.notasEvolucao !== undefined) res.notas_evolucao = c.notasEvolucao;
+  if (c.fotoAntes !== undefined) res.foto_antes = c.fotoAntes;
+  if (c.fotoDepois !== undefined) res.foto_depois = c.fotoDepois;
+  if (c.fotosEvolucao !== undefined) res.fotos_evolucao = c.fotosEvolucao;
+  if (c.historico !== undefined) res.historico = c.historico;
+  if (c.telefone !== undefined) res.telefone = c.telefone;
+  if (c.cpf !== undefined) res.cpf = c.cpf;
+  if (c.pronome !== undefined) res.pronome = c.pronome;
   return res;
 };
 
-export const mapAppointmentToFrontend = (a: any): Appointment => ({
+export const mapAgendamentoToFrontend = (a: any): Agendamento => ({
   id: a.id,
-  patientId: a.patient_id,
-  time: a.time,
-  patientName: a.patients?.name || a.patient_name,
-  patientAvatar: a.patients?.avatar || a.patient_avatar,
-  procedure: a.procedure,
+  clienteId: a.cliente_id,
+  hora: a.hora,
+  clienteNome: a.clientes?.nome || a.cliente_nome,
+  clienteAvatar: a.clientes?.avatar || a.cliente_avatar,
+  procedimento: a.procedimento,
   status: a.status,
-  professional: a.professional,
-  category: a.category,
-  notes: a.notes,
-  date: a.date || new Date().toISOString().split('T')[0]
+  profissional: a.profissional,
+  categoria: a.categoria,
+  notas: a.notas,
+  data: a.data || new Date().toISOString().split('T')[0]
 });
 
-export const mapAppointmentToBackend = (a: Partial<Appointment>): Record<string, unknown> => {
+export const mapAgendamentoToBackend = (a: Partial<Agendamento>): Record<string, unknown> => {
   const res: Record<string, unknown> = {};
   if (a.id !== undefined) res.id = a.id;
-  if (a.patientId !== undefined) res.patient_id = a.patientId;
-  if (a.time !== undefined) res.time = a.time;
-  if (a.patientName !== undefined) res.patient_name = a.patientName;
-  if (a.patientAvatar !== undefined) res.patient_avatar = a.patientAvatar;
-  if (a.procedure !== undefined) res.procedure = a.procedure;
+  if (a.clienteId !== undefined) res.cliente_id = a.clienteId;
+  if (a.hora !== undefined) res.hora = a.hora;
+  if (a.clienteNome !== undefined) res.cliente_nome = a.clienteNome;
+  if (a.clienteAvatar !== undefined) res.cliente_avatar = a.clienteAvatar;
+  if (a.procedimento !== undefined) res.procedimento = a.procedimento;
   if (a.status !== undefined) res.status = a.status;
-  if (a.professional !== undefined) res.professional = a.professional;
-  if (a.category !== undefined) res.category = a.category;
-  if (a.notes !== undefined) res.notes = a.notes;
-  if (a.date !== undefined) res.date = a.date;
+  if (a.profissional !== undefined) res.profissional = a.profissional;
+  if (a.categoria !== undefined) res.categoria = a.categoria;
+  if (a.notas !== undefined) res.notas = a.notas;
+  if (a.data !== undefined) res.data = a.data;
   return res;
 };
 
@@ -125,6 +125,44 @@ export const mapInventoryToBackend = (i: Partial<InventoryItem>): Record<string,
   if (i.quantity !== undefined) res.quantity = i.quantity;
   if (i.minQuantity !== undefined) res.min_quantity = i.minQuantity;
   if (i.unit !== undefined) res.unit = i.unit;
+  return res;
+};
+
+export const mapCobrancaToFrontend = (c: any): Cobranca => ({
+  id: c.id,
+  data: c.data,
+  descricao: c.descricao,
+  categoria: c.categoria,
+  status: c.status,
+  valor: Number(c.valor || 0)
+});
+
+export const mapCobrancaToBackend = (c: Partial<Cobranca>): Record<string, unknown> => {
+  const res: Record<string, unknown> = {};
+  if (c.id !== undefined) res.id = c.id;
+  if (c.data !== undefined) res.data = c.data;
+  if (c.descricao !== undefined) res.descricao = c.descricao;
+  if (c.categoria !== undefined) res.categoria = c.categoria;
+  if (c.status !== undefined) res.status = c.status;
+  if (c.valor !== undefined) res.valor = c.valor;
+  return res;
+};
+
+export const mapServicoToFrontend = (s: any): Servico => ({
+  id: s.id,
+  nome: s.nome,
+  preco: Number(s.preco || 0),
+  duracao: s.duracao,
+  categoria: s.categoria
+});
+
+export const mapServicoToBackend = (s: Partial<Servico>): Record<string, unknown> => {
+  const res: Record<string, unknown> = {};
+  if (s.id !== undefined) res.id = s.id;
+  if (s.nome !== undefined) res.nome = s.nome;
+  if (s.preco !== undefined) res.preco = s.preco;
+  if (s.duracao !== undefined) res.duracao = s.duracao;
+  if (s.categoria !== undefined) res.categoria = s.categoria;
   return res;
 };
 

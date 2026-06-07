@@ -14,56 +14,81 @@ export interface EvolutionPhoto {
   type: 'Antes' | 'Depois' | 'Evolução';
 }
 
-export interface Patient {
+export interface Cliente {
   id: string;
-  name: string;
+  nome: string;
   avatar: string;
-  detailsAvatar: string;
-  lastVisit: string;
+  fotoDetalhes: string;
+  ultimaVisita: string;
   tier: string;
   since: string;
-  totalSpent: number;
-  proceduresCount: number;
-  lastPhotoDate: string;
+  totalGasto: number;
+  qtdeProcedimentos: number;
+  dataUltimaFoto: string;
   status: string;
   ltv?: string;
   birthdate?: string;
-  allergies: string;
-  medications: string;
-  previousProcedures: string;
-  evolutionNotes: string;
-  beforePhoto: string;
-  afterPhoto: string;
-  evolutionPhotos: EvolutionPhoto[];
-  timeline: TimelineItem[];
-  phone?: string;
+  alergias: string;
+  medicacoes: string;
+  procedimentosAnteriores: string;
+  notasEvolucao: string;
+  fotoAntes: string;
+  fotoDepois: string;
+  fotosEvolucao: EvolutionPhoto[];
+  historico: TimelineItem[];
+  telefone?: string;
   cpf?: string;
-  pronoun?: string;
+  pronome?: string;
 }
 
-export type AppointmentStatus = 'Confirmado' | 'Em Atendimento' | 'Finalizado' | 'Pendente';
-export type AppointmentCategory = 'Estética' | 'Consulta';
+export type AgendamentoStatus = 'Confirmado' | 'Em Atendimento' | 'Finalizado' | 'Pendente';
+export type AgendamentoCategoria = 'Estética' | 'Consulta';
 
-export interface Appointment {
+export interface Agendamento {
   id: string;
-  patientId?: string;
-  time: string;
-  patientName: string;
-  patientAvatar?: string;
-  procedure: string;
-  status: AppointmentStatus;
-  professional: string;
-  category: AppointmentCategory;
-  notes?: string;
-  date: string;
+  clienteId?: string;
+  hora: string;
+  clienteNome: string;
+  clienteAvatar?: string;
+  procedimento: string;
+  status: AgendamentoStatus;
+  profissional: string;
+  categoria: AgendamentoCategoria;
+  notas?: string;
+  data: string;
 }
 
-export interface ServiceObj {
+export interface Servico {
   id: string;
-  name: string;
-  price: number;
-  duration: string;
-  category: string;
+  nome: string;
+  preco: number;
+  duracao: string;
+  categoria: string;
+}
+
+export interface Cobranca {
+  id: string;
+  data: string;
+  descricao: string;
+  categoria: string;
+  status: string;
+  valor: number;
+}
+
+export interface Despesa {
+  id: string;
+  data: string;
+  descricao: string;
+  categoria: string;
+  status: string;
+  valor: number;
+}
+
+export interface MsgPreDefinida {
+  id: string;
+  titulo: string;
+  conteudo: string;
+  gatilho: string;
 }
 
 export interface InventoryItem {
@@ -72,24 +97,6 @@ export interface InventoryItem {
   quantity: number;
   minQuantity: number;
   unit: string;
-}
-
-export type TransactionStatus = 'Confirmado' | 'Pago' | 'Pendente';
-
-export interface Transaction {
-  id: string;
-  date: string;
-  description: string;
-  category: string;
-  status: TransactionStatus;
-  value: number;
-}
-
-export interface CommissionLeader {
-  name: string;
-  avatar: string;
-  revenue: number;
-  commission: number;
 }
 
 export type UserRole = 'admin' | 'staff' | 'prestador';
@@ -117,3 +124,11 @@ export interface AppUser {
   permissions?: UserPermissions;
   createdAt?: string;
 }
+
+export interface CommissionLeader {
+  name: string;
+  avatar: string;
+  revenue: number;
+  commission: number;
+}
+
