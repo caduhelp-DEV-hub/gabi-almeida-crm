@@ -1591,11 +1591,26 @@ export default function CRMPage() {
                   
                   <div className="h-6 w-[1px] bg-outline-variant"></div>
                   
-                  {/* Dynamic Practitioner Avatars */}
+                  {/* Dynamic Practitioner Avatars (from DB users) */}
                   <div className="flex -space-x-2">
-                    <Image width={500} height={500} unoptimized alt="Ricardo" className="w-8 h-8 rounded-full border-2 border-surface object-cover hover:z-10 transition-transform hover:scale-110" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAN-Snz7tw2cfJzM9hV2bOvnyopMNo02cO7qeufmV6KniT2HUq20-Uc-RRAkUX48x8ZKf93EvatW4M98a7buubdfWLGNqkXPLNrTtU1ZbEUEcVs5f5uWuhpl0Q2I0NaGJlrZCINa5rkAAXLS_CBdLRVveaDh9UGjr2iDt1eA0F0RWq5cWvfZcYUBxTyjUMTf5iKZ5-lEAATGNSqS2ap6D_9sr90et2Y5BEv3NCQhawEF3qma8IVuNwPY5_Z5dpvYHi2gmvEsUKME3A" title="Ricardo" sizes="(max-width: 768px) 100vw, 500px" />
-                    <Image width={500} height={500} unoptimized alt="Helena" className="w-8 h-8 rounded-full border-2 border-surface object-cover hover:z-10 transition-transform hover:scale-110" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAZIoJ5rvFEd0QMoDhK--t5eo06m0e_1bwl91JesfdGrGuK7jx2D0IbCslQ2BXI21cNsAIomQGuNVKemV7t_bk7l9Cq2EIUbZRmflXAbPRdFMZ8ZNJwCA9_OQmPUHWdNJGN3xUo8DhmzgV2zzvBpZHhQBAKbGADEMh-nPQlk7t75ZOoYy4NkrQIWwst_VAWsIODxR87XUbLjQ5Gj_y2sZHFebWcQxLtztQv3_M9YOPoSuSyQEh-GYl3QCbRV7ZC2vngKjoQswx1GIw" title="Helena" sizes="(max-width: 768px) 100vw, 500px" />
-                    <div className="w-8 h-8 rounded-full border-2 border-surface bg-[#e5e2df] flex items-center justify-center text-[10px] font-bold text-primary cursor-pointer hover:bg-primary/10 hover:text-primary transition-colors">+2</div>
+                    {professionals.slice(0, 3).map((prof) => (
+                      <div
+                        key={prof.id || prof.name}
+                        title={prof.name}
+                        className="w-8 h-8 rounded-full border-2 border-surface bg-primary/10 flex items-center justify-center text-[10px] font-bold text-primary hover:z-10 transition-transform hover:scale-110"
+                      >
+                        {prof.avatar ? (
+                          <Image width={500} height={500} unoptimized alt={prof.name} className="w-8 h-8 rounded-full object-cover" src={prof.avatar} sizes="(max-width: 768px) 100vw, 500px" />
+                        ) : (
+                          prof.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()
+                        )}
+                      </div>
+                    ))}
+                    {professionals.length > 3 && (
+                      <div className="w-8 h-8 rounded-full border-2 border-surface bg-[#e5e2df] flex items-center justify-center text-[10px] font-bold text-primary cursor-pointer hover:bg-primary/10 hover:text-primary transition-colors">
+                        +{professionals.length - 3}
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
