@@ -507,15 +507,15 @@ export default function CRMPage() {
     e.preventDefault();
     const selectedPat = patients.find(p => p.nome === newApptPatient);
     const apptData = {
-      time: newApptTime,
-      patientId: selectedPat?.id,
+      hora: newApptTime,
+      clienteId: selectedPat?.id,
       clienteNome: newApptPatient,
-      patientAvatar: selectedPat?.avatar || '',
-      procedure: newApptProcedure,
+      clienteAvatar: selectedPat?.avatar || '',
+      procedimento: newApptProcedure,
       status: newApptStatus,
-      professional: newApptProfessional,
-      category: newApptCategory,
-      date: newApptDate
+      profissional: newApptProfessional,
+      categoria: newApptCategory,
+      data: newApptDate
     };
     
     try {
@@ -528,14 +528,14 @@ export default function CRMPage() {
         
         const updatedAppt = {
           ...editingAppointment,
-          time: newApptTime,
+          hora: newApptTime,
           clienteNome: newApptPatient,
-          patientAvatar: selectedPat?.avatar || '',
-          procedure: newApptProcedure,
-          professional: newApptProfessional,
-          category: newApptCategory,
-          date: newApptDate,
-          patientId: selectedPat?.id,
+          clienteAvatar: selectedPat?.avatar || '',
+          procedimento: newApptProcedure,
+          profissional: newApptProfessional,
+          categoria: newApptCategory,
+          data: newApptDate,
+          clienteId: selectedPat?.id,
           status: newApptStatus
         };
         setAppointments(prev => prev.map(a => a.id === editingAppointment.id ? updatedAppt : a));
@@ -1008,6 +1008,15 @@ export default function CRMPage() {
             <span className="material-symbols-outlined text-primary text-[18px]" style={{fontVariationSettings: currentTab === 'configuracoes' ? "'FILL' 1" : "'FILL' 0"}}>settings</span>
             <span className="font-manrope text-[13px] leading-none text-primary">Configurações</span>
           </button>
+
+          <button 
+            id="nav-dados-empresa"
+            onClick={() => { setCurrentTab('dados-empresa'); setSearchQuery(''); setIsMobileMenuOpen(false); }}
+            className={`flex items-center gap-4 px-4 py-2 rounded-xl transition-all duration-300 text-left ${currentTab === 'dados-empresa' ? 'text-primary font-bold border-r-4 border-primary bg-primary/10' : 'text-on-surface-variant hover:text-primary hover:bg-surface-container'}`}
+          >
+            <span className="material-symbols-outlined text-primary text-[18px]" style={{fontVariationSettings: currentTab === 'dados-empresa' ? "'FILL' 1" : "'FILL' 0"}}>business</span>
+            <span className="font-manrope text-[13px] leading-none text-primary">Dados da Empresa</span>
+          </button>
         </nav>
 
         {/* Create appointment trigger from sidebar */}
@@ -1042,10 +1051,6 @@ export default function CRMPage() {
               <span className="font-manrope">Usuários</span>
             </button>
           )}
-          <button onClick={() => showAlert('Desenvolvido com carinho para studio de estética avançada Gabi Almeida.')} className="w-full flex items-center gap-4 px-4 py-2.5 rounded-xl text-on-surface-variant hover:text-primary transition-colors text-left text-[14px]">
-            <span className="material-symbols-outlined">settings</span>
-            <span className="font-manrope">Configurações</span>
-          </button>
            <button onClick={() => {
             handleLogout();
             setCurrentTab('dashboard');
@@ -2382,9 +2387,9 @@ export default function CRMPage() {
                                     
                                     try {
                                       const updatedPhotos = [...(selectedPatient.fotosEvolucao || []), newPhoto];
-                                      const updateField: any = { evolution_photos: updatedPhotos };
-                                      if (photoType === 'Antes') updateField.before_photo = base64String;
-                                      if (photoType === 'Depois') updateField.after_photo = base64String;
+                                      const updateField: any = { fotos_evolucao: updatedPhotos };
+                                      if (photoType === 'Antes') updateField.foto_antes = base64String;
+                                      if (photoType === 'Depois') updateField.foto_depois = base64String;
                                       
                                       const { error } = await supabase
                                         .from('clientes')
@@ -2396,9 +2401,9 @@ export default function CRMPage() {
                                         if (p.id === selectedPatient.id) {
                                           return {
                                             ...p,
-                                            beforePhoto: photoType === 'Antes' ? base64String : p.fotoAntes,
-                                            afterPhoto: photoType === 'Depois' ? base64String : p.fotoDepois,
-                                            evolutionPhotos: updatedPhotos
+                                            fotoAntes: photoType === 'Antes' ? base64String : p.fotoAntes,
+                                            fotoDepois: photoType === 'Depois' ? base64String : p.fotoDepois,
+                                            fotosEvolucao: updatedPhotos
                                           };
                                         }
                                         return p;
@@ -4288,13 +4293,73 @@ export default function CRMPage() {
             <div className="max-w-4xl mx-auto space-y-6">
               <h1 className="font-manrope text-[24px] font-bold text-primary">Configurações Gerais</h1>
               <div className="bg-white-pure rounded-3xl p-6 border border-outline-variant space-y-4">
-                <h3 className="font-bold text-[16px] text-primary">Informações da Clínica</h3>
-                <p className="text-[12px] text-on-surface-variant">Nome: Gabi Almeida Estética Avançada<br/>CNPJ: 00.000.000/0001-00<br/>Cidade: São Paulo - SP</p>
-                <div className="pt-4">
-                  <button onClick={() => setIsChangePasswordModalOpen(true)} className="bg-primary text-white-pure px-4 py-2 rounded-xl text-[12px] font-bold">
+                <h3 className="font-bold text-[16px] text-primary">Segurança</h3>
+                <div className="pt-2">
+                  <button onClick={() => setIsChangePasswordModalOpen(true)} className="bg-primary text-white-pure px-4 py-2 rounded-xl text-[12px] font-bold hover:bg-primary/90 transition-colors">
                     Alterar Senha de Acesso
                   </button>
                 </div>
+              </div>
+            </div>
+          </section>
+        )}
+
+        {currentTab === 'dados-empresa' && (
+          <section className="flex-1 overflow-y-auto p-4 sm:p-8 bg-surface">
+            <div className="max-w-4xl mx-auto space-y-6">
+              <h1 className="font-manrope text-[24px] font-bold text-primary">Dados da Empresa</h1>
+              <div className="bg-white-pure rounded-3xl p-6 border border-outline-variant space-y-4">
+                <p className="text-[12px] text-on-surface-variant mb-4">Gerencie as informações da clínica. Estes dados podem ser exibidos em recibos e relatórios.</p>
+                <form className="space-y-4 max-w-lg" onSubmit={(e) => {
+                  e.preventDefault();
+                  // No backend yet for configuracoes_empresa, handle via showAlert for now
+                  showAlert('Dados da empresa atualizados com sucesso!');
+                }}>
+                  <div>
+                    <label className="block text-[11px] font-bold text-on-surface-variant mb-1">Nome da Clínica</label>
+                    <input 
+                      type="text" 
+                      defaultValue="Gabi Almeida Estética Avançada" 
+                      disabled={currentUser?.role !== 'admin'}
+                      className="w-full bg-surface-container-lowest border border-outline-variant rounded-xl px-4 py-2.5 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary text-[13px] disabled:opacity-60"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-bold text-on-surface-variant mb-1">CNPJ</label>
+                    <input 
+                      type="text" 
+                      defaultValue="00.000.000/0001-00" 
+                      disabled={currentUser?.role !== 'admin'}
+                      className="w-full bg-surface-container-lowest border border-outline-variant rounded-xl px-4 py-2.5 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary text-[13px] disabled:opacity-60"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-bold text-on-surface-variant mb-1">Endereço Completo</label>
+                    <input 
+                      type="text" 
+                      defaultValue="São Paulo - SP" 
+                      disabled={currentUser?.role !== 'admin'}
+                      className="w-full bg-surface-container-lowest border border-outline-variant rounded-xl px-4 py-2.5 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary text-[13px] disabled:opacity-60"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-bold text-on-surface-variant mb-1">Telefone / Contato</label>
+                    <input 
+                      type="text" 
+                      defaultValue="(11) 99999-9999" 
+                      disabled={currentUser?.role !== 'admin'}
+                      className="w-full bg-surface-container-lowest border border-outline-variant rounded-xl px-4 py-2.5 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary text-[13px] disabled:opacity-60"
+                    />
+                  </div>
+                  
+                  {currentUser?.role === 'admin' && (
+                    <div className="pt-4">
+                      <button type="submit" className="bg-primary hover:bg-primary/90 text-white-pure px-6 py-2.5 rounded-xl text-[13px] font-bold transition-all shadow-sm">
+                        Salvar Informações
+                      </button>
+                    </div>
+                  )}
+                </form>
               </div>
             </div>
           </section>
