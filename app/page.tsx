@@ -113,6 +113,7 @@ export default function CRMPage() {
   const selectedCalendarDay = agendaNavDate.getDate();
 
   const [companyData, setCompanyData] = useState({
+    id: '',
     nome: 'Gabi Almeida Estética Avançada',
     cnpj: '00.000.000/0001-00',
     endereco: 'São Paulo - SP',
@@ -125,12 +126,14 @@ export default function CRMPage() {
       if (savedTarget) {
         setPrimaryRevenueTarget(parseFloat(savedTarget));
       }
-      const savedCompanyData = localStorage.getItem('companyData');
-      if (savedCompanyData) {
-        try {
-          setCompanyData(JSON.parse(savedCompanyData));
-        } catch (e) {}
-      }
+      
+      const fetchCompany = async () => {
+        const { data, error } = await supabase.from('configuracoes_empresa').select('*').limit(1).single();
+        if (data && !error) {
+          setCompanyData(data);
+        }
+      };
+      fetchCompany();
     }
   }, []);
 
@@ -4323,10 +4326,21 @@ export default function CRMPage() {
               <h1 className="font-manrope text-[24px] font-bold text-primary">Dados da Empresa</h1>
               <div className="bg-white-pure rounded-3xl p-6 border border-outline-variant space-y-4">
                 <p className="text-[12px] text-on-surface-variant mb-4">Gerencie as informações da clínica. Estes dados podem ser exibidos em recibos e relatórios.</p>
-                <form className="space-y-4 max-w-lg" onSubmit={(e) => {
+                <form className="space-y-4 max-w-lg" onSubmit={async (e) => {
                   e.preventDefault();
-                  localStorage.setItem('companyData', JSON.stringify(companyData));
-                  showAlert('Dados da empresa salvos com sucesso!');
+                  if (companyData.id) {
+                    const { error } = await supabase.from('configuracoes_empresa')
+                      .update({
+                        nome: companyData.nome,
+                        cnpj: companyData.cnpj,
+                        endereco: companyData.endereco,
+                        telefone: companyData.telefone
+                      })
+                      .eq('id', companyData.id);
+                      
+                    if (error) showAlert('Erro ao atualizar dados: ' + error.message);
+                    else showAlert('Dados da empresa salvos com sucesso!');
+                  }
                 }}>
                   <div>
                     <label className="block text-[11px] font-bold text-on-surface-variant mb-1">Nome da Clínica</label>
