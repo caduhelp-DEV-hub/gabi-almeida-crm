@@ -46,7 +46,7 @@ export default function CRMPage() {
   const [loginError, setLoginError] = useState('');
 
   // Sidebar tab control
-  const [currentTab, setCurrentTab] = useState<'dashboard' | 'agenda' | 'clientes' | 'financeiro' | 'usuarios' | 'cadastro-cliente' | 'servicos' | 'estoque' | 'comandas' | 'mensagens-pre' | 'despesas' | 'funcionarios' | 'relatorios-performance' | 'relatorios-financeiro' | 'relatorios-melhores-clientes' | 'configuracoes'>('agenda');
+  const [currentTab, setCurrentTab] = useState<'dashboard' | 'agenda' | 'clientes' | 'financeiro' | 'usuarios' | 'cadastro-cliente' | 'servicos' | 'estoque' | 'comandas' | 'mensagens-pre' | 'despesas' | 'funcionarios' | 'relatorios-performance' | 'relatorios-financeiro' | 'relatorios-melhores-clientes' | 'configuracoes' | 'dados-empresa'>('agenda');
   const [dashboardPeriod, setDashboardPeriod] = useState('Hoje');
   
   // Agenda View Control (Diária / Semanal / Mensal)

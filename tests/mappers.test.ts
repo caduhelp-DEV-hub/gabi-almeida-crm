@@ -2,10 +2,10 @@ import { describe, it, expect } from 'vitest';
 import {
   mapUserToFrontend,
   mapUserToBackend,
-  mapPatientToFrontend,
-  mapPatientToBackend,
-  mapAppointmentToFrontend,
-  mapAppointmentToBackend,
+  mapClienteToFrontend,
+  mapClienteToBackend,
+  mapAgendamentoToFrontend,
+  mapAgendamentoToBackend,
   mapInventoryToFrontend,
   mapInventoryToBackend,
   getAppointmentColorClass
@@ -50,39 +50,39 @@ describe('mapUserToBackend', () => {
   });
 });
 
-describe('mapPatientToFrontend', () => {
+describe('mapClienteToFrontend', () => {
   it('parses numeric fields and maps relations', () => {
-    const result = mapPatientToFrontend({
+    const result = mapClienteToFrontend({
       id: 'p1',
       name: 'Maria',
-      details_avatar: 'avatar',
-      last_visit: '2024-01-01',
-      total_spent: '1500.5',
-      procedures_count: '3',
-      evolution_photos: [{ id: 'ph1' }],
-      timeline: []
+      foto_detalhes: 'avatar',
+      ultima_visita: '2024-01-01',
+      total_gasto: '1500.5',
+      qtde_procedimentos: '3',
+      fotos_evolucao: [{ id: 'ph1' }],
+      historico: []
     });
-    expect(result.totalSpent).toBe(1500.5);
-    expect(result.proceduresCount).toBe(3);
-    expect(result.evolutionPhotos).toEqual([{ id: 'ph1' }]);
+    expect(result.totalGasto).toBe(1500.5);
+    expect(result.qtdeProcedimentos).toBe(3);
+    expect(result.fotosEvolucao).toEqual([{ id: 'ph1' }]);
   });
 });
 
-describe('mapAppointmentToFrontend', () => {
+describe('mapAgendamentoToFrontend', () => {
   it('uses nested patient data when available', () => {
-    const result = mapAppointmentToFrontend({
+    const result = mapAgendamentoToFrontend({
       id: 'a1',
-      patient_id: 'p1',
-      patients: { name: 'Maria', avatar: 'avatar.png' },
-      time: '10:00',
-      procedure: 'Botox',
+      cliente_id: 'p1',
+      clientes: { nome: 'Maria', avatar: 'avatar.png' },
+      hora: '10:00',
+      procedimento: 'Botox',
       status: 'Confirmado',
-      professional: 'Dra. Gabi',
-      category: 'Estética',
-      date: '2024-01-01'
+      profissional: 'Dra. Gabi',
+      categoria: 'Estética',
+      data: '2024-01-01'
     });
-    expect(result.patientName).toBe('Maria');
-    expect(result.patientAvatar).toBe('avatar.png');
+    expect(result.clienteNome).toBe('Maria');
+    expect(result.clienteAvatar).toBe('avatar.png');
   });
 });
 
