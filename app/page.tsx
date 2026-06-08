@@ -46,7 +46,7 @@ export default function CRMPage() {
   const [loginError, setLoginError] = useState('');
 
   // Sidebar tab control
-  const [currentTab, setCurrentTab] = useState<'dashboard' | 'agenda' | 'clientes' | 'financeiro' | 'usuarios' | 'cadastro-cliente' | 'servicos' | 'estoque'>('agenda');
+  const [currentTab, setCurrentTab] = useState<'dashboard' | 'agenda' | 'clientes' | 'financeiro' | 'usuarios' | 'cadastro-cliente' | 'servicos' | 'estoque' | 'comandas' | 'mensagens-pre' | 'despesas' | 'funcionarios' | 'relatorios-performance' | 'relatorios-financeiro' | 'relatorios-melhores-clientes' | 'configuracoes'>('agenda');
   const [dashboardPeriod, setDashboardPeriod] = useState('Hoje');
   
   // Agenda View Control (Diária / Semanal / Mensal)
@@ -887,59 +887,126 @@ export default function CRMPage() {
           </div>
         </div>
 
-        <nav className="flex-1 px-4 space-y-2 flex flex-col pt-4">
+        <nav className="flex-1 px-4 space-y-1.5 flex flex-col pt-2 overflow-y-auto custom-scrollbar">
           <button 
             id="nav-agenda"
             onClick={() => { setCurrentTab('agenda'); setSearchQuery(''); setIsMobileMenuOpen(false); }}
-            className={`flex items-center gap-4 px-4 py-3 rounded-xl transition-all duration-300 text-left ${currentTab === 'agenda' ? 'text-primary font-bold border-r-4 border-primary bg-primary/10 scale-95' : 'text-on-surface-variant hover:text-primary hover:bg-surface-container'}`}
+            className={`flex items-center gap-4 px-4 py-2.5 rounded-xl transition-all duration-300 text-left ${currentTab === 'agenda' ? 'text-primary font-bold border-r-4 border-primary bg-primary/10 scale-95' : 'text-on-surface-variant hover:text-primary hover:bg-surface-container'}`}
           >
-            <span className="material-symbols-outlined" style={{fontVariationSettings: currentTab === 'agenda' ? "'FILL' 1" : "'FILL' 0"}}>calendar_month</span>
-            <span className="font-manrope text-[14px] leading-none">Agenda</span>
-          </button>
-
-          <button 
-            id="nav-clientes"
-            onClick={() => { setCurrentTab('clientes'); setSearchQuery(''); setIsMobileMenuOpen(false); }}
-            className={`flex items-center gap-4 px-4 py-3 rounded-xl transition-all duration-300 text-left ${currentTab === 'clientes' ? 'text-primary font-bold border-r-4 border-primary bg-primary/10 scale-95' : 'text-on-surface-variant hover:text-primary hover:bg-surface-container'}`}
-          >
-            <span className="material-symbols-outlined" style={{fontVariationSettings: currentTab === 'clientes' ? "'FILL' 1" : "'FILL' 0"}}>group</span>
-            <span className="font-manrope text-[14px] leading-none">Clientes</span>
-          </button>
-
-          <button 
-            id="nav-cadastro-cliente"
-            onClick={() => { setCurrentTab('cadastro-cliente'); setSearchQuery(''); setIsMobileMenuOpen(false); }}
-            className={`flex items-center gap-4 px-4 py-3 rounded-xl transition-all duration-300 text-left ${currentTab === 'cadastro-cliente' ? 'text-primary font-bold border-r-4 border-primary bg-primary/10 scale-95' : 'text-on-surface-variant hover:text-primary hover:bg-surface-container'}`}
-          >
-            <span className="material-symbols-outlined" style={{fontVariationSettings: currentTab === 'cadastro-cliente' ? "'FILL' 1" : "'FILL' 0"}}>person_add</span>
-            <span className="font-manrope text-[14px] leading-none">Cadastro Clientes</span>
+            <span className="material-symbols-outlined text-primary" style={{fontVariationSettings: currentTab === 'agenda' ? "'FILL' 1" : "'FILL' 0"}}>calendar_month</span>
+            <span className="font-manrope text-[14px] leading-none text-primary">Agenda</span>
           </button>
 
           <button 
             id="nav-financeiro"
             onClick={() => { setCurrentTab('financeiro'); setSearchQuery(''); setIsMobileMenuOpen(false); }}
-            className={`flex items-center gap-4 px-4 py-3 rounded-xl transition-all duration-300 text-left ${currentTab === 'financeiro' ? 'text-primary font-bold border-r-4 border-primary bg-primary/10 scale-95' : 'text-on-surface-variant hover:text-primary hover:bg-surface-container'}`}
+            className={`flex items-center gap-4 px-4 py-2.5 rounded-xl transition-all duration-300 text-left ${currentTab === 'financeiro' ? 'text-primary font-bold border-r-4 border-primary bg-primary/10 scale-95' : 'text-on-surface-variant hover:text-primary hover:bg-surface-container'}`}
           >
-            <span className="material-symbols-outlined" style={{fontVariationSettings: currentTab === 'financeiro' ? "'FILL' 1" : "'FILL' 0"}}>payments</span>
-            <span className="font-manrope text-[14px] leading-none">Financeiro</span>
+            <span className="material-symbols-outlined text-primary" style={{fontVariationSettings: currentTab === 'financeiro' ? "'FILL' 1" : "'FILL' 0"}}>payments</span>
+            <span className="font-manrope text-[14px] leading-none text-primary">Cobranças</span>
+          </button>
+
+          <button 
+            id="nav-comandas"
+            onClick={() => { setCurrentTab('comandas'); setSearchQuery(''); setIsMobileMenuOpen(false); }}
+            className={`flex items-center gap-4 px-4 py-2.5 rounded-xl transition-all duration-300 text-left ${currentTab === 'comandas' ? 'text-primary font-bold border-r-4 border-primary bg-primary/10 scale-95' : 'text-on-surface-variant hover:text-primary hover:bg-surface-container'}`}
+          >
+            <span className="material-symbols-outlined text-primary" style={{fontVariationSettings: currentTab === 'comandas' ? "'FILL' 1" : "'FILL' 0"}}>description</span>
+            <span className="font-manrope text-[14px] leading-none text-primary">Comandas</span>
+          </button>
+
+          <button 
+            id="nav-mensagens-pre"
+            onClick={() => { setCurrentTab('mensagens-pre'); setSearchQuery(''); setIsMobileMenuOpen(false); }}
+            className={`flex items-center gap-4 px-4 py-2.5 rounded-xl transition-all duration-300 text-left ${currentTab === 'mensagens-pre' ? 'text-primary font-bold border-r-4 border-primary bg-primary/10 scale-95' : 'text-on-surface-variant hover:text-primary hover:bg-surface-container'}`}
+          >
+            <span className="material-symbols-outlined text-primary" style={{fontVariationSettings: currentTab === 'mensagens-pre' ? "'FILL' 1" : "'FILL' 0"}}>chat_bubble</span>
+            <span className="font-manrope text-[14px] leading-none text-primary">Msgs Pre-definidas</span>
+          </button>
+
+          <button 
+            id="nav-clientes"
+            onClick={() => { setCurrentTab('clientes'); setSearchQuery(''); setIsMobileMenuOpen(false); }}
+            className={`flex items-center gap-4 px-4 py-2.5 rounded-xl transition-all duration-300 text-left ${currentTab === 'clientes' ? 'text-primary font-bold border-r-4 border-primary bg-primary/10 scale-95' : 'text-on-surface-variant hover:text-primary hover:bg-surface-container'}`}
+          >
+            <span className="material-symbols-outlined text-primary" style={{fontVariationSettings: currentTab === 'clientes' ? "'FILL' 1" : "'FILL' 0"}}>group</span>
+            <span className="font-manrope text-[14px] leading-none text-primary">Clientes</span>
           </button>
 
           <button 
             id="nav-servicos"
             onClick={() => { setCurrentTab('servicos'); setSearchQuery(''); setIsMobileMenuOpen(false); }}
-            className={`flex items-center gap-4 px-4 py-3 rounded-xl transition-all duration-300 text-left ${currentTab === 'servicos' ? 'text-primary font-bold border-r-4 border-primary bg-primary/10 scale-95' : 'text-on-surface-variant hover:text-primary hover:bg-surface-container'}`}
+            className={`flex items-center gap-4 px-4 py-2.5 rounded-xl transition-all duration-300 text-left ${currentTab === 'servicos' ? 'text-primary font-bold border-r-4 border-primary bg-primary/10 scale-95' : 'text-on-surface-variant hover:text-primary hover:bg-surface-container'}`}
           >
-            <span className="material-symbols-outlined" style={{fontVariationSettings: currentTab === 'servicos' ? "'FILL' 1" : "'FILL' 0"}}>medical_services</span>
-            <span className="font-manrope text-[14px] leading-none">Serviços e Tratamentos</span>
+            <span className="material-symbols-outlined text-primary" style={{fontVariationSettings: currentTab === 'servicos' ? "'FILL' 1" : "'FILL' 0"}}>medical_services</span>
+            <span className="font-manrope text-[14px] leading-none text-primary">Serviços & Pacotes</span>
           </button>
 
           <button 
             id="nav-estoque"
             onClick={() => { setCurrentTab('estoque'); setSearchQuery(''); setIsMobileMenuOpen(false); }}
-            className={`flex items-center gap-4 px-4 py-3 rounded-xl transition-all duration-300 text-left ${currentTab === 'estoque' ? 'text-primary font-bold border-r-4 border-primary bg-primary/10 scale-95' : 'text-on-surface-variant hover:text-primary hover:bg-surface-container'}`}
+            className={`flex items-center gap-4 px-4 py-2.5 rounded-xl transition-all duration-300 text-left ${currentTab === 'estoque' ? 'text-primary font-bold border-r-4 border-primary bg-primary/10 scale-95' : 'text-on-surface-variant hover:text-primary hover:bg-surface-container'}`}
           >
-            <span className="material-symbols-outlined" style={{fontVariationSettings: currentTab === 'estoque' ? "'FILL' 1" : "'FILL' 0"}}>inventory</span>
-            <span className="font-manrope text-[14px] leading-none">Estoque</span>
+            <span className="material-symbols-outlined text-primary" style={{fontVariationSettings: currentTab === 'estoque' ? "'FILL' 1" : "'FILL' 0"}}>shopping_cart</span>
+            <span className="font-manrope text-[14px] leading-none text-primary">Produtos & Estoque</span>
+          </button>
+
+          <button 
+            id="nav-despesas"
+            onClick={() => { setCurrentTab('despesas'); setSearchQuery(''); setIsMobileMenuOpen(false); }}
+            className={`flex items-center gap-4 px-4 py-2.5 rounded-xl transition-all duration-300 text-left ${currentTab === 'despesas' ? 'text-primary font-bold border-r-4 border-primary bg-primary/10 scale-95' : 'text-on-surface-variant hover:text-primary hover:bg-surface-container'}`}
+          >
+            <span className="material-symbols-outlined text-primary" style={{fontVariationSettings: currentTab === 'despesas' ? "'FILL' 1" : "'FILL' 0"}}>monetization_on</span>
+            <span className="font-manrope text-[14px] leading-none text-primary">Despesas</span>
+          </button>
+
+          <button 
+            id="nav-funcionarios"
+            onClick={() => { setCurrentTab('funcionarios'); setSearchQuery(''); setIsMobileMenuOpen(false); }}
+            className={`flex items-center gap-4 px-4 py-2.5 rounded-xl transition-all duration-300 text-left ${currentTab === 'funcionarios' ? 'text-primary font-bold border-r-4 border-primary bg-primary/10 scale-95' : 'text-on-surface-variant hover:text-primary hover:bg-surface-container'}`}
+          >
+            <span className="material-symbols-outlined text-primary" style={{fontVariationSettings: currentTab === 'funcionarios' ? "'FILL' 1" : "'FILL' 0"}}>badge</span>
+            <span className="font-manrope text-[14px] leading-none text-primary">Funcionários</span>
+          </button>
+
+          <div className="pt-4 pb-1">
+            <span className="text-[10px] uppercase font-bold text-outline tracking-wider px-4">Relatórios</span>
+          </div>
+
+          <button 
+            id="nav-relatorios-performance"
+            onClick={() => { setCurrentTab('relatorios-performance'); setSearchQuery(''); setIsMobileMenuOpen(false); }}
+            className={`flex items-center gap-4 px-4 py-2 rounded-xl transition-all duration-300 text-left ${currentTab === 'relatorios-performance' ? 'text-primary font-bold border-r-4 border-primary bg-primary/10' : 'text-on-surface-variant hover:text-primary hover:bg-surface-container'}`}
+          >
+            <span className="material-symbols-outlined text-primary text-[18px]" style={{fontVariationSettings: currentTab === 'relatorios-performance' ? "'FILL' 1" : "'FILL' 0"}}>speed</span>
+            <span className="font-manrope text-[13px] leading-none text-primary">Performance</span>
+          </button>
+
+          <button 
+            id="nav-relatorios-financeiro"
+            onClick={() => { setCurrentTab('relatorios-financeiro'); setSearchQuery(''); setIsMobileMenuOpen(false); }}
+            className={`flex items-center gap-4 px-4 py-2 rounded-xl transition-all duration-300 text-left ${currentTab === 'relatorios-financeiro' ? 'text-primary font-bold border-r-4 border-primary bg-primary/10' : 'text-on-surface-variant hover:text-primary hover:bg-surface-container'}`}
+          >
+            <span className="material-symbols-outlined text-primary text-[18px]" style={{fontVariationSettings: currentTab === 'relatorios-financeiro' ? "'FILL' 1" : "'FILL' 0"}}>bar_chart</span>
+            <span className="font-manrope text-[13px] leading-none text-primary">Resumo Financeiro</span>
+          </button>
+
+          <button 
+            id="nav-relatorios-melhores-clientes"
+            onClick={() => { setCurrentTab('relatorios-melhores-clientes'); setSearchQuery(''); setIsMobileMenuOpen(false); }}
+            className={`flex items-center gap-4 px-4 py-2 rounded-xl transition-all duration-300 text-left ${currentTab === 'relatorios-melhores-clientes' ? 'text-primary font-bold border-r-4 border-primary bg-primary/10' : 'text-on-surface-variant hover:text-primary hover:bg-surface-container'}`}
+          >
+            <span className="material-symbols-outlined text-primary text-[18px]" style={{fontVariationSettings: currentTab === 'relatorios-melhores-clientes' ? "'FILL' 1" : "'FILL' 0"}}>person</span>
+            <span className="font-manrope text-[13px] leading-none text-primary">Melhores Clientes</span>
+          </button>
+
+          <button 
+            id="nav-configuracoes"
+            onClick={() => { setCurrentTab('configuracoes'); setSearchQuery(''); setIsMobileMenuOpen(false); }}
+            className={`flex items-center gap-4 px-4 py-2 rounded-xl transition-all duration-300 text-left ${currentTab === 'configuracoes' ? 'text-primary font-bold border-r-4 border-primary bg-primary/10' : 'text-on-surface-variant hover:text-primary hover:bg-surface-container'}`}
+          >
+            <span className="material-symbols-outlined text-primary text-[18px]" style={{fontVariationSettings: currentTab === 'configuracoes' ? "'FILL' 1" : "'FILL' 0"}}>settings</span>
+            <span className="font-manrope text-[13px] leading-none text-primary">Configurações</span>
           </button>
         </nav>
 
@@ -4028,6 +4095,211 @@ export default function CRMPage() {
           </section>
         )}
 
+        {/* Novas Abas Implementadas da Foto 3 */}
+        {currentTab === 'comandas' && (
+          <section className="flex-1 overflow-y-auto p-4 sm:p-8 bg-surface">
+            <div className="max-w-4xl mx-auto space-y-6">
+              <div className="flex justify-between items-center">
+                <div>
+                  <h1 className="font-manrope text-[24px] font-bold text-primary">Comandas</h1>
+                  <p className="text-[13px] text-on-surface-variant">Gerenciamento de comandas de consumo de serviços e produtos</p>
+                </div>
+                <button onClick={() => showAlert('Função para abrir nova comanda em breve.')} className="bg-primary text-white-pure px-4 py-2.5 rounded-xl font-bold text-[13px] hover:opacity-90 transition-all flex items-center gap-2">
+                  <span className="material-symbols-outlined text-[18px]">add</span>
+                  Nova Comanda
+                </button>
+              </div>
+              <div className="bg-white-pure rounded-3xl p-6 border border-outline-variant text-center py-16">
+                <span className="material-symbols-outlined text-[48px] text-primary/30">description</span>
+                <p className="font-manrope font-bold text-[15px] mt-4">Nenhuma comanda aberta hoje</p>
+                <p className="text-[12px] text-on-surface-variant mt-1">Abra comandas para vincular serviços e vendas aos clientes de forma dinâmica.</p>
+              </div>
+            </div>
+          </section>
+        )}
+
+        {currentTab === 'mensagens-pre' && (
+          <section className="flex-1 overflow-y-auto p-4 sm:p-8 bg-surface">
+            <div className="max-w-4xl mx-auto space-y-6">
+              <div className="flex justify-between items-center">
+                <div>
+                  <h1 className="font-manrope text-[24px] font-bold text-primary">Msgs Pre-definidas</h1>
+                  <p className="text-[13px] text-on-surface-variant">Respostas rápidas e modelos para envio no WhatsApp</p>
+                </div>
+                <button onClick={() => showAlert('Função de cadastrar modelo em desenvolvimento.')} className="bg-primary text-white-pure px-4 py-2.5 rounded-xl font-bold text-[13px] hover:opacity-90 transition-all flex items-center gap-2">
+                  <span className="material-symbols-outlined text-[18px]">add</span>
+                  Novo Modelo
+                </button>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="bg-white-pure rounded-3xl p-5 border border-outline-variant space-y-3">
+                  <h3 className="font-bold text-[15px] text-primary">Lembrete de Agendamento</h3>
+                  <p className="text-[12px] text-on-surface-variant italic">"Olá [nome]! Confirmamos seu atendimento de [procedimento] no dia [data] às [hora] com Dra. Gabi Almeida. Contamos com sua presença!"</p>
+                  <span className="inline-block bg-[#ebf3fe] text-blue-800 text-[10px] font-bold px-2 py-0.5 rounded">Gatilho: Agenda</span>
+                </div>
+                <div className="bg-white-pure rounded-3xl p-5 border border-outline-variant space-y-3">
+                  <h3 className="font-bold text-[15px] text-primary">Pós-Procedimento D+15</h3>
+                  <p className="text-[12px] text-on-surface-variant italic">"Olá [nome]! Já se passaram 15 dias do seu procedimento de [procedimento]. Como está a evolução? Qualquer dúvida estamos aqui!"</p>
+                  <span className="inline-block bg-[#fff9eb] text-amber-800 text-[10px] font-bold px-2 py-0.5 rounded">Gatilho: Pós-Procedimento</span>
+                </div>
+              </div>
+            </div>
+          </section>
+        )}
+
+        {currentTab === 'despesas' && (
+          <section className="flex-1 overflow-y-auto p-4 sm:p-8 bg-surface">
+            <div className="max-w-4xl mx-auto space-y-6">
+              <div className="flex justify-between items-center">
+                <div>
+                  <h1 className="font-manrope text-[24px] font-bold text-primary">Despesas</h1>
+                  <p className="text-[13px] text-on-surface-variant">Controle de saídas, aluguéis, materiais e despesas fixas</p>
+                </div>
+                <button onClick={() => showAlert('Função de adicionar despesa em breve.')} className="bg-primary text-white-pure px-4 py-2.5 rounded-xl font-bold text-[13px] hover:opacity-90 transition-all flex items-center gap-2">
+                  <span className="material-symbols-outlined text-[18px]">add</span>
+                  Nova Despesa
+                </button>
+              </div>
+              <div className="bg-white-pure rounded-3xl p-6 border border-outline-variant text-center py-16">
+                <span className="material-symbols-outlined text-[48px] text-error/30">monetization_on</span>
+                <p className="font-manrope font-bold text-[15px] mt-4">Nenhuma despesa cadastrada</p>
+                <p className="text-[12px] text-on-surface-variant mt-1">Registre suas contas para apurar o lucro líquido nos resumos financeiros.</p>
+              </div>
+            </div>
+          </section>
+        )}
+
+        {currentTab === 'funcionarios' && (
+          <section className="flex-1 overflow-y-auto p-4 sm:p-8 bg-surface">
+            <div className="max-w-4xl mx-auto space-y-6">
+              <div className="flex justify-between items-center">
+                <div>
+                  <h1 className="font-manrope text-[24px] font-bold text-primary">Funcionários & Especialistas</h1>
+                  <p className="text-[13px] text-on-surface-variant">Equipe técnica e controle de comissões/agendas</p>
+                </div>
+              </div>
+              <div className="bg-white-pure rounded-3xl border border-outline-variant overflow-hidden">
+                <table className="w-full text-left font-sans text-[13px]">
+                  <thead className="bg-[#f7f3f0]/50 border-b border-outline-variant">
+                    <tr>
+                      <th className="px-6 py-4 font-bold text-on-surface-variant text-[11px] uppercase tracking-wider">Nome</th>
+                      <th className="px-6 py-4 font-bold text-on-surface-variant text-[11px] uppercase tracking-wider">Especialidade</th>
+                      <th className="px-6 py-4 font-bold text-on-surface-variant text-[11px] uppercase tracking-wider">Comissão padrão</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-outline-variant/40">
+                    {appUsers.map(u => (
+                      <tr key={u.id}>
+                        <td className="px-6 py-4 flex items-center gap-3 font-bold text-on-surface">
+                          <Image width={32} height={32} src={u.avatar || 'https://api.dicebear.com/7.x/notionists/svg?seed=' + u.username} alt={u.name} className="h-8 w-8 rounded-full object-cover" />
+                          {u.name}
+                        </td>
+                        <td className="px-6 py-4 text-on-surface-variant">{u.specialty || u.role}</td>
+                        <td className="px-6 py-4 font-bold text-primary">{u.commissionRate || 0}%</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </section>
+        )}
+
+        {currentTab === 'relatorios-performance' && (
+          <section className="flex-1 overflow-y-auto p-4 sm:p-8 bg-surface">
+            <div className="max-w-4xl mx-auto space-y-6">
+              <h1 className="font-manrope text-[24px] font-bold text-primary">Relatórios de Performance</h1>
+              <div className="bg-white-pure rounded-3xl p-6 border border-outline-variant">
+                <p className="font-manrope font-bold text-[15px] mb-4">Metas e Conversões da Equipe</p>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  <div className="bg-surface-container rounded-2xl p-4 text-center">
+                    <p className="text-[11px] text-on-surface-variant font-bold">Taxa de Conversão Geral</p>
+                    <p className="text-[28px] font-extrabold text-primary mt-1">{taxaConversao}%</p>
+                  </div>
+                  <div className="bg-surface-container rounded-2xl p-4 text-center">
+                    <p className="text-[11px] text-on-surface-variant font-bold">Agendamentos Hoje</p>
+                    <p className="text-[28px] font-extrabold text-primary mt-1">{appointmentsToday}</p>
+                  </div>
+                  <div className="bg-surface-container rounded-2xl p-4 text-center">
+                    <p className="text-[11px] text-on-surface-variant font-bold">Clientes Ativos</p>
+                    <p className="text-[28px] font-extrabold text-primary mt-1">{patients.length}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+        )}
+
+        {currentTab === 'relatorios-financeiro' && (
+          <section className="flex-1 overflow-y-auto p-4 sm:p-8 bg-surface">
+            <div className="max-w-4xl mx-auto space-y-6">
+              <h1 className="font-manrope text-[24px] font-bold text-primary">Resumo Financeiro</h1>
+              <div className="bg-white-pure rounded-3xl p-6 border border-outline-variant space-y-4">
+                <div className="flex justify-between border-b pb-2">
+                  <span className="font-bold">Faturamento Total do Mês:</span>
+                  <span className="font-bold text-emerald-600">R$ {totalRevenueThisMonth.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                </div>
+                <div className="flex justify-between border-b pb-2">
+                  <span className="font-bold">Valores Confirmados/Recebidos:</span>
+                  <span className="font-bold text-emerald-600">R$ {receitaRecebida.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                </div>
+                <div className="flex justify-between border-b pb-2">
+                  <span className="font-bold">Contas a Receber (Pendente):</span>
+                  <span className="font-bold text-amber-600">R$ {aReceber.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                </div>
+              </div>
+            </div>
+          </section>
+        )}
+
+        {currentTab === 'relatorios-melhores-clientes' && (
+          <section className="flex-1 overflow-y-auto p-4 sm:p-8 bg-surface">
+            <div className="max-w-4xl mx-auto space-y-6">
+              <h1 className="font-manrope text-[24px] font-bold text-primary">Melhores Clientes</h1>
+              <div className="bg-white-pure rounded-3xl border border-outline-variant overflow-hidden">
+                <table className="w-full text-left font-sans text-[13px]">
+                  <thead className="bg-[#f7f3f0]/50 border-b border-outline-variant">
+                    <tr>
+                      <th className="px-6 py-4 font-bold text-on-surface-variant text-[11px] uppercase tracking-wider">Cliente</th>
+                      <th className="px-6 py-4 font-bold text-on-surface-variant text-[11px] uppercase tracking-wider">Total Gasto</th>
+                      <th className="px-6 py-4 font-bold text-on-surface-variant text-[11px] uppercase tracking-wider">Procedimentos</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-outline-variant/40">
+                    {patients.slice().sort((a, b) => b.totalGasto - a.totalGasto).slice(0, 10).map(p => (
+                      <tr key={p.id}>
+                        <td className="px-6 py-4 flex items-center gap-3 font-bold text-on-surface">
+                          <Image width={32} height={32} src={p.avatar} alt={p.nome} className="h-8 w-8 rounded-full object-cover" />
+                          {p.nome}
+                        </td>
+                        <td className="px-6 py-4 text-emerald-600 font-bold">R$ {p.totalGasto.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
+                        <td className="px-6 py-4">{p.qtdeProcedimentos} sessões</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </section>
+        )}
+
+        {currentTab === 'configuracoes' && (
+          <section className="flex-1 overflow-y-auto p-4 sm:p-8 bg-surface">
+            <div className="max-w-4xl mx-auto space-y-6">
+              <h1 className="font-manrope text-[24px] font-bold text-primary">Configurações Gerais</h1>
+              <div className="bg-white-pure rounded-3xl p-6 border border-outline-variant space-y-4">
+                <h3 className="font-bold text-[16px] text-primary">Informações da Clínica</h3>
+                <p className="text-[12px] text-on-surface-variant">Nome: Gabi Almeida Estética Avançada<br/>CNPJ: 00.000.000/0001-00<br/>Cidade: São Paulo - SP</p>
+                <div className="pt-4">
+                  <button onClick={() => setIsChangePasswordModalOpen(true)} className="bg-primary text-white-pure px-4 py-2 rounded-xl text-[12px] font-bold">
+                    Alterar Senha de Acesso
+                  </button>
+                </div>
+              </div>
+            </div>
+          </section>
+        )}
+
       </main>
 
       {/* Edit Profile Modal */}
@@ -4053,9 +4325,27 @@ export default function CRMPage() {
               if(name) {
                 const upd = { ...currentUser, name, phone, avatar: avatar || currentUser.avatar };
                 try {
-                  const { error } = await supabase.from('users').update({ name, phone, avatar: upd.avatar }).eq('id', currentUser.id);
-                  if (error) throw error;
-                  setCurrentUser(upd);
+                  const res = await fetch('/api/auth/users/update', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                      id: currentUser.id,
+                      name,
+                      username: currentUser.username,
+                      role: currentUser.role,
+                      status: currentUser.status,
+                      phone,
+                      specialty: currentUser.specialty,
+                      commissionRate: currentUser.commissionRate,
+                      avatar: upd.avatar,
+                      permissions: currentUser.permissions
+                    })
+                  });
+                  const resData = await res.json();
+                  if (!res.ok) {
+                    throw new Error(resData.error || 'Erro ao atualizar perfil.');
+                  }
+                  setCurrentUser(mapUserToFrontend(resData.user));
                   setIsEditProfileModalOpen(false);
                   setNewUserAvatarUrl('');
                   showAlert('Perfil atualizado com sucesso!');

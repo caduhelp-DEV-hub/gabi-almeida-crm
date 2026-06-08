@@ -1,18 +1,25 @@
 import { NextRequest, NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
 import { supabaseAdmin } from '../../../../../lib/supabase';
-import { requireAdmin } from '../../../../../lib/auth';
+import { requireUser } from '../../../../../lib/auth';
 
 export const dynamic = 'force-dynamic';
 
 const SALT_ROUNDS = 10;
 
 export async function POST(request: NextRequest) {
-  const auth = await requireAdmin(request);
+  const auth = await requireUser(request);
   if (auth instanceof NextResponse) return auth;
 
   try {
     const { id, name, username, role, status, phone, specialty, commissionRate, permissions, password, avatar } = await request.json();
+
+    if (auth.role !== 'admin' && auth.id !== id) {
+      return NextResponse.json(
+        { error: 'Acesso negado. Você só pode atualizar o seu próprio perfil.' },
+        { status: 403 }
+      );
+    }
 
     if (!id || !name || !username || !role) {
       return NextResponse.json(
