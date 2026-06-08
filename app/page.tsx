@@ -112,11 +112,24 @@ export default function CRMPage() {
   const [agendaNavDate, setAgendaNavDate] = useState<Date>(new Date());
   const selectedCalendarDay = agendaNavDate.getDate();
 
+  const [companyData, setCompanyData] = useState({
+    nome: 'Gabi Almeida Estética Avançada',
+    cnpj: '00.000.000/0001-00',
+    endereco: 'São Paulo - SP',
+    telefone: '(11) 99999-9999'
+  });
+
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const savedTarget = localStorage.getItem('primaryRevenueTarget');
       if (savedTarget) {
         setPrimaryRevenueTarget(parseFloat(savedTarget));
+      }
+      const savedCompanyData = localStorage.getItem('companyData');
+      if (savedCompanyData) {
+        try {
+          setCompanyData(JSON.parse(savedCompanyData));
+        } catch (e) {}
       }
     }
   }, []);
@@ -4312,14 +4325,15 @@ export default function CRMPage() {
                 <p className="text-[12px] text-on-surface-variant mb-4">Gerencie as informações da clínica. Estes dados podem ser exibidos em recibos e relatórios.</p>
                 <form className="space-y-4 max-w-lg" onSubmit={(e) => {
                   e.preventDefault();
-                  // No backend yet for configuracoes_empresa, handle via showAlert for now
-                  showAlert('Dados da empresa atualizados com sucesso!');
+                  localStorage.setItem('companyData', JSON.stringify(companyData));
+                  showAlert('Dados da empresa salvos com sucesso!');
                 }}>
                   <div>
                     <label className="block text-[11px] font-bold text-on-surface-variant mb-1">Nome da Clínica</label>
                     <input 
                       type="text" 
-                      defaultValue="Gabi Almeida Estética Avançada" 
+                      value={companyData.nome}
+                      onChange={(e) => setCompanyData({...companyData, nome: e.target.value})}
                       disabled={currentUser?.role !== 'admin'}
                       className="w-full bg-surface-container-lowest border border-outline-variant rounded-xl px-4 py-2.5 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary text-[13px] disabled:opacity-60"
                     />
@@ -4328,7 +4342,8 @@ export default function CRMPage() {
                     <label className="block text-[11px] font-bold text-on-surface-variant mb-1">CNPJ</label>
                     <input 
                       type="text" 
-                      defaultValue="00.000.000/0001-00" 
+                      value={companyData.cnpj}
+                      onChange={(e) => setCompanyData({...companyData, cnpj: e.target.value})}
                       disabled={currentUser?.role !== 'admin'}
                       className="w-full bg-surface-container-lowest border border-outline-variant rounded-xl px-4 py-2.5 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary text-[13px] disabled:opacity-60"
                     />
@@ -4337,7 +4352,8 @@ export default function CRMPage() {
                     <label className="block text-[11px] font-bold text-on-surface-variant mb-1">Endereço Completo</label>
                     <input 
                       type="text" 
-                      defaultValue="São Paulo - SP" 
+                      value={companyData.endereco}
+                      onChange={(e) => setCompanyData({...companyData, endereco: e.target.value})}
                       disabled={currentUser?.role !== 'admin'}
                       className="w-full bg-surface-container-lowest border border-outline-variant rounded-xl px-4 py-2.5 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary text-[13px] disabled:opacity-60"
                     />
@@ -4346,7 +4362,8 @@ export default function CRMPage() {
                     <label className="block text-[11px] font-bold text-on-surface-variant mb-1">Telefone / Contato</label>
                     <input 
                       type="text" 
-                      defaultValue="(11) 99999-9999" 
+                      value={companyData.telefone}
+                      onChange={(e) => setCompanyData({...companyData, telefone: e.target.value})}
                       disabled={currentUser?.role !== 'admin'}
                       className="w-full bg-surface-container-lowest border border-outline-variant rounded-xl px-4 py-2.5 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary text-[13px] disabled:opacity-60"
                     />
