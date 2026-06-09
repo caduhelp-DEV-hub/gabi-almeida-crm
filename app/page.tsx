@@ -450,9 +450,9 @@ export default function CRMPage() {
         setPatientDocuments(documentsMap);
       }
 
-      const { data: appts } = await supabase.from('agendamentos').select('*, patients(id, name, avatar)');
+      const { data: appts } = await supabase.from('agendamentos').select('*, clientes(id, nome, avatar)');
       if (appts) {
-        const validAppts = appts.filter((a: any) => a.cliente_id && a.patients);
+        const validAppts = appts.filter((a: any) => a.cliente_id && a.clientes);
         setAppointments(validAppts.map(mapAgendamentoToFrontend));
       }
 
@@ -491,10 +491,10 @@ export default function CRMPage() {
         });
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'agendamentos' }, () => {
-        supabase.from('agendamentos').select('*, patients(id, name, avatar)').then((res: any) => {
+        supabase.from('agendamentos').select('*, clientes(id, nome, avatar)').then((res: any) => {
           const data = res.data;
           if (data) {
-            const validAppts = data.filter((a: any) => a.cliente_id && a.patients);
+            const validAppts = data.filter((a: any) => a.cliente_id && a.clientes);
             setAppointments(validAppts.map(mapAgendamentoToFrontend));
           }
         });
@@ -560,7 +560,7 @@ export default function CRMPage() {
         const { data, error } = await supabase
           .from('agendamentos')
           .insert([mapAgendamentoToBackend(apptData)])
-          .select('*, patients(id, name, avatar)');
+          .select('*, clientes(id, nome, avatar)');
         if (error) throw error;
         if (data && data[0]) {
           setAppointments(prev => [...prev, mapAgendamentoToFrontend(data[0])]);
