@@ -1683,7 +1683,7 @@ export default function CRMPage() {
                           setNewApptPatient(patients[0]?.nome || '');
                           setNewApptProcedure(services[0]?.nome || '');
                           setNewApptTime('09:00');
-                          setNewApptDate(agendaNavDate.toISOString().split('T')[0]);
+                          setNewApptDate(`${agendaNavDate.getFullYear()}-${String(agendaNavDate.getMonth() + 1).padStart(2, '0')}-${String(agendaNavDate.getDate()).padStart(2, '0')}`);
                           setIsNewAppointmentOpen(true);
                         }}
                         className="self-center sm:self-auto flex items-center gap-2 bg-primary text-white-pure px-4 py-2 rounded-xl font-bold text-[13px] hover:opacity-90 transition-opacity shadow-sm min-h-[36px]"
@@ -1698,154 +1698,147 @@ export default function CRMPage() {
                       const dateStr = `${agendaNavDate.getFullYear()}-${formattedMonth}-${formattedDay}`;
                       const dayAppts = appointments.filter(appt => appt.data === dateStr);
 
-                      if (dayAppts.length === 0) {
-                        return (
-                          <div className="flex flex-col items-center justify-center py-12 text-center">
-                            <span className="material-symbols-outlined text-[48px] text-outline opacity-40">calendar_today</span>
-                            <p className="mt-2 font-manrope text-[14px] font-bold text-on-surface-variant">Nenhum atendimento agendado</p>
-                            <p className="text-[11px] text-outline mt-1">Toque no botão "+" para criar um novo</p>
-                          </div>
-                        );
-                      }
+                      const hours = Array.from({length: 13}, (_, i) => i + 8); // 08:00 to 20:00
 
-                      return dayAppts.map(appt => {
-                        const isConsult = appt.categoria === 'Consulta';
-                        
-                        // Assign background colors based on professional
-                        let cardColorClass = 'bg-surface-container border-outline-variant text-on-surface';
-                        if (appt.profissional.toLowerCase().includes('ricardo')) {
-                          cardColorClass = 'bg-card-blue border-transparent';
-                        } else if (appt.profissional.toLowerCase().includes('helena')) {
-                          cardColorClass = 'bg-card-pink border-transparent';
-                        }
+                      return (
+                        <div className="relative mt-4 bg-white-pure rounded-2xl border border-outline-variant/50 shadow-sm overflow-hidden flex flex-col">
+                          {hours.map(hour => {
+                            const formattedHour = `${String(hour).padStart(2, '0')}:00`;
+                            const hourAppts = dayAppts.filter(appt => {
+                              const apptHour = parseInt(appt.hora.split(':')[0]);
+                              return apptHour === hour;
+                            });
 
-                        const badgeBg = appt.status === 'Finalizado' 
-                          ? 'bg-emerald-600 text-white-pure' 
-                          : appt.status === 'Em Atendimento' 
-                            ? 'bg-cyan-600 text-white-pure' 
-                            : appt.status === 'Confirmado' 
-                              ? 'bg-amber-500 text-white-pure' 
-                              : 'bg-slate-400 text-white-pure';
+                            return (
+                              <div key={hour} className="flex min-h-[90px] border-b border-outline-variant/30 last:border-0 relative group">
+                                <div className="w-[70px] flex-shrink-0 text-center text-[12px] font-bold text-on-surface-variant/60 pt-3 border-r border-outline-variant/30 bg-surface/30">
+                                  {formattedHour}
+                                </div>
+                                <div className="flex-1 p-2 flex flex-col gap-2 relative bg-transparent transition-colors group-hover:bg-surface-container-lowest/50">
+                                  {hourAppts.length > 0 ? (
+                                    hourAppts.map(appt => {
+                                      const isConsult = appt.categoria === 'Consulta';
+                                      
+                                      let cardColorClass = 'bg-surface-container border-outline-variant text-on-surface';
+                                      if (appt.profissional.toLowerCase().includes('ricardo')) {
+                                        cardColorClass = 'bg-blue-50 border-blue-200 text-blue-900';
+                                      } else if (appt.profissional.toLowerCase().includes('helena')) {
+                                        cardColorClass = 'bg-pink-50 border-pink-200 text-pink-900';
+                                      } else {
+                                        cardColorClass = 'bg-purple-50 border-purple-200 text-purple-900';
+                                      }
 
-                        return (
-                          <div 
-                            key={appt.id} 
-                            className={`p-4 rounded-xl border-l-4 border shadow-sm flex flex-col gap-2 relative group hover:shadow-md transition-all ${cardColorClass}`}
-                          >
-                            {/* Status badge in top right */}
-                            <span className={`absolute top-4 right-4 text-[9px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wide ${badgeBg}`}>
-                              {appt.status}
-                            </span>
+                                      const badgeBg = appt.status === 'Finalizado' 
+                                        ? 'bg-emerald-500 text-white-pure' 
+                                        : appt.status === 'Em Atendimento' 
+                                          ? 'bg-cyan-500 text-white-pure' 
+                                          : appt.status === 'Confirmado' 
+                                            ? 'bg-amber-500 text-white-pure' 
+                                            : 'bg-slate-400 text-white-pure';
 
-                            {/* Time */}
-                            <p className="font-manrope text-[13px] font-extrabold flex items-center gap-1.5">
-                              <span className="material-symbols-outlined text-[14px]">schedule</span>
-                              {appt.hora}
-                            </p>
+                                      return (
+                                        <div 
+                                          key={appt.id} 
+                                          className={`p-3 rounded-xl border border-l-4 shadow-sm flex flex-col gap-1 relative hover:shadow-md transition-all animate-fade-in-up cursor-pointer ${cardColorClass}`}
+                                          onClick={(e) => {
+                                             e.stopPropagation();
+                                             const client = patients.find(p => p.nome.toLowerCase() === appt.clienteNome.toLowerCase() || p.id === appt.clienteId);
+                                             if (client) {
+                                               setInteractClient(client);
+                                               setInteractAppointmentId(appt.id);
+                                               setIsWhatsAppSubmenuOpen(false);
+                                               setIsClientInteractModalOpen(true);
+                                             }
+                                          }}
+                                        >
+                                          <div className="flex justify-between items-start">
+                                            <p className="font-manrope text-[13px] font-extrabold flex items-center gap-1.5">
+                                              <span className="material-symbols-outlined text-[14px]">schedule</span>
+                                              {appt.hora}
+                                            </p>
+                                            <span className={`text-[9px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wide ${badgeBg}`}>
+                                              {appt.status}
+                                            </span>
+                                          </div>
 
-                            {/* Client Name */}
-                            <p 
-                               onClick={(e) => {
-                                 e.stopPropagation();
-                                 const client = patients.find(p => p.nome.toLowerCase() === appt.clienteNome.toLowerCase() || p.id === appt.clienteId);
-                                 if (client) {
-                                   setInteractClient(client);
-                                   setInteractAppointmentId(appt.id);
-                                   setIsWhatsAppSubmenuOpen(false);
-                                   setIsClientInteractModalOpen(true);
-                                 } else {
-                                   const tempClient: Cliente = {
-                                     id: appt.clienteId || '',
-                                     nome: appt.clienteNome,
-                                     avatar: appt.clienteAvatar || 'https://api.dicebear.com/7.x/notionists/svg?seed=' + appt.clienteNome.replace(/\s+/g, ''),
-                                     fotoDetalhes: appt.clienteAvatar || 'https://api.dicebear.com/7.x/notionists/svg?seed=' + appt.clienteNome.replace(/\s+/g, ''),
-                                     ultimaVisita: 'Hoje',
-                                     tier: 'Standard',
-                                     since: 'Hoje',
-                                     totalGasto: 0,
-                                     qtdeProcedimentos: 0,
-                                     dataUltimaFoto: '--',
-                                     status: 'Ativo',
-                                     alergias: 'Nenhuma',
-                                     medicacoes: 'Nenhum',
-                                     procedimentosAnteriores: 'Nenhum',
-                                     notasEvolucao: '',
-                                     fotoAntes: '',
-                                     fotoDepois: '',
-                                     fotosEvolucao: [],
-                                     historico: [],
-                                     telefone: '(11) 98029-7072'
-                                   };
-                                   setInteractClient(tempClient);
-                                   setInteractAppointmentId(appt.id);
-                                   setIsWhatsAppSubmenuOpen(false);
-                                   setIsClientInteractModalOpen(true);
-                                 }
-                               }}
-                               className="text-[13px] font-bold text-primary hover:underline cursor-pointer flex items-center gap-1.5"
-                             >
-                               <span className="material-symbols-outlined text-[16px]">person</span>
-                               {appt.clienteNome}
-                             </p>
+                                          <p className="text-[13px] font-bold mt-1 flex items-center gap-1.5">
+                                            <span className="material-symbols-outlined text-[16px]">person</span>
+                                            {appt.clienteNome}
+                                          </p>
 
-                            {/* Service / Procedure */}
-                            <p className="text-[13px] font-medium flex items-center gap-1.5">
-                              <span className="material-symbols-outlined text-[16px]">
-                                {isConsult ? 'event_note' : 'spa'}
-                              </span>
-                              {appt.procedimento}
-                            </p>
+                                          <p className="text-[12px] font-medium flex items-center gap-1.5 opacity-90">
+                                            <span className="material-symbols-outlined text-[15px]">
+                                              {isConsult ? 'event_note' : 'spa'}
+                                            </span>
+                                            {appt.procedimento}
+                                          </p>
 
-                            {/* Notes */}
-                            {appt.notas && (
-                              <p className="text-[12px] opacity-80 italic flex items-start gap-1.5 mt-1 pt-1 border-t border-black/5">
-                                <span className="material-symbols-outlined text-[14px] mt-0.5">chat_bubble</span>
-                                {appt.notas}
-                              </p>
-                            )}
-
-                            {/* Actions bar */}
-                            <div className="flex gap-3 justify-end mt-2 pt-2 border-t border-black/5">
-                              <button 
-                                onClick={() => {
-                                  setEditingAppointment(appt);
-                                  setNewApptPatient(appt.clienteNome);
-                                  setNewApptProcedure(appt.procedimento);
-                                  setNewApptProfessional(appt.profissional);
-                                  setNewApptTime(appt.hora);
-                                  setNewApptDate(appt.data);
-                                  setNewApptCategory(appt.categoria);
-                                  setNewApptStatus(appt.status);
-                                  setIsNewAppointmentOpen(true);
-                                }}
-                                className="p-1 hover:text-primary transition-colors flex items-center gap-1 font-bold text-[11px] cursor-pointer"
-                              >
-                                <span className="material-symbols-outlined text-[15px]">edit</span>
-                                Editar
-                              </button>
-                              <button 
-                                onClick={() => {
-                                  showConfirm(`Remover agendamento de ${appt.clienteNome}?`, async () => {
-                                    try {
-                                      const { error } = await supabase.from('agendamentos').delete().eq('id', appt.id);
-                                      if (error) throw error;
-                                      setAppointments(prev => prev.filter(a => a.id !== appt.id));
-                                      showAlert('Agendamento removido.');
-                                    } catch (err: any) {
-                                      console.error('Delete appt error:', err);
-                                      showAlert(`Erro ao excluir: ${err.message}`);
-                                    }
-                                  });
-                                }}
-                                className="p-1 hover:text-error transition-colors flex items-center gap-1 font-bold text-[11px] cursor-pointer"
-                              >
-                                <span className="material-symbols-outlined text-[15px]">delete</span>
-                                Excluir
-                              </button>
-                            </div>
-                          </div>
-                        );
-                      });
+                                          <div className="flex gap-2 justify-end mt-1 pt-2 border-t border-black/5 opacity-0 group-hover:opacity-100 transition-opacity">
+                                            <button 
+                                              onClick={(e) => {
+                                                e.stopPropagation();
+                                                setEditingAppointment(appt);
+                                                setNewApptPatient(appt.clienteNome);
+                                                setNewApptProcedure(appt.procedimento);
+                                                setNewApptProfessional(appt.profissional);
+                                                setNewApptTime(appt.hora);
+                                                setNewApptDate(appt.data);
+                                                setNewApptCategory(appt.categoria);
+                                                setNewApptStatus(appt.status);
+                                                setIsNewAppointmentOpen(true);
+                                              }}
+                                              className="p-1 hover:text-primary transition-colors flex items-center gap-1 font-bold text-[10px]"
+                                            >
+                                              <span className="material-symbols-outlined text-[14px]">edit</span>
+                                              Editar
+                                            </button>
+                                            <button 
+                                              onClick={(e) => {
+                                                e.stopPropagation();
+                                                showConfirm(`Remover agendamento de ${appt.clienteNome}?`, async () => {
+                                                  try {
+                                                    const { error } = await supabase.from('agendamentos').delete().eq('id', appt.id);
+                                                    if (error) throw error;
+                                                    setAppointments(prev => prev.filter(a => a.id !== appt.id));
+                                                    showAlert('Agendamento removido.');
+                                                  } catch (err: any) {
+                                                    showAlert(`Erro ao excluir: ${err.message}`);
+                                                  }
+                                                });
+                                              }}
+                                              className="p-1 hover:text-error transition-colors flex items-center gap-1 font-bold text-[10px]"
+                                            >
+                                              <span className="material-symbols-outlined text-[14px]">delete</span>
+                                              Excluir
+                                            </button>
+                                          </div>
+                                        </div>
+                                      );
+                                    })
+                                  ) : (
+                                    <div className="w-full h-full min-h-[40px] flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                      <button 
+                                        onClick={() => {
+                                          setEditingAppointment(null);
+                                          setNewApptPatient(patients[0]?.nome || '');
+                                          setNewApptProcedure(services[0]?.nome || '');
+                                          setNewApptTime(formattedHour);
+                                          setNewApptDate(dateStr);
+                                          setIsNewAppointmentOpen(true);
+                                        }}
+                                        className="text-[11px] font-bold text-primary flex items-center gap-1 bg-primary/10 px-3 py-1 rounded-full hover:bg-primary/20"
+                                      >
+                                        <span className="material-symbols-outlined text-[14px]">add</span>
+                                        Agendar às {formattedHour}
+                                      </button>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      );
                     })()}
                   </div>
                 )}
