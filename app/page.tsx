@@ -5453,7 +5453,7 @@ export default function CRMPage() {
             <div className="flex flex-col gap-3">
               <button 
                 onClick={async () => {
-                  const photoType = 'Antes';
+                  const photoType: 'Antes' | 'Depois' | 'Evolução' = 'Antes';
                   if (!pendingEvolutionPhoto || !selectedPatient.id) return;
                   const newPhoto = { id: Date.now().toString(), url: pendingEvolutionPhoto.base64, date: new Date().toLocaleDateString('pt-BR'), type: photoType };
                   try {
@@ -5480,7 +5480,7 @@ export default function CRMPage() {
 
               <button 
                 onClick={async () => {
-                  const photoType = 'Depois';
+                  const photoType: 'Antes' | 'Depois' | 'Evolução' = 'Depois';
                   if (!pendingEvolutionPhoto || !selectedPatient.id) return;
                   const newPhoto = { id: Date.now().toString(), url: pendingEvolutionPhoto.base64, date: new Date().toLocaleDateString('pt-BR'), type: photoType };
                   try {
@@ -5507,7 +5507,7 @@ export default function CRMPage() {
 
               <button 
                 onClick={async () => {
-                  const photoType = 'Evolução';
+                  const photoType: 'Antes' | 'Depois' | 'Evolução' = 'Evolução';
                   if (!pendingEvolutionPhoto || !selectedPatient.id) return;
                   const newPhoto = { id: Date.now().toString(), url: pendingEvolutionPhoto.base64, date: new Date().toLocaleDateString('pt-BR'), type: photoType };
                   try {
