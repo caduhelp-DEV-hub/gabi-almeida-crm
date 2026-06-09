@@ -2379,14 +2379,15 @@ export default function CRMPage() {
                               <span className="material-symbols-outlined text-[18px]">add_a_photo</span>
                               <span className="ml-1 text-[11px] font-bold uppercase">Nova Foto</span>
                               <input type="file" className="hidden" accept="image/*" onChange={async (e) => {
-                                if (e.target.files && e.target.files[0] && selectedPatient.id) {
-                                  const file = e.target.files[0];
+                                const target = e.target;
+                                if (target.files && target.files[0] && selectedPatient.id) {
+                                  const file = target.files[0];
                                   const reader = new FileReader();
                                   reader.onloadend = async () => {
                                     const base64String = reader.result as string;
                                     setPendingEvolutionPhoto({ file, base64: base64String });
                                     // Reset input so we can upload same file again if needed
-                                    e.target.value = '';
+                                    try { target.value = ''; } catch (err) {}
                                   };
                                   reader.readAsDataURL(file);
                                 }
