@@ -2525,11 +2525,47 @@ export default function CRMPage() {
                                     {/* Action Hover Overlay */}
                                     <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-1.5 p-1 text-white-pure">
                                       <button 
-                                        onClick={() => setActiveLightboxImage(photo.url)}
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          setActiveLightboxImage(photo.url);
+                                        }}
                                         className="p-1 rounded-full bg-white-pure/20 hover:bg-white-pure/40 transition-colors flex items-center justify-center cursor-pointer"
                                         title="Abrir Foto"
                                       >
                                         <span className="material-symbols-outlined text-[16px] text-white-pure">zoom_in</span>
+                                      </button>
+                                      <button 
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          showConfirm('Tem certeza que deseja apagar esta foto do histórico?', async () => {
+                                            try {
+                                              const updatedPhotos = (selectedPatient.fotosEvolucao || []).filter(p => p.id !== photo.id);
+                                              let updateField: any = { fotos_evolucao: updatedPhotos };
+                                              if (selectedPatient.fotoAntes === photo.url) updateField.foto_antes = null;
+                                              if (selectedPatient.fotoDepois === photo.url) updateField.foto_depois = null;
+                                              
+                                              const { error } = await supabase.from('clientes').update(updateField).eq('id', selectedPatient.id);
+                                              if (error) throw error;
+                                              
+                                              setPatients(prev => prev.map(p => {
+                                                if (p.id !== selectedPatient.id) return p;
+                                                return {
+                                                  ...p,
+                                                  fotosEvolucao: updatedPhotos,
+                                                  fotoAntes: p.fotoAntes === photo.url ? '' : p.fotoAntes,
+                                                  fotoDepois: p.fotoDepois === photo.url ? '' : p.fotoDepois
+                                                };
+                                              }));
+                                              showAlert('Foto apagada com sucesso!');
+                                            } catch (err: any) {
+                                              showAlert('Erro ao apagar: ' + err.message);
+                                            }
+                                          });
+                                        }}
+                                        className="p-1 mt-1 rounded-full bg-error/20 hover:bg-error/40 transition-colors flex items-center justify-center cursor-pointer"
+                                        title="Apagar Foto"
+                                      >
+                                        <span className="material-symbols-outlined text-[16px] text-[#ff4444]">delete</span>
                                       </button>
                                       {isComparing && (
                                         <button
