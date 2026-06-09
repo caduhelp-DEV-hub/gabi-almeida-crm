@@ -2383,10 +2383,28 @@ export default function CRMPage() {
                                   const file = target.files[0];
                                   const reader = new FileReader();
                                   reader.onloadend = async () => {
-                                    const base64String = reader.result as string;
-                                    setPendingEvolutionPhoto({ file, base64: base64String });
-                                    // Reset input so we can upload same file again if needed
-                                    try { target.value = ''; } catch (err) {}
+                                    const img = new globalThis.Image();
+                                    img.onload = () => {
+                                      const canvas = document.createElement('canvas');
+                                      let width = img.width;
+                                      let height = img.height;
+                                      const MAX_SIZE = 1200;
+                                      if (width > height && width > MAX_SIZE) {
+                                        height *= MAX_SIZE / width;
+                                        width = MAX_SIZE;
+                                      } else if (height > MAX_SIZE) {
+                                        width *= MAX_SIZE / height;
+                                        height = MAX_SIZE;
+                                      }
+                                      canvas.width = width;
+                                      canvas.height = height;
+                                      const ctx = canvas.getContext('2d');
+                                      ctx?.drawImage(img, 0, 0, width, height);
+                                      const base64String = canvas.toDataURL('image/jpeg', 0.6);
+                                      setPendingEvolutionPhoto({ file, base64: base64String });
+                                      try { target.value = ''; } catch (err) {}
+                                    };
+                                    img.src = reader.result as string;
                                   };
                                   reader.readAsDataURL(file);
                                 }
