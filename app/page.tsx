@@ -186,6 +186,7 @@ export default function CRMPage() {
   const [activeLightboxImage, setActiveLightboxImage] = useState<string>('');
   const [isComparing, setIsComparing] = useState<boolean>(false);
   const [compareSelectedIds, setCompareSelectedIds] = useState<string[]>([]);
+  const [pendingEvolutionPhoto, setPendingEvolutionPhoto] = useState<{file: File, base64: string} | null>(null);
 
   // Financeiro module detailed view timeframe
   const [financialTimeframe, setFinancialTimeframe] = useState<'semanal' | 'mensal'>('mensal');
@@ -2380,48 +2381,12 @@ export default function CRMPage() {
                               <input type="file" className="hidden" accept="image/*" onChange={async (e) => {
                                 if (e.target.files && e.target.files[0] && selectedPatient.id) {
                                   const file = e.target.files[0];
-                                  const typeInput = prompt("Digite o tipo da foto ('Antes', 'Depois' ou 'Evolução'):", "Evolução");
-                                  if (typeInput === null) return;
-                                  const photoType = ((typeInput.trim() === 'Antes' || typeInput.trim() === 'antes') ? 'Antes' : ((typeInput.trim() === 'Depois' || typeInput.trim() === 'depois') ? 'Depois' : 'Evolução')) as 'Antes' | 'Depois' | 'Evolução';
-                                  
                                   const reader = new FileReader();
                                   reader.onloadend = async () => {
                                     const base64String = reader.result as string;
-                                    const newPhoto = {
-                                      id: Date.now().toString(),
-                                      url: base64String,
-                                      date: new Date().toLocaleDateString('pt-BR'),
-                                      type: photoType
-                                    };
-                                    
-                                    try {
-                                      const updatedPhotos = [...(selectedPatient.fotosEvolucao || []), newPhoto];
-                                      const updateField: any = { fotos_evolucao: updatedPhotos };
-                                      if (photoType === 'Antes') updateField.foto_antes = base64String;
-                                      if (photoType === 'Depois') updateField.foto_depois = base64String;
-                                      
-                                      const { error } = await supabase
-                                        .from('clientes')
-                                        .update(updateField)
-                                        .eq('id', selectedPatient.id);
-                                      if (error) throw error;
-                                      
-                                      setPatients(prev => prev.map(p => {
-                                        if (p.id === selectedPatient.id) {
-                                          return {
-                                            ...p,
-                                            fotoAntes: photoType === 'Antes' ? base64String : p.fotoAntes,
-                                            fotoDepois: photoType === 'Depois' ? base64String : p.fotoDepois,
-                                            fotosEvolucao: updatedPhotos
-                                          };
-                                        }
-                                        return p;
-                                      }));
-                                      showAlert('Foto de evolução salva com sucesso!');
-                                    } catch (err: any) {
-                                      console.error('Error saving photo:', err);
-                                      showAlert(`Erro ao salvar foto: ${err.message}`);
-                                    }
+                                    setPendingEvolutionPhoto({ file, base64: base64String });
+                                    // Reset input so we can upload same file again if needed
+                                    e.target.value = '';
                                   };
                                   reader.readAsDataURL(file);
                                 }
@@ -5474,6 +5439,106 @@ export default function CRMPage() {
               <span className="material-symbols-outlined text-3xl">close</span>
             </button>
             <Image width={500} height={500} unoptimized src={activeLightboxImage} className="max-w-full max-h-[80vh] rounded-2xl object-contain shadow-2xl border border-white/10" alt="Visualização ampliada" onClick={(e) => e.stopPropagation()} sizes="(max-width: 768px) 100vw, 500px" />
+          </div>
+        </div>
+      )}
+
+      {/* Modal Evolution Photo Type Selection */}
+      {pendingEvolutionPhoto && (
+        <div className="fixed inset-0 bg-[#31302fd0] backdrop-blur-md flex items-center justify-center z-50 p-4 animate-fade-in">
+          <div className="bg-white-pure rounded-[24px] shadow-2xl p-6 lg:p-8 w-full max-w-[400px]">
+            <h3 className="font-manrope text-[20px] font-extrabold text-on-surface mb-2">Classificar Foto</h3>
+            <p className="text-[13px] text-on-surface-variant mb-6">Onde esta foto deve ser armazenada no prontuário do cliente?</p>
+            
+            <div className="flex flex-col gap-3">
+              <button 
+                onClick={async () => {
+                  const photoType = 'Antes';
+                  if (!pendingEvolutionPhoto || !selectedPatient.id) return;
+                  const newPhoto = { id: Date.now().toString(), url: pendingEvolutionPhoto.base64, date: new Date().toLocaleDateString('pt-BR'), type: photoType };
+                  try {
+                    const updatedPhotos = [...(selectedPatient.fotosEvolucao || []), newPhoto];
+                    const updateField: any = { fotos_evolucao: updatedPhotos, foto_antes: pendingEvolutionPhoto.base64 };
+                    const { error } = await supabase.from('clientes').update(updateField).eq('id', selectedPatient.id);
+                    if (error) throw error;
+                    setPatients(prev => prev.map(p => p.id === selectedPatient.id ? { ...p, fotoAntes: pendingEvolutionPhoto.base64, fotosEvolucao: updatedPhotos } : p));
+                    showAlert('Foto classificada como Antes com sucesso!');
+                  } catch (err: any) { showAlert(`Erro ao salvar foto: ${err.message}`); }
+                  setPendingEvolutionPhoto(null);
+                }}
+                className="w-full flex items-center justify-between p-4 rounded-xl border border-outline-variant hover:border-primary hover:bg-primary/5 transition-colors group"
+              >
+                <div className="flex items-center gap-3">
+                  <span className="material-symbols-outlined text-on-surface-variant group-hover:text-primary">history</span>
+                  <div className="text-left">
+                    <p className="text-[14px] font-bold text-on-surface group-hover:text-primary">Antes do Tratamento</p>
+                    <p className="text-[11px] text-on-surface-variant">Vai para o quadro esquerdo de comparativo</p>
+                  </div>
+                </div>
+                <span className="material-symbols-outlined text-on-surface-variant opacity-0 group-hover:opacity-100 transition-opacity">chevron_right</span>
+              </button>
+
+              <button 
+                onClick={async () => {
+                  const photoType = 'Depois';
+                  if (!pendingEvolutionPhoto || !selectedPatient.id) return;
+                  const newPhoto = { id: Date.now().toString(), url: pendingEvolutionPhoto.base64, date: new Date().toLocaleDateString('pt-BR'), type: photoType };
+                  try {
+                    const updatedPhotos = [...(selectedPatient.fotosEvolucao || []), newPhoto];
+                    const updateField: any = { fotos_evolucao: updatedPhotos, foto_depois: pendingEvolutionPhoto.base64 };
+                    const { error } = await supabase.from('clientes').update(updateField).eq('id', selectedPatient.id);
+                    if (error) throw error;
+                    setPatients(prev => prev.map(p => p.id === selectedPatient.id ? { ...p, fotoDepois: pendingEvolutionPhoto.base64, fotosEvolucao: updatedPhotos } : p));
+                    showAlert('Foto classificada como Depois com sucesso!');
+                  } catch (err: any) { showAlert(`Erro ao salvar foto: ${err.message}`); }
+                  setPendingEvolutionPhoto(null);
+                }}
+                className="w-full flex items-center justify-between p-4 rounded-xl border border-outline-variant hover:border-primary hover:bg-primary/5 transition-colors group"
+              >
+                <div className="flex items-center gap-3">
+                  <span className="material-symbols-outlined text-on-surface-variant group-hover:text-primary">flare</span>
+                  <div className="text-left">
+                    <p className="text-[14px] font-bold text-on-surface group-hover:text-primary">Depois do Tratamento</p>
+                    <p className="text-[11px] text-on-surface-variant">Vai para o quadro direito de comparativo</p>
+                  </div>
+                </div>
+                <span className="material-symbols-outlined text-on-surface-variant opacity-0 group-hover:opacity-100 transition-opacity">chevron_right</span>
+              </button>
+
+              <button 
+                onClick={async () => {
+                  const photoType = 'Evolução';
+                  if (!pendingEvolutionPhoto || !selectedPatient.id) return;
+                  const newPhoto = { id: Date.now().toString(), url: pendingEvolutionPhoto.base64, date: new Date().toLocaleDateString('pt-BR'), type: photoType };
+                  try {
+                    const updatedPhotos = [...(selectedPatient.fotosEvolucao || []), newPhoto];
+                    const updateField: any = { fotos_evolucao: updatedPhotos };
+                    const { error } = await supabase.from('clientes').update(updateField).eq('id', selectedPatient.id);
+                    if (error) throw error;
+                    setPatients(prev => prev.map(p => p.id === selectedPatient.id ? { ...p, fotosEvolucao: updatedPhotos } : p));
+                    showAlert('Foto adicionada à galeria de evolução!');
+                  } catch (err: any) { showAlert(`Erro ao salvar foto: ${err.message}`); }
+                  setPendingEvolutionPhoto(null);
+                }}
+                className="w-full flex items-center justify-between p-4 rounded-xl border border-outline-variant hover:border-primary hover:bg-primary/5 transition-colors group"
+              >
+                <div className="flex items-center gap-3">
+                  <span className="material-symbols-outlined text-on-surface-variant group-hover:text-primary">collections_bookmark</span>
+                  <div className="text-left">
+                    <p className="text-[14px] font-bold text-on-surface group-hover:text-primary">Apenas Galeria / Evolução</p>
+                    <p className="text-[11px] text-on-surface-variant">Vai para o acompanhamento cronológico</p>
+                  </div>
+                </div>
+                <span className="material-symbols-outlined text-on-surface-variant opacity-0 group-hover:opacity-100 transition-opacity">chevron_right</span>
+              </button>
+            </div>
+            
+            <button 
+              onClick={() => setPendingEvolutionPhoto(null)}
+              className="mt-6 w-full py-3 rounded-xl font-bold text-[13px] text-on-surface-variant hover:bg-surface-container transition-colors"
+            >
+              Cancelar
+            </button>
           </div>
         </div>
       )}
