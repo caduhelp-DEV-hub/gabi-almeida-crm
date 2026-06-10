@@ -507,14 +507,19 @@ export default function CRMPage() {
           }
         });
       })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'agendamentos' }, () => {
-        supabase.from('agendamentos').select('*, clientes(id, nome, avatar)').then((res: any) => {
-          const data = res.data;
-          if (data) {
-            const validAppts = data.filter((a: any) => a.cliente_id && a.clientes);
-            setAppointments(validAppts.map(mapAgendamentoToFrontend));
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'agendamentos' }, async (payload: any) => {
+        if (payload.eventType === 'DELETE') {
+          setAppointments(prev => prev.filter(a => a.id !== payload.old.id));
+        } else if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
+          const { data } = await supabase.from('agendamentos').select('*, clientes(id, nome, avatar)').eq('id', payload.new.id).single();
+          if (data && data.cliente_id && data.clientes) {
+            const mapped = mapAgendamentoToFrontend(data);
+            setAppointments(prev => {
+              const exists = prev.find(a => a.id === mapped.id);
+              return exists ? prev.map(a => a.id === mapped.id ? mapped : a) : [...prev, mapped];
+            });
           }
-        });
+        }
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'cobrancas' }, () => {
         supabase.from('cobrancas').select('*').then((res: any) => { const data = res.data; if (data) setTransactions(data as Cobranca[]); });
@@ -1805,10 +1810,10 @@ export default function CRMPage() {
                       const dateStr = `${agendaNavDate.getFullYear()}-${formattedMonth}-${formattedDay}`;
                       const dayAppts = appointments.filter(appt => appt.data === dateStr);
 
-                      const hours = Array.from({length: 13}, (_, i) => i + 8); // 08:00 to 20:00
+                      const hours = Array.from({length: 16}, (_, i) => i + 7); // 07:00 to 22:00
 
                       return (
-                        <div className="relative mt-4 bg-white-pure rounded-2xl border border-outline-variant/50 shadow-sm overflow-hidden flex flex-col">
+                        <div className="relative mt-4 bg-white-pure rounded-2xl border border-outline-variant/50 shadow-sm overflow-hidden flex flex-col max-h-[60vh] overflow-y-auto custom-scrollbar">
                           {hours.map(hour => {
                             const formattedHour = `${String(hour).padStart(2, '0')}:00`;
                             const hourAppts = dayAppts.filter(appt => {
@@ -1827,7 +1832,8 @@ export default function CRMPage() {
                                       const isConsult = appt.categoria === 'Consulta';
                                       
                                       let cardColorClass = 'bg-surface-container border-outline-variant text-on-surface';
-                                      if (appt.notas?.includes('[CONFLITO]')) {
+                                      const isConflicted = appointments.some(a => a.id !== appt.id && a.data === appt.data && a.hora === appt.hora);
+                                      if (isConflicted || appt.notas?.includes('[CONFLITO]')) {
                                         cardColorClass = 'bg-red-600 border-red-800 text-white-pure animate-pulse shadow-md';
                                       } else if (appt.profissional.toLowerCase().includes('ricardo')) {
                                         cardColorClass = 'bg-blue-50 border-blue-200 text-blue-900';
@@ -1978,7 +1984,8 @@ export default function CRMPage() {
                                 let cardClass = isConsult
                                   ? 'bg-tertiary-container/10 border-tertiary-container text-tertiary'
                                   : 'bg-secondary-container/10 border-secondary-container text-[#745c00]';
-                                if (appt.notas?.includes('[CONFLITO]')) {
+                                const isConflicted = appointments.some(a => a.id !== appt.id && a.data === appt.data && a.hora === appt.hora);
+                                if (isConflicted || appt.notas?.includes('[CONFLITO]')) {
                                   cardClass = 'bg-red-600 border-red-800 text-white-pure animate-pulse shadow-md';
                                 }
                                 return (
@@ -5541,7 +5548,7 @@ export default function CRMPage() {
                     Vincular
                   </button>
                   <button type="button" onClick={() => {
-                    setIsNewAppointmentOpen(false);
+                    // Removed setIsNewAppointmentOpen(false) to keep appointment modal open underneath
                     setEditingPatientId(null);
                     setIsPatientModalOpen(true);
                   }} className="bg-primary/10 text-primary px-3 rounded-xl hover:bg-primary/20 transition-all font-bold text-[11px] border border-primary/20 flex flex-col justify-center items-center" title="Cadastrar Novo Cliente">
