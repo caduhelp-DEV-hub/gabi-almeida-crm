@@ -5383,6 +5383,14 @@ export default function CRMPage() {
                     <span className="material-symbols-outlined text-[16px] mb-0.5">sync</span>
                     Vincular
                   </button>
+                  <button type="button" onClick={() => {
+                    setIsNewAppointmentOpen(false);
+                    setEditingPatientId(null);
+                    setIsPatientModalOpen(true);
+                  }} className="bg-primary/10 text-primary px-3 rounded-xl hover:bg-primary/20 transition-all font-bold text-[11px] border border-primary/20 flex flex-col justify-center items-center" title="Cadastrar Novo Cliente">
+                    <span className="material-symbols-outlined text-[16px] mb-0.5">person_add</span>
+                    Novo
+                  </button>
                 </div>
               </div>
 
