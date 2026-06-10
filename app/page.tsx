@@ -5832,22 +5832,26 @@ export default function CRMPage() {
               <button 
                 onClick={() => {
                   setIsClientInteractModalOpen(false);
-                  showConfirm(`Deseja realmente excluir o cliente ${interactClient.nome}?`, async () => {
+                  if (!interactAppointmentId) {
+                     showAlert('Nenhum agendamento selecionado para exclusão.');
+                     return;
+                  }
+                  showConfirm(`Deseja realmente cancelar este agendamento de ${interactClient.nome}?`, async () => {
                     try {
-                      const { error } = await supabase.from('clientes').delete().eq('id', interactClient.id);
+                      const { error } = await supabase.from('agendamentos').delete().eq('id', interactAppointmentId);
                       if (error) throw error;
-                      setPatients(prev => prev.filter(p => p.id !== interactClient.id));
-                      showAlert('Cliente excluído com sucesso.');
+                      setAppointments(prev => prev.filter(a => a.id !== interactAppointmentId));
+                      showAlert('Agendamento cancelado com sucesso.');
                     } catch (err: any) {
                       console.error(err);
-                      showAlert(`Erro ao excluir cliente: ${err.message}`);
+                      showAlert(`Erro ao cancelar agendamento: ${err.message}`);
                     }
                   });
                 }}
                 className="flex flex-col items-center justify-center p-2 rounded-2xl hover:bg-surface transition-all cursor-pointer min-h-[70px]"
               >
-                <span className="material-symbols-outlined text-error text-2xl">delete</span>
-                <span className="text-[11px] font-bold text-error mt-1">Deletar</span>
+                <span className="material-symbols-outlined text-error text-2xl">event_busy</span>
+                <span className="text-[11px] font-bold text-error mt-1">Cancelar<br/>Agenda</span>
               </button>
             </div>
 
