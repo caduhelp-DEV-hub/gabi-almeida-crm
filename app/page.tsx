@@ -1842,30 +1842,31 @@ export default function CRMPage() {
                             });
 
                             return (
-                              <div key={hour} className="flex min-h-[90px] border-b border-outline-variant/30 last:border-0 relative group">
-                                <div className="w-[70px] flex-shrink-0 text-center text-[12px] font-bold text-on-surface-variant/60 pt-3 border-r border-outline-variant/30 bg-surface/30">
+                              <div key={hour} className="flex h-[90px] border-b border-outline-variant/30 last:border-0 relative group">
+                                <div className="w-[70px] flex-shrink-0 text-center text-[12px] font-bold text-on-surface-variant/60 pt-3 border-r border-outline-variant/30 bg-surface/30 z-10">
                                   {formattedHour}
                                 </div>
-                                <div className="flex-1 p-2 flex flex-col gap-2 relative bg-transparent transition-colors group-hover:bg-surface-container-lowest/50">
+                                <div className="flex-1 relative bg-transparent transition-colors group-hover:bg-surface-container-lowest/50">
                                   {hourAppts.length > 0 ? (
-                                    hourAppts.map(appt => {
+                                    hourAppts.map((appt, i) => {
                                       const isConsult = appt.categoria === 'Consulta';
                                       
-                                      let cardColorClass = 'bg-surface-container border-outline-variant text-on-surface';
+                                      let cardColorClass = 'bg-surface-container border-outline-variant text-on-surface z-20';
                                       const durAppt = getServiceDuration(appt.procedimento);
-                                      const isConflicted = appointments.some(a => {
-                                        if (a.id === appt.id || a.data !== appt.data) return false;
+                                      const apptIndex = appointments.findIndex(a => a.id === appt.id);
+                                      const isConflicted = appointments.some((a, idx) => {
+                                        if (idx >= apptIndex || a.data !== appt.data) return false;
                                         const durA = getServiceDuration(a.procedimento);
                                         return checkTimeOverlap(a.hora.slice(0, 5), durA, appt.hora.slice(0, 5), durAppt);
                                       });
                                       if (isConflicted || appt.notas?.includes('[CONFLITO]')) {
-                                        cardColorClass = 'bg-red-600 border-red-800 text-white-pure animate-pulse shadow-md';
+                                        cardColorClass = 'bg-red-600 border-red-800 text-white-pure shadow-xl z-30 scale-[0.98] origin-left';
                                       } else if (appt.profissional.toLowerCase().includes('ricardo')) {
-                                        cardColorClass = 'bg-blue-50 border-blue-200 text-blue-900';
+                                        cardColorClass = 'bg-blue-50 border-blue-200 text-blue-900 z-20';
                                       } else if (appt.profissional.toLowerCase().includes('helena')) {
                                         cardColorClass = 'bg-pink-50 border-pink-200 text-pink-900';
                                       } else {
-                                        cardColorClass = 'bg-purple-50 border-purple-200 text-purple-900';
+                                        cardColorClass = 'bg-purple-50 border-purple-200 text-purple-900 z-20';
                                       }
 
                                       const badgeBg = appt.status === 'Finalizado' 
@@ -1876,10 +1877,15 @@ export default function CRMPage() {
                                             ? 'bg-amber-500 text-white-pure' 
                                             : 'bg-slate-400 text-white-pure';
 
+                                      const startMinute = parseInt(appt.hora.split(':')[1] || '0');
+                                      const topPx = (startMinute / 60) * 90;
+                                      const heightPx = (durAppt / 60) * 90;
+
                                       return (
                                         <div 
                                           key={appt.id} 
-                                          className={`p-3 rounded-xl border border-l-4 shadow-sm flex flex-col gap-1 relative hover:shadow-md transition-all animate-fade-in-up cursor-pointer ${cardColorClass}`}
+                                          style={{ top: `${topPx}px`, height: `${Math.max(heightPx, 40)}px`, left: '8px', right: '8px' }}
+                                          className={`absolute p-2 rounded-xl border border-l-4 shadow-sm flex flex-col gap-0.5 overflow-hidden hover:shadow-md transition-all cursor-pointer ${cardColorClass}`}
                                           onClick={(e) => {
                                              e.stopPropagation();
                                              const client = patients.find(p => p.nome.toLowerCase() === appt.clienteNome.toLowerCase() || p.id === appt.clienteId);
@@ -2010,8 +2016,9 @@ export default function CRMPage() {
                                   ? 'bg-tertiary-container/10 border-tertiary-container text-tertiary'
                                   : 'bg-secondary-container/10 border-secondary-container text-[#745c00]';
                                 const durAppt = getServiceDuration(appt.procedimento);
-                                const isConflicted = appointments.some(a => {
-                                  if (a.id === appt.id || a.data !== appt.data) return false;
+                                const apptIndex = appointments.findIndex(a => a.id === appt.id);
+                                const isConflicted = appointments.some((a, idx) => {
+                                  if (idx >= apptIndex || a.data !== appt.data) return false;
                                   const durA = getServiceDuration(a.procedimento);
                                   return checkTimeOverlap(a.hora.slice(0, 5), durA, appt.hora.slice(0, 5), durAppt);
                                 });
