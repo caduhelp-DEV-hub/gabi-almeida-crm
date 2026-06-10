@@ -37,6 +37,7 @@ export default function CRMPage() {
   
   // Auth state
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isInitialLoading, setIsInitialLoading] = useState(true);
   const [currentUser, setCurrentUser] = useState<AppUser | null>(null);
   const [appUsers, setAppUsers] = useState<AppUser[]>([]);
   
@@ -437,7 +438,24 @@ export default function CRMPage() {
 
     // Fetch initial data
     const fetchInitial = async () => {
-      const { data: pats } = await supabase.from('clientes').select('*');
+      setIsInitialLoading(true);
+
+      const [
+        { data: pats },
+        { data: appts },
+        { data: trans },
+        { data: servs },
+        { data: inv },
+        { data: usrs }
+      ] = await Promise.all([
+        supabase.from('clientes').select('*'),
+        supabase.from('agendamentos').select('*, clientes(id, nome, avatar)'),
+        supabase.from('cobrancas').select('*'),
+        supabase.from('servicos').select('*'),
+        supabase.from('inventory').select('*'),
+        supabase.from('users').select('*')
+      ]);
+
       if (pats) {
         setPatients(pats.map(mapClienteToFrontend));
         const financialsMap: Record<string, PatientFinancialItem[]> = {};
@@ -450,23 +468,17 @@ export default function CRMPage() {
         setPatientDocuments(documentsMap);
       }
 
-      const { data: appts } = await supabase.from('agendamentos').select('*, clientes(id, nome, avatar)');
       if (appts) {
         const validAppts = appts.filter((a: any) => a.cliente_id && a.clientes);
         setAppointments(validAppts.map(mapAgendamentoToFrontend));
       }
 
-      const { data: trans } = await supabase.from('cobrancas').select('*');
       if (trans) setTransactions(trans as Cobranca[]);
-
-      const { data: servs } = await supabase.from('servicos').select('*');
       if (servs) setServices(servs as Servico[]);
-
-      const { data: inv } = await supabase.from('inventory').select('*');
       if (inv) setInventory(inv.map(mapInventoryToFrontend));
-
-      const { data: usrs } = await supabase.from('users').select('*');
       if (usrs) setAppUsers(usrs.map(mapUserToFrontend));
+      
+      setIsInitialLoading(false);
     };
 
     fetchInitial();
@@ -815,6 +827,18 @@ export default function CRMPage() {
       setIsAuthenticated(false);
     }
   };
+
+  if (isAuthenticated && isInitialLoading) {
+    return (
+      <div className="bg-surface-container-lowest h-screen w-full flex flex-col items-center justify-center relative select-none">
+        <div className="flex flex-col items-center animate-fade-in">
+          <span className="material-symbols-outlined text-primary text-[60px] mb-6 animate-spin" style={{ animationDuration: '3s' }}>schedule</span>
+          <h2 className="font-manrope text-2xl font-black text-on-surface uppercase tracking-tight">Carregando CRM</h2>
+          <p className="font-manrope text-[11px] tracking-[0.2em] font-bold text-on-surface-variant uppercase mt-2">Sincronizando Banco de Dados...</p>
+        </div>
+      </div>
+    );
+  }
 
   if (!isAuthenticated) {
     return (
