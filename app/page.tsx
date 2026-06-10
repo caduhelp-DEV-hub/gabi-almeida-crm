@@ -4792,7 +4792,7 @@ export default function CRMPage() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block mb-1">Nome Completo</label>
                   <input type="text" id="new_user_name" defaultValue={editingUser?.name || ''} placeholder="Ex: Luciano Santos" required className="w-full bg-surface border border-outline-variant rounded-xl p-2.5 focus:outline-none focus:border-primary font-medium" />
@@ -4803,7 +4803,7 @@ export default function CRMPage() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block mb-1">Telefone Celular</label>
                   <input type="text" id="new_user_phone" defaultValue={editingUser?.phone || ''} placeholder="(11) 98721-0012" className="w-full bg-surface border border-outline-variant rounded-xl p-2.5 focus:outline-none focus:border-primary font-medium" />
@@ -4818,7 +4818,7 @@ export default function CRMPage() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block mb-1">Especialidade (Se Aplicável)</label>
                   <input type="text" id="new_user_specialty" defaultValue={editingUser?.specialty || ''} placeholder="Biomédico / Dermato" className="w-full bg-surface border border-outline-variant rounded-xl p-2.5 focus:outline-none focus:border-primary font-medium" />
@@ -5010,8 +5010,8 @@ export default function CRMPage() {
                   <p className="text-[10px] text-on-surface-variant/75 mt-1 font-semibold">Clique para carregar foto de perfil</p>
                 </div>
 
-                <div className="grid grid-cols-4 gap-4">
-                  <div className="col-span-1">
+                <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+                  <div className="sm:col-span-1">
                     <label className="block text-on-surface-variant font-bold mb-1 ml-1 text-[11px] uppercase tracking-wider">Pronome</label>
                     <select
                       id="new_pat_pronoun"
@@ -5025,7 +5025,7 @@ export default function CRMPage() {
                       <option value=""></option>
                     </select>
                   </div>
-                  <div className="col-span-3">
+                  <div className="sm:col-span-3">
                     <label className="block text-on-surface-variant font-bold mb-1 ml-1 text-[11px] uppercase tracking-wider">Nome Completo</label>
                     <div className="relative">
                       <span className="material-symbols-outlined absolute left-3 top-3.5 text-on-surface-variant text-[18px]">person</span>
@@ -5040,7 +5040,7 @@ export default function CRMPage() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-on-surface-variant font-bold mb-1 ml-1 text-[11px] uppercase tracking-wider">WhatsApp</label>
                     <div className="flex gap-2">
@@ -5161,7 +5161,7 @@ export default function CRMPage() {
                 <label className="block text-[11px] font-bold text-on-surface-variant uppercase tracking-wider mb-2">Nome do Serviço</label>
                 <input required name="name" defaultValue={editingService?.nome || ''} type="text" className="w-full bg-surface-container px-4 py-3 rounded-xl border border-outline-variant focus:outline-primary placeholder:text-on-surface-variant/50" placeholder="ex: Peeling Químico" />
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                  <div>
                    <label className="block text-[11px] font-bold text-on-surface-variant uppercase tracking-wider mb-2">Categoria</label>
                    <select required name="category" defaultValue={editingService?.categoria || 'Estética'} className="w-full bg-surface-container px-4 py-3 rounded-xl border border-outline-variant focus:outline-primary appearance-none custom-select-arrow">
@@ -5240,7 +5240,7 @@ export default function CRMPage() {
                 <label className="block text-[11px] font-bold text-on-surface-variant uppercase tracking-wider mb-2">Nome do Insumo</label>
                 <input required name="name" defaultValue={editingInventory?.name || ''} type="text" className="w-full bg-surface-container px-4 py-3 rounded-xl border border-outline-variant focus:outline-primary placeholder:text-on-surface-variant/50" placeholder="ex: Ácido Hialurônico 1ml" />
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                  <div>
                    <label className="block text-[11px] font-bold text-on-surface-variant uppercase tracking-wider mb-2">Unidade</label>
                    <input required name="unit" defaultValue={editingInventory?.unit || ''} type="text" className="w-full bg-surface-container px-4 py-3 rounded-xl border border-outline-variant focus:outline-primary placeholder:text-on-surface-variant/50" placeholder="ex: seringas, frascos" />
@@ -5317,7 +5317,7 @@ export default function CRMPage() {
                 <label className="block text-[11px] font-bold text-on-surface-variant uppercase tracking-wider mb-2">Descrição</label>
                 <input required name="descricao" defaultValue={editingCobranca?.descricao || ''} type="text" className="w-full bg-surface-container px-4 py-3 rounded-xl border border-outline-variant focus:outline-primary placeholder:text-on-surface-variant/50" placeholder="ex: Compra de materiais" />
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                  <div>
                    <label className="block text-[11px] font-bold text-on-surface-variant uppercase tracking-wider mb-2">Data</label>
                     <input required name="data" defaultValue={editingCobranca?.data || 'Hoje, 10:00'} type="text" className="w-full bg-surface-container px-4 py-3 rounded-xl border border-outline-variant focus:outline-primary placeholder:text-on-surface-variant/50" />
@@ -5327,7 +5327,7 @@ export default function CRMPage() {
                     <input required name="valor" defaultValue={editingCobranca?.valor || ''} type="number" step="0.01" className="w-full bg-surface-container px-4 py-3 rounded-xl border border-outline-variant focus:outline-primary placeholder:text-on-surface-variant/50" placeholder="-150.00" />
                  </div>
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                  <div>
                    <label className="block text-[11px] font-bold text-on-surface-variant uppercase tracking-wider mb-2">Categoria</label>
                     <select required name="categoria" defaultValue={editingCobranca?.categoria || 'Procedimento'} className="w-full bg-surface-container px-4 py-3 rounded-xl border border-outline-variant focus:outline-primary appearance-none custom-select-arrow">
@@ -5441,7 +5441,7 @@ export default function CRMPage() {
               </div>
 
               {/* Professional, Date and Time grid */}
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 
                 <div className="space-y-1.5">
                   <label className="font-bold text-on-surface-variant">Profissional</label>
