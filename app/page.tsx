@@ -175,6 +175,11 @@ export default function CRMPage() {
 
   // New appointment dialog options
   const [isNewAppointmentOpen, setIsNewAppointmentOpen] = useState(false);
+  const [isConflictModalOpen, setIsConflictModalOpen] = useState(false);
+  const [conflictPendingData, setConflictPendingData] = useState<any>(null);
+  const [conflictPassword, setConflictPassword] = useState('');
+  const [conflictError, setConflictError] = useState('');
+  const [isValidatingConflict, setIsValidatingConflict] = useState(false);
   const [newApptPatient, setNewApptPatient] = useState('');
   const [newApptProcedure, setNewApptProcedure] = useState('Limpeza de Pele Profunda');
   const [newApptProfessional, setNewApptProfessional] = useState('Gabi Almeida');
@@ -546,6 +551,18 @@ export default function CRMPage() {
       data: newApptDate
     };
     
+    const hasConflict = appointments.some(a => 
+      a.data === newApptDate && 
+      a.hora === newApptTime && 
+      (!editingAppointment || a.id !== editingAppointment.id)
+    );
+
+    if (hasConflict && !conflictPendingData) {
+      setConflictPendingData(apptData);
+      setIsConflictModalOpen(true);
+      return;
+    }
+    
     try {
       if (editingAppointment) {
         const { error } = await supabase
@@ -577,7 +594,6 @@ export default function CRMPage() {
         if (data && data[0]) {
           setAppointments(prev => [...prev, mapAgendamentoToFrontend(data[0])]);
         }
-        // Dynamic AI insight triggering when an appointment is added
         setAiAdvice(`Dica Gabi Almeida AI: Agendamento agendado às ${newApptTime}. Com isso, sua jornada de ocupação de hoje subiu para ${Math.min(98, 92 + 2)}%. Excelente trabalho de otimização de horário!`);
       }
       setIsNewAppointmentOpen(false);
@@ -585,6 +601,64 @@ export default function CRMPage() {
     } catch (err: any) {
       console.error('Error saving appointment:', err);
       showAlert(`Erro ao salvar na agenda: ${err.message || err}`);
+    }
+  };
+
+  const handleConfirmConflict = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsValidatingConflict(true);
+    setConflictError('');
+    try {
+      if (!currentUser?.username) throw new Error('Usuário não autenticado.');
+      
+      const res = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: currentUser.username, password: conflictPassword })
+      });
+      
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Senha incorreta.');
+      
+      const finalApptData = {
+        ...conflictPendingData,
+        notas: '[CONFLITO] ' + (conflictPendingData.notas || '')
+      };
+      
+      if (editingAppointment) {
+        const { error } = await supabase
+          .from('agendamentos')
+          .update(mapAgendamentoToBackend(finalApptData))
+          .eq('id', editingAppointment.id);
+        if (error) throw error;
+        
+        const updatedAppt = {
+          ...editingAppointment,
+          ...finalApptData
+        };
+        setAppointments(prev => prev.map(a => a.id === editingAppointment.id ? updatedAppt : a));
+        showAlert('Agendamento (em conflito) atualizado com sucesso!');
+      } else {
+        const { data: newData, error } = await supabase
+          .from('agendamentos')
+          .insert([mapAgendamentoToBackend(finalApptData)])
+          .select('*, clientes(id, nome, avatar)');
+        if (error) throw error;
+        if (newData && newData[0]) {
+          setAppointments(prev => [...prev, mapAgendamentoToFrontend(newData[0])]);
+        }
+        setAiAdvice(`Dica Gabi Almeida AI: Agendamento forçado às ${finalApptData.hora}. Cuidado com o choque de horário!`);
+      }
+      
+      setIsNewAppointmentOpen(false);
+      setEditingAppointment(null);
+      setIsConflictModalOpen(false);
+      setConflictPendingData(null);
+      setConflictPassword('');
+    } catch (err: any) {
+      setConflictError(err.message || 'Erro ao validar senha.');
+    } finally {
+      setIsValidatingConflict(false);
     }
   };
 
@@ -1753,7 +1827,9 @@ export default function CRMPage() {
                                       const isConsult = appt.categoria === 'Consulta';
                                       
                                       let cardColorClass = 'bg-surface-container border-outline-variant text-on-surface';
-                                      if (appt.profissional.toLowerCase().includes('ricardo')) {
+                                      if (appt.notas?.includes('[CONFLITO]')) {
+                                        cardColorClass = 'bg-red-600 border-red-800 text-white-pure animate-pulse shadow-md';
+                                      } else if (appt.profissional.toLowerCase().includes('ricardo')) {
                                         cardColorClass = 'bg-blue-50 border-blue-200 text-blue-900';
                                       } else if (appt.profissional.toLowerCase().includes('helena')) {
                                         cardColorClass = 'bg-pink-50 border-pink-200 text-pink-900';
@@ -1899,9 +1975,12 @@ export default function CRMPage() {
                             <div key={idx} className={`p-1.5 space-y-3 ${day.active ? 'bg-primary/[0.01]' : ''}`}>
                               {dayAppts.map(appt => {
                                 const isConsult = appt.categoria === 'Consulta';
-                                const cardClass = isConsult
+                                let cardClass = isConsult
                                   ? 'bg-tertiary-container/10 border-tertiary-container text-tertiary'
                                   : 'bg-secondary-container/10 border-secondary-container text-[#745c00]';
+                                if (appt.notas?.includes('[CONFLITO]')) {
+                                  cardClass = 'bg-red-600 border-red-800 text-white-pure animate-pulse shadow-md';
+                                }
                                 return (
                                   <div 
                                     key={appt.id} 
@@ -5357,6 +5436,60 @@ export default function CRMPage() {
       )}
 
       {/* 7. Novo Agendamento Modal Overlay */}
+      {isConflictModalOpen && (
+        <div className="fixed inset-0 bg-[#31302fd0] backdrop-blur-md flex items-center justify-center z-[60] p-0 sm:p-4 animate-fade-in">
+          <div className="bg-white-pure sm:rounded-3xl border border-red-500 w-full max-w-sm p-6 shadow-2xl relative select-none">
+            <div className="flex flex-col items-center text-center">
+              <div className="w-16 h-16 bg-red-100 text-red-600 rounded-full flex items-center justify-center mb-4">
+                <span className="material-symbols-outlined text-[32px]">warning</span>
+              </div>
+              <h3 className="font-manrope text-[18px] font-bold text-on-surface mb-2">
+                Conflito de Horário
+              </h3>
+              <p className="text-[13px] text-on-surface-variant mb-6">
+                Já existe um agendamento marcado para este mesmo dia e horário. Digite sua senha para liberar a sobreposição.
+              </p>
+              
+              <form onSubmit={handleConfirmConflict} className="w-full space-y-4">
+                <div>
+                  <input 
+                    type="password" 
+                    required
+                    placeholder="Sua senha de acesso" 
+                    value={conflictPassword}
+                    onChange={(e) => setConflictPassword(e.target.value)}
+                    className="w-full bg-surface-container px-4 py-3 rounded-xl border border-outline-variant focus:outline-primary text-center font-bold tracking-widest"
+                  />
+                  {conflictError && <p className="text-red-500 text-[11px] font-bold mt-2">{conflictError}</p>}
+                </div>
+                
+                <div className="flex gap-3 pt-2">
+                  <button 
+                    type="button" 
+                    onClick={() => { 
+                      setIsConflictModalOpen(false);
+                      setConflictPendingData(null);
+                      setConflictPassword('');
+                      setConflictError('');
+                    }}
+                    className="flex-1 py-3 text-[12px] font-bold text-on-surface border border-outline-variant rounded-xl hover:bg-surface transition-all"
+                  >
+                    Cancelar
+                  </button>
+                  <button 
+                    type="submit"
+                    disabled={isValidatingConflict}
+                    className="flex-1 py-3 text-[12px] font-bold text-white-pure bg-red-600 rounded-xl hover:bg-red-700 transition-all shadow-md disabled:opacity-70 flex justify-center items-center"
+                  >
+                    {isValidatingConflict ? <span className="material-symbols-outlined animate-spin">refresh</span> : 'Liberar Vaga'}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
+
       {isNewAppointmentOpen && (
         <div className="fixed inset-0 bg-[#31302fd0] backdrop-blur-md flex items-center justify-center z-50 p-0 sm:p-4 animate-fade-in">
           <div className="bg-white-pure sm:rounded-3xl border border-outline-variant w-full max-w-lg p-5 sm:p-8 shadow-2xl relative h-full sm:h-auto sm:max-h-[90vh] overflow-y-auto select-none">

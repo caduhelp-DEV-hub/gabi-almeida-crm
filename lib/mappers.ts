@@ -166,7 +166,10 @@ export const mapServicoToBackend = (s: Partial<Servico>): Record<string, unknown
   return res;
 };
 
-export const getAppointmentColorClass = (status: string): string => {
+export const getAppointmentColorClass = (status: string, notas: string = ''): string => {
+  if (notas.includes('[CONFLITO]')) {
+    return 'bg-red-600 border-red-800 text-white-pure animate-pulse shadow-md';
+  }
   switch (status) {
     case 'Finalizado':
       return 'bg-emerald-50/90 border-emerald-500 text-emerald-800 hover:bg-emerald-100/90';
