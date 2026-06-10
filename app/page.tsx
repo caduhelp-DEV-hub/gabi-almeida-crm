@@ -29,6 +29,19 @@ import type {
   AppUser
 } from '../lib/types';
 
+const checkTimeOverlap = (time1: string, dur1: number, time2: string, dur2: number) => {
+  if (!time1 || !time2) return false;
+  const t1 = time1.split(':').map(Number);
+  const start1 = t1[0] * 60 + t1[1];
+  const end1 = start1 + dur1;
+
+  const t2 = time2.split(':').map(Number);
+  const start2 = t2[0] * 60 + t2[1];
+  const end2 = start2 + dur2;
+
+  return start1 < end2 && start2 < end1;
+};
+
 export default function CRMPage() {
   // Global Modal State
   const [dialogState, setDialogState] = useState<{isOpen: boolean, type: 'alert' | 'confirm', message: string, onConfirm?: () => void}>({isOpen: false, type: 'alert', message: ''});
@@ -541,6 +554,11 @@ export default function CRMPage() {
   }, [isAuthenticated]);
 
   // Handle new appointment submission
+  const getServiceDuration = (procedureName: string) => {
+    const s = services.find(srv => srv.nome === procedureName);
+    return s ? parseInt(s.duracao) || 30 : 30;
+  };
+
   const handleAddNewAgendamento = async (e: React.FormEvent) => {
     e.preventDefault();
     const selectedPat = patients.find(p => p.nome === newApptPatient);
@@ -556,11 +574,13 @@ export default function CRMPage() {
       data: newApptDate
     };
     
-    const hasConflict = appointments.some(a => 
-      a.data === newApptDate && 
-      a.hora.slice(0, 5) === newApptTime.slice(0, 5) && 
-      (!editingAppointment || a.id !== editingAppointment.id)
-    );
+    const newDur = getServiceDuration(newApptProcedure);
+    const hasConflict = appointments.some(a => {
+      if (a.data !== newApptDate) return false;
+      if (editingAppointment && a.id === editingAppointment.id) return false;
+      const durA = getServiceDuration(a.procedimento);
+      return checkTimeOverlap(a.hora.slice(0, 5), durA, newApptTime.slice(0, 5), newDur);
+    });
 
     if (hasConflict && !conflictPendingData) {
       setConflictPendingData(apptData);
@@ -1832,7 +1852,12 @@ export default function CRMPage() {
                                       const isConsult = appt.categoria === 'Consulta';
                                       
                                       let cardColorClass = 'bg-surface-container border-outline-variant text-on-surface';
-                                      const isConflicted = appointments.some(a => a.id !== appt.id && a.data === appt.data && a.hora.slice(0, 5) === appt.hora.slice(0, 5));
+                                      const durAppt = getServiceDuration(appt.procedimento);
+                                      const isConflicted = appointments.some(a => {
+                                        if (a.id === appt.id || a.data !== appt.data) return false;
+                                        const durA = getServiceDuration(a.procedimento);
+                                        return checkTimeOverlap(a.hora.slice(0, 5), durA, appt.hora.slice(0, 5), durAppt);
+                                      });
                                       if (isConflicted || appt.notas?.includes('[CONFLITO]')) {
                                         cardColorClass = 'bg-red-600 border-red-800 text-white-pure animate-pulse shadow-md';
                                       } else if (appt.profissional.toLowerCase().includes('ricardo')) {
@@ -1984,7 +2009,12 @@ export default function CRMPage() {
                                 let cardClass = isConsult
                                   ? 'bg-tertiary-container/10 border-tertiary-container text-tertiary'
                                   : 'bg-secondary-container/10 border-secondary-container text-[#745c00]';
-                                const isConflicted = appointments.some(a => a.id !== appt.id && a.data === appt.data && a.hora.slice(0, 5) === appt.hora.slice(0, 5));
+                                const durAppt = getServiceDuration(appt.procedimento);
+                                const isConflicted = appointments.some(a => {
+                                  if (a.id === appt.id || a.data !== appt.data) return false;
+                                  const durA = getServiceDuration(a.procedimento);
+                                  return checkTimeOverlap(a.hora.slice(0, 5), durA, appt.hora.slice(0, 5), durAppt);
+                                });
                                 if (isConflicted || appt.notas?.includes('[CONFLITO]')) {
                                   cardClass = 'bg-red-600 border-red-800 text-white-pure animate-pulse shadow-md';
                                 }
