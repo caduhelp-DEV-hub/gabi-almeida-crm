@@ -941,12 +941,21 @@ export default function CRMPage() {
           </button>
 
           <button 
+            id="nav-cadastro-cliente"
+            onClick={() => { setCurrentTab('cadastro-cliente'); setSearchQuery(''); setIsMobileMenuOpen(false); }}
+            className={`flex items-center gap-4 px-4 py-2.5 rounded-xl transition-all duration-300 text-left ${currentTab === 'cadastro-cliente' ? 'text-primary font-bold border-r-4 border-primary bg-primary/10 scale-95' : 'text-on-surface-variant hover:text-primary hover:bg-surface-container'}`}
+          >
+            <span className="material-symbols-outlined text-primary" style={{fontVariationSettings: currentTab === 'cadastro-cliente' ? "'FILL' 1" : "'FILL' 0"}}>person_add</span>
+            <span className="font-manrope text-[14px] leading-none text-primary">Cadastro de Clientes</span>
+          </button>
+
+          <button 
             id="nav-clientes"
             onClick={() => { setCurrentTab('clientes'); setSearchQuery(''); setIsMobileMenuOpen(false); }}
             className={`flex items-center gap-4 px-4 py-2.5 rounded-xl transition-all duration-300 text-left ${currentTab === 'clientes' ? 'text-primary font-bold border-r-4 border-primary bg-primary/10 scale-95' : 'text-on-surface-variant hover:text-primary hover:bg-surface-container'}`}
           >
             <span className="material-symbols-outlined text-primary" style={{fontVariationSettings: currentTab === 'clientes' ? "'FILL' 1" : "'FILL' 0"}}>group</span>
-            <span className="font-manrope text-[14px] leading-none text-primary">Clientes</span>
+            <span className="font-manrope text-[14px] leading-none text-primary">Prontuário (CRM)</span>
           </button>
 
           <button 
