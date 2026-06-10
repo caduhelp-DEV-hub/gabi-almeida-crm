@@ -558,7 +558,7 @@ export default function CRMPage() {
     
     const hasConflict = appointments.some(a => 
       a.data === newApptDate && 
-      a.hora === newApptTime && 
+      a.hora.slice(0, 5) === newApptTime.slice(0, 5) && 
       (!editingAppointment || a.id !== editingAppointment.id)
     );
 
@@ -1832,7 +1832,7 @@ export default function CRMPage() {
                                       const isConsult = appt.categoria === 'Consulta';
                                       
                                       let cardColorClass = 'bg-surface-container border-outline-variant text-on-surface';
-                                      const isConflicted = appointments.some(a => a.id !== appt.id && a.data === appt.data && a.hora === appt.hora);
+                                      const isConflicted = appointments.some(a => a.id !== appt.id && a.data === appt.data && a.hora.slice(0, 5) === appt.hora.slice(0, 5));
                                       if (isConflicted || appt.notas?.includes('[CONFLITO]')) {
                                         cardColorClass = 'bg-red-600 border-red-800 text-white-pure animate-pulse shadow-md';
                                       } else if (appt.profissional.toLowerCase().includes('ricardo')) {
@@ -1984,7 +1984,7 @@ export default function CRMPage() {
                                 let cardClass = isConsult
                                   ? 'bg-tertiary-container/10 border-tertiary-container text-tertiary'
                                   : 'bg-secondary-container/10 border-secondary-container text-[#745c00]';
-                                const isConflicted = appointments.some(a => a.id !== appt.id && a.data === appt.data && a.hora === appt.hora);
+                                const isConflicted = appointments.some(a => a.id !== appt.id && a.data === appt.data && a.hora.slice(0, 5) === appt.hora.slice(0, 5));
                                 if (isConflicted || appt.notas?.includes('[CONFLITO]')) {
                                   cardClass = 'bg-red-600 border-red-800 text-white-pure animate-pulse shadow-md';
                                 }
