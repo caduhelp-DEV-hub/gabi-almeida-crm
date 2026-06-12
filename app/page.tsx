@@ -15,6 +15,10 @@ import {
   mapAgendamentoToBackend,
   mapInventoryToFrontend,
   mapInventoryToBackend,
+  mapServicoToFrontend,
+  mapServicoToBackend,
+  mapCobrancaToFrontend,
+  mapCobrancaToBackend,
   getAppointmentColorClass
 } from '../lib/mappers';
 import type {
@@ -491,8 +495,8 @@ export default function CRMPage() {
         setAppointments(validAppts.map(mapAgendamentoToFrontend));
       }
 
-      if (trans) setTransactions(trans as Cobranca[]);
-      if (servs) setServices(servs as Servico[]);
+      if (trans) setTransactions(trans.map(mapCobrancaToFrontend));
+      if (servs) setServices(servs.map(mapServicoToFrontend));
       if (inv) setInventory(inv.map(mapInventoryToFrontend));
       if (usrs) setAppUsers(usrs.map(mapUserToFrontend));
       
@@ -535,10 +539,10 @@ export default function CRMPage() {
         }
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'cobrancas' }, () => {
-        supabase.from('cobrancas').select('*').then((res: any) => { const data = res.data; if (data) setTransactions(data as Cobranca[]); });
+        supabase.from('cobrancas').select('*').then((res: any) => { const data = res.data; if (data) setTransactions(data.map(mapCobrancaToFrontend)); });
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'servicos' }, () => {
-        supabase.from('servicos').select('*').then((res: any) => { const data = res.data; if (data) setServices(data as Servico[]); });
+        supabase.from('servicos').select('*').then((res: any) => { const data = res.data; if (data) setServices(data.map(mapServicoToFrontend)); });
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'inventory' }, () => {
         supabase.from('inventory').select('*').then((res: any) => { const data = res.data; if (data) setInventory(data.map(mapInventoryToFrontend)); });
@@ -860,10 +864,40 @@ export default function CRMPage() {
     window.print();
   };
 
-  const fileToBase64 = (file: File): Promise<string> =>
+  const fileToBase64 = (file: File, maxWidth: number = 1200): Promise<string> =>
     new Promise((resolve, reject) => {
       const reader = new FileReader();
-      reader.onload = () => resolve(reader.result as string);
+      reader.onload = (e) => {
+        if (!e.target?.result) return reject('Failed to read file');
+        if (typeof e.target.result !== 'string') return reject('Invalid file type');
+        
+        // If it's a PDF or non-image, skip compression
+        if (!file.type.startsWith('image/')) {
+          return resolve(e.target.result);
+        }
+
+        const img = new window.Image();
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          let width = img.width;
+          let height = img.height;
+          
+          if (width > maxWidth) {
+            height = Math.round((height * maxWidth) / width);
+            width = maxWidth;
+          }
+          
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          if (!ctx) return resolve(e.target?.result as string);
+          
+          ctx.drawImage(img, 0, 0, width, height);
+          resolve(canvas.toDataURL('image/jpeg', 0.8));
+        };
+        img.onerror = () => resolve(e.target?.result as string);
+        img.src = e.target.result;
+      };
       reader.onerror = reject;
       reader.readAsDataURL(file);
     });
@@ -5257,21 +5291,21 @@ export default function CRMPage() {
                 if(editingService) {
                   const { data, error } = await supabase
                     .from('servicos')
-                    .update({ name, category, duration, price })
+                    .update(mapServicoToBackend({ nome: name, categoria: category, duracao: duration, preco: price }))
                     .eq('id', editingService.id)
                     .select();
                   if (error) throw error;
                   if (data && data[0]) {
-                    setServices(prev => prev.map(s => s.id === editingService.id ? data[0] : s));
+                    setServices(prev => prev.map(s => s.id === editingService.id ? mapServicoToFrontend(data[0]) : s));
                   }
                 } else {
                   const { data, error } = await supabase
                     .from('servicos')
-                    .insert([{ name, category, duration, price }])
+                    .insert([mapServicoToBackend({ nome: name, categoria: category, duracao: duration, preco: price })])
                     .select();
                   if (error) throw error;
                   if (data && data[0]) {
-                    setServices(prev => [...prev, data[0]]);
+                    setServices(prev => [...prev, mapServicoToFrontend(data[0])]);
                   }
                 }
                 setIsServiceModalOpen(false);
@@ -5413,21 +5447,21 @@ export default function CRMPage() {
                 if(editingCobranca) {
                   const { data: result, error } = await supabase
                     .from('cobrancas')
-                    .update({ descricao, data, categoria, status, valor })
+                    .update(mapCobrancaToBackend({ descricao, data, categoria, status, valor }))
                     .eq('id', editingCobranca.id)
                     .select();
                   if (error) throw error;
                   if (result && result[0]) {
-                    setTransactions(prev => prev.map(t => t.id === editingCobranca.id ? result[0] : t));
+                    setTransactions(prev => prev.map(t => t.id === editingCobranca.id ? mapCobrancaToFrontend(result[0]) : t));
                   }
                 } else {
                   const { data: result, error } = await supabase
                     .from('cobrancas')
-                    .insert([{ descricao, data, categoria, status, valor }])
+                    .insert([mapCobrancaToBackend({ descricao, data, categoria, status, valor })])
                     .select();
                   if (error) throw error;
                   if (result && result[0]) {
-                    setTransactions(prev => [...prev, result[0]]);
+                    setTransactions(prev => [...prev, mapCobrancaToFrontend(result[0])]);
                   }
                 }
                 setIsTransactionModalOpen(false);
