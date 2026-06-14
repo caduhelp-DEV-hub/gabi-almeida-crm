@@ -3268,9 +3268,9 @@ export default function CRMPage() {
                         const { error } = await supabase
                           .from('clientes')
                           .update({
-                            allergies: allergiesStr,
-                            medications: medicationsStr,
-                            previous_procedures: prevProceduresStr,
+                            alergias: allergiesStr,
+                            medicacoes: medicationsStr,
+                            procedimentos_anteriores: prevProceduresStr,
                             documents: updatedDocs,
                             historico: updatedTimeline
                           })
@@ -3283,9 +3283,9 @@ export default function CRMPage() {
                           if (p.id === selectedPatient.id) {
                             return {
                               ...p,
-                              allergies: allergiesStr,
-                              medications: medicationsStr,
-                              previousProcedures: prevProceduresStr,
+                              alergias: allergiesStr,
+                              medicacoes: medicationsStr,
+                              procedimentosAnteriores: prevProceduresStr,
                               historico: updatedTimeline
                             };
                           }
