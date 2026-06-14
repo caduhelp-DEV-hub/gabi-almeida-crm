@@ -199,7 +199,6 @@ export default function CRMPage() {
   }, []);
 
   // Search state (unified search experience across views)
-  const [searchQuery, setSearchQuery] = useState('');
   
   // Current logged in medical professional representation
   const [currentProfessional, setCurrentProfessional] = useState<{name: string; role: string; avatar: string}>({
@@ -1010,11 +1009,29 @@ export default function CRMPage() {
     }
   };
 
-  // Filter patients by search query
+  // Search state (unified search experience across views)
+  const [searchQuery, setSearchQuery] = useState('');
+  
+  // Clientes Tab specific state
+  const [clientesSearchQuery, setClientesSearchQuery] = useState('');
+  const [clientesSortOrder, setClientesSortOrder] = useState<'asc' | 'desc'>('asc');
+
+  // Filter patients by global search query
   const filteredPatients = patients.filter(p => 
     p.nome.toLowerCase().includes(searchQuery.toLowerCase()) ||
     p.status.toLowerCase().includes(searchQuery.toLowerCase())
   );
+
+  // Filter and sort patients specifically for the Clientes tab
+  const clientesTabPatients = patients
+    .filter(p => 
+      p.nome.toLowerCase().includes(clientesSearchQuery.toLowerCase()) ||
+      p.status.toLowerCase().includes(clientesSearchQuery.toLowerCase())
+    )
+    .sort((a, b) => {
+      const cmp = a.nome.localeCompare(b.nome);
+      return clientesSortOrder === 'asc' ? cmp : -cmp;
+    });
 
   // Filter transactions by search query
   const filteredTransactions = transactions.filter(t =>
@@ -1156,7 +1173,7 @@ export default function CRMPage() {
 
   if (isAuthenticated && isInitialLoading) {
     return (
-      <div className="bg-surface-container-lowest h-screen w-full flex flex-col items-center justify-center relative select-none">
+      <div className="bg-surface-container-lowest h-[100dvh] w-full flex flex-col items-center justify-center relative select-none">
         <div className="flex flex-col items-center animate-fade-in">
           <span className="material-symbols-outlined text-primary text-[60px] mb-6 animate-spin" style={{ animationDuration: '3s' }}>schedule</span>
           <h2 className="font-manrope text-2xl font-black text-on-surface uppercase tracking-tight">Carregando CRM</h2>
@@ -1168,7 +1185,7 @@ export default function CRMPage() {
 
   if (!isAuthenticated) {
     return (
-      <div className="bg-surface-container-lowest text-on-surface font-sans h-screen flex flex-col items-center justify-center p-4 relative" style={{backgroundImage: 'radial-gradient(circle at top, rgba(163,34,216,0.05), transparent 60%)'}}>
+      <div className="bg-surface-container-lowest text-on-surface font-sans h-[100dvh] flex flex-col items-center justify-center p-4 relative" style={{backgroundImage: 'radial-gradient(circle at top, rgba(163,34,216,0.05), transparent 60%)'}}>
         <div className="max-w-md w-full bg-white-pure rounded-3xl p-10 border border-outline-variant/60 shadow-xl relative z-10 flex flex-col items-center">
            <div className="w-16 h-16 bg-primary/10 text-primary rounded-full flex items-center justify-center mb-6">
              <span className="material-symbols-outlined text-3xl">spa</span>
@@ -1227,7 +1244,7 @@ export default function CRMPage() {
               <span>Acesso seguro. Todos os dados são criptografados.</span>
               <span>© 2026 Gabi Almeida Estética.</span>
               <span>Desenvolvido: caduhelp-dev</span>
-              <span>Ver. 2.1</span>
+              <span>Ver. 2.3</span>
             </div>
         </div>
       </div>
@@ -1490,8 +1507,8 @@ export default function CRMPage() {
             id="sidebar-new-appointment"
             onClick={() => {
               setEditingAppointment(null);
-              setNewApptPatient(patients[0]?.nome || '');
-              setNewApptProcedure(services[0]?.nome || '');
+              setNewApptPatient('');
+              setNewApptProcedure('');
               setNewApptTime('09:00');
               setNewApptDate(new Date().toISOString().split('T')[0]);
               setIsNewAppointmentOpen(true);
@@ -2135,8 +2152,8 @@ export default function CRMPage() {
                       <button
                         onClick={() => {
                           setEditingAppointment(null);
-                          setNewApptPatient(patients[0]?.nome || '');
-                          setNewApptProcedure(services[0]?.nome || '');
+                          setNewApptPatient('');
+                          setNewApptProcedure('');
                           setNewApptTime('09:00');
                           setNewApptDate(`${agendaNavDate.getFullYear()}-${String(agendaNavDate.getMonth() + 1).padStart(2, '0')}-${String(agendaNavDate.getDate()).padStart(2, '0')}`);
                           setIsNewAppointmentOpen(true);
@@ -2299,8 +2316,8 @@ export default function CRMPage() {
                                       <button 
                                         onClick={() => {
                                           setEditingAppointment(null);
-                                          setNewApptPatient(patients[0]?.nome || '');
-                                          setNewApptProcedure(services[0]?.nome || '');
+                                          setNewApptPatient('');
+                                          setNewApptProcedure('');
                                           setNewApptTime(formattedHour);
                                           setNewApptDate(dateStr);
                                           setIsNewAppointmentOpen(true);
@@ -2497,8 +2514,8 @@ export default function CRMPage() {
                                   const formattedMonth = String(agendaNavDate.getMonth() + 1).padStart(2, '0');
                                   const dateStr = `${agendaNavDate.getFullYear()}-${formattedMonth}-${formattedDay}`;
                                   setEditingAppointment(null);
-                                  setNewApptPatient(patients[0]?.nome || '');
-                                  setNewApptProcedure(services[0]?.nome || '');
+                                  setNewApptPatient('');
+                                  setNewApptProcedure('');
                                   setNewApptTime('10:00');
                                   setNewApptDate(dateStr);
                                   setIsNewAppointmentOpen(true);
@@ -2670,16 +2687,40 @@ export default function CRMPage() {
             
             {/* Master Cliente List Column */}
             <div className={`w-full lg:w-80 lg:flex-shrink-0 border-b lg:border-b-0 lg:border-r border-outline-variant bg-white-pure flex-col overflow-hidden z-10 transition-all print-hidden ${selectedPatientId ? 'hidden lg:flex flex-1 lg:h-auto' : 'flex flex-1 lg:h-auto'}`}>
-              <div className="p-4 lg:p-6 flex justify-between items-center border-b border-outline-variant/60">
-                <h2 className="font-manrope text-headline-md text-primary font-bold text-[18px]" id="patients-module-title">Clientes</h2>
-                <span className="bg-surface-container text-primary px-3 py-1 rounded-full text-[11px] font-bold font-manrope">
-                  {filteredPatients.length} Ativos
-                </span>
+              <div className="p-4 lg:p-6 flex flex-col gap-3 border-b border-outline-variant/60">
+                <div className="flex justify-between items-center">
+                  <h2 className="font-manrope text-headline-md text-primary font-bold text-[18px]" id="patients-module-title">Clientes</h2>
+                  <span className="bg-surface-container text-primary px-3 py-1 rounded-full text-[11px] font-bold font-manrope">
+                    {clientesTabPatients.length} Ativos
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="flex-1 relative">
+                    <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[18px] text-on-surface-variant">search</span>
+                    <input 
+                      type="text"
+                      placeholder="Buscar cliente..."
+                      value={clientesSearchQuery}
+                      onChange={(e) => setClientesSearchQuery(e.target.value)}
+                      className="w-full bg-surface-container border border-outline-variant rounded-xl pl-10 pr-4 py-2 text-[13px] text-on-surface focus:outline-none focus:border-primary transition-colors"
+                    />
+                  </div>
+                  <button 
+                    onClick={() => setClientesSortOrder(prev => prev === 'asc' ? 'desc' : 'asc')}
+                    className="p-2 border border-outline-variant rounded-xl bg-surface hover:bg-surface-container-highest transition-colors flex items-center justify-center shrink-0"
+                    title={clientesSortOrder === 'asc' ? "Ordem Crescente (A-Z)" : "Ordem Decrescente (Z-A)"}
+                  >
+                    <span className="material-symbols-outlined text-[18px] text-primary">
+                      {clientesSortOrder === 'asc' ? 'arrow_downward' : 'arrow_upward'}
+                    </span>
+                    <span className="text-[11px] font-bold ml-1 text-primary">{clientesSortOrder === 'asc' ? 'A-Z' : 'Z-A'}</span>
+                  </button>
+                </div>
               </div>
 
               {/* Cliente items list wrapper */}
               <div className="flex-1 overflow-y-auto custom-scrollbar">
-                {filteredPatients.map(patient => (
+                {clientesTabPatients.map(patient => (
                   <div 
                     key={patient.id}
                     onClick={() => { setSelectedPatientId(patient.id); setSignatureSaved(false); }}
@@ -5048,6 +5089,18 @@ export default function CRMPage() {
                 <div className="space-y-4">
                   <h3 className="text-[14px] font-bold text-primary border-b border-outline-variant/30 pb-2">Histórico de Versões (Changelog)</h3>
                   
+                  <div className="bg-surface-container-lowest rounded-2xl p-4 border border-outline-variant/50 mb-4">
+                    <div className="flex justify-between items-center mb-2">
+                      <span className="font-bold text-[14px] text-on-surface">Versão 2.3.0</span>
+                      <span className="text-[11px] font-bold text-on-surface-variant px-2 py-1 bg-surface-container rounded-lg">Junho 2026</span>
+                    </div>
+                    <ul className="list-disc pl-5 space-y-1.5 text-[13px] text-on-surface-variant mt-3">
+                      <li><strong className="text-on-surface">Correção de UX:</strong> Corrigido erro onde modais de agendamento puxavam o primeiro cliente/procedimento da lista ao abrir, forçando agora a seleção manual e evitando agendamentos trocados.</li>
+                      <li><strong className="text-on-surface">Lista de Clientes:</strong> Adicionada busca rápida e botão de ordem alfabética (Crescente/Decrescente) exclusivos para gerenciamento da carteira de clientes.</li>
+                      <li><strong className="text-on-surface">Responsividade (Mobile):</strong> Otimização da altura de tela usando dimensões dinâmicas (100dvh) para evitar corte de conteúdo no Safari e Chrome de celulares, ajustado os agrupamentos em modais.</li>
+                    </ul>
+                  </div>
+
                   <div className="bg-surface-container-lowest rounded-2xl p-4 border border-outline-variant/50 mb-4">
                     <div className="flex justify-between items-center mb-2">
                       <span className="font-bold text-[14px] text-on-surface">Versão 2.1.0</span>
