@@ -4679,9 +4679,9 @@ export default function CRMPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {mensagensPredefinidas.map(msg => (
                   <div key={msg.id} className="bg-white-pure rounded-3xl p-5 border border-outline-variant space-y-3 relative group">
-                    <div className="absolute top-4 right-4 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <button onClick={() => { setEditingMsg(msg); setIsMsgModalOpen(true); }} className="text-on-surface-variant hover:text-primary"><span className="material-symbols-outlined text-[16px]">edit</span></button>
-                      <button onClick={() => deleteMsgPredefinida(msg.id)} className="text-on-surface-variant hover:text-error"><span className="material-symbols-outlined text-[16px]">delete</span></button>
+                    <div className="absolute top-4 right-4 flex gap-2">
+                      <button onClick={() => { setEditingMsg(msg); setIsMsgModalOpen(true); }} className="text-on-surface-variant hover:text-primary transition-transform active:scale-90 hover:scale-110 p-1"><span className="material-symbols-outlined text-[20px]">edit</span></button>
+                      <button onClick={() => deleteMsgPredefinida(msg.id)} className="text-on-surface-variant hover:text-error transition-transform active:scale-90 hover:scale-110 p-1"><span className="material-symbols-outlined text-[20px]">delete</span></button>
                     </div>
                     <h3 className="font-bold text-[15px] text-primary pr-12">{msg.title}</h3>
                     <p className="text-[12px] text-on-surface-variant italic whitespace-pre-wrap">{msg.content}</p>
