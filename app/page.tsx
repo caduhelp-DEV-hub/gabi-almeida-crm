@@ -46,6 +46,37 @@ const checkTimeOverlap = (time1: string, dur1: number, time2: string, dur2: numb
   return start1 < end2 && start2 < end1;
 };
 
+// Helpers for dynamic styling
+const getProcedureStyles = (procName: string) => {
+  if (!procName) return { bg: 'hsl(0, 0%, 96%)', border: 'hsl(0, 0%, 85%)', text: 'hsl(0, 0%, 20%)', icon: 'spa' };
+  
+  const mainProc = procName.split(' + ')[0];
+  const nameLower = mainProc.toLowerCase();
+  
+  let icon = 'spa';
+  if (nameLower.includes('limpeza') || nameLower.includes('rosto') || nameLower.includes('facial')) icon = 'face_retouching_natural';
+  else if (nameLower.includes('cílio') || nameLower.includes('cilio') || nameLower.includes('sobrancelha') || nameLower.includes('design')) icon = 'visibility';
+  else if (nameLower.includes('unha') || nameLower.includes('manicure') || nameLower.includes('pedicure') || nameLower.includes('pé') || nameLower.includes('mão')) icon = 'back_hand';
+  else if (nameLower.includes('cabelo') || nameLower.includes('corte') || nameLower.includes('escova')) icon = 'content_cut';
+  else if (nameLower.includes('massagem') || nameLower.includes('drenagem')) icon = 'self_improvement';
+  else if (nameLower.includes('laser') || nameLower.includes('depilação')) icon = 'flash_on';
+  else if (nameLower.includes('botox') || nameLower.includes('preenchimento') || nameLower.includes('enzima')) icon = 'vaccines';
+  else if (nameLower.includes('maquiagem')) icon = 'brush';
+
+  let hash = 0;
+  for (let i = 0; i < mainProc.length; i++) {
+    hash = mainProc.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  const hue = Math.abs(hash) % 360;
+  
+  return {
+    bg: `hsl(${hue}, 80%, 94%)`,
+    border: `hsl(${hue}, 80%, 85%)`,
+    text: `hsl(${hue}, 90%, 25%)`,
+    icon
+  };
+};
+
 export default function CRMPage() {
   // Global Modal State
   const [dialogState, setDialogState] = useState<{isOpen: boolean, type: 'alert' | 'confirm', message: string, onConfirm?: () => void}>({isOpen: false, type: 'alert', message: ''});
@@ -212,7 +243,7 @@ export default function CRMPage() {
   const [conflictError, setConflictError] = useState('');
   const [isValidatingConflict, setIsValidatingConflict] = useState(false);
   const [newApptPatient, setNewApptPatient] = useState('');
-  const [newApptProcedure, setNewApptProcedure] = useState('Limpeza de Pele Profunda');
+  const [newApptProcedure, setNewApptProcedure] = useState('');
   const [newApptProfessional, setNewApptProfessional] = useState('Gabi Almeida');
   const [newApptTime, setNewApptTime] = useState('09:00');
   const [newApptDate, setNewApptDate] = useState(new Date().toISOString().split('T')[0]);
@@ -662,8 +693,14 @@ export default function CRMPage() {
 
   // Handle new appointment submission
   const getServiceDuration = (procedureName: string) => {
-    const s = services.find(srv => srv.nome === procedureName);
-    return s ? parseInt(s.duracao) || 30 : 30;
+    if (!procedureName) return 30;
+    const names = procedureName.split(' + ');
+    let totalDur = 0;
+    names.forEach(name => {
+      const s = services.find(srv => srv.nome.trim() === name.trim());
+      totalDur += s ? parseInt(s.duracao) || 30 : 30;
+    });
+    return totalDur > 0 ? totalDur : 30;
   };
 
   const handleAddNewAgendamento = async (e: React.FormEvent) => {
@@ -2147,22 +2184,14 @@ export default function CRMPage() {
                                     hourAppts.map((appt, i) => {
                                       const isConsult = appt.categoria === 'Consulta';
                                       
-                                      let cardColorClass = 'bg-surface-container border-outline-variant text-on-surface z-20';
-                                      const durAppt = getServiceDuration(appt.procedimento);
-                                      const apptIndex = appointments.findIndex(a => a.id === appt.id);
-                                      const isConflicted = appointments.some((a, idx) => {
-                                        if (idx >= apptIndex || a.data !== appt.data) return false;
-                                        const durA = getServiceDuration(a.procedimento);
-                                        return checkTimeOverlap(a.hora.slice(0, 5), durA, appt.hora.slice(0, 5), durAppt);
-                                      });
+                                      const styles = getProcedureStyles(appt.procedimento);
+                                      let dynamicStyle: any = { top: `${topPx}px`, height: `${Math.max(heightPx, 40)}px`, left: '8px', right: '8px' };
+                                      let cardColorClass = 'z-20 border-l-4 shadow-sm hover:shadow-md transition-all cursor-pointer absolute p-1.5 sm:p-2 rounded-xl flex flex-col gap-0.5 overflow-hidden text-[10px] sm:text-[11px] leading-tight';
+                                      
                                       if (isConflicted || appt.notas?.includes('[CONFLITO]')) {
-                                        cardColorClass = 'bg-red-600 border-red-800 text-white-pure shadow-xl z-30 scale-[0.98] origin-left';
-                                      } else if (appt.profissional.toLowerCase().includes('ricardo')) {
-                                        cardColorClass = 'bg-blue-50 border-blue-200 text-blue-900 z-20';
-                                      } else if (appt.profissional.toLowerCase().includes('helena')) {
-                                        cardColorClass = 'bg-pink-50 border-pink-200 text-pink-900';
+                                        cardColorClass += ' bg-red-600 border-red-800 text-white-pure shadow-xl z-30 scale-[0.98] origin-left';
                                       } else {
-                                        cardColorClass = 'bg-purple-50 border-purple-200 text-purple-900 z-20';
+                                        dynamicStyle = { ...dynamicStyle, backgroundColor: styles.bg, borderColor: styles.border, color: styles.text };
                                       }
 
                                       const badgeBg = appt.status === 'Finalizado' 
@@ -2176,12 +2205,14 @@ export default function CRMPage() {
                                       const startMinute = parseInt(appt.hora.split(':')[1] || '0');
                                       const topPx = (startMinute / 60) * 90;
                                       const heightPx = (durAppt / 60) * 90;
+                                      dynamicStyle.top = `${topPx}px`;
+                                      dynamicStyle.height = `${Math.max(heightPx, 45)}px`;
 
                                       return (
                                         <div 
                                           key={appt.id} 
-                                          style={{ top: `${topPx}px`, height: `${Math.max(heightPx, 40)}px`, left: '8px', right: '8px' }}
-                                          className={`absolute p-2 rounded-xl border border-l-4 shadow-sm flex flex-col gap-0.5 overflow-hidden hover:shadow-md transition-all cursor-pointer ${cardColorClass}`}
+                                          style={dynamicStyle}
+                                          className={cardColorClass}
                                           onClick={(e) => {
                                              e.stopPropagation();
                                              const client = patients.find(p => p.nome.toLowerCase() === appt.clienteNome.toLowerCase() || p.id === appt.clienteId);
@@ -2203,16 +2234,16 @@ export default function CRMPage() {
                                             </span>
                                           </div>
 
-                                          <p className="text-[13px] font-bold mt-1 flex items-center gap-1.5">
-                                            <span className="material-symbols-outlined text-[16px]">person</span>
-                                            {appt.clienteNome}
+                                          <p className="text-[11px] sm:text-[13px] font-bold mt-0.5 sm:mt-1 flex items-start gap-1.5">
+                                            <span className="material-symbols-outlined text-[14px] sm:text-[16px]">person</span>
+                                            <span className="line-clamp-2">{appt.clienteNome}</span>
                                           </p>
 
-                                          <p className="text-[12px] font-medium flex items-center gap-1.5 opacity-90">
-                                            <span className="material-symbols-outlined text-[15px]">
-                                              {isConsult ? 'event_note' : 'spa'}
+                                          <p className="text-[10px] sm:text-[12px] font-medium flex items-start gap-1.5 opacity-90 leading-tight">
+                                            <span className="material-symbols-outlined text-[12px] sm:text-[15px] shrink-0 mt-0.5">
+                                              {styles.icon}
                                             </span>
-                                            {appt.procedimento}
+                                            <span className="line-clamp-2">{appt.procedimento}</span>
                                           </p>
 
                                           <div className="flex gap-2 justify-end mt-1 pt-2 border-t border-black/5 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -2307,10 +2338,10 @@ export default function CRMPage() {
                           return (
                             <div key={idx} className={`p-1.5 space-y-3 ${day.active ? 'bg-primary/[0.01]' : ''}`}>
                               {dayAppts.map(appt => {
-                                const isConsult = appt.categoria === 'Consulta';
-                                let cardClass = isConsult
-                                  ? 'bg-tertiary-container/10 border-tertiary-container text-tertiary'
-                                  : 'bg-secondary-container/10 border-secondary-container text-[#745c00]';
+                                const styles = getProcedureStyles(appt.procedimento);
+                                let cardClass = 'border-l-4 p-2 rounded-lg relative hover:shadow-sm transition-all cursor-pointer leading-tight';
+                                let dynamicStyle: any = {};
+                                
                                 const durAppt = getServiceDuration(appt.procedimento);
                                 const apptIndex = appointments.findIndex(a => a.id === appt.id);
                                 const isConflicted = appointments.some((a, idx) => {
@@ -2319,7 +2350,9 @@ export default function CRMPage() {
                                   return checkTimeOverlap(a.hora.slice(0, 5), durA, appt.hora.slice(0, 5), durAppt);
                                 });
                                 if (isConflicted || appt.notas?.includes('[CONFLITO]')) {
-                                  cardClass = 'bg-red-600 border-red-800 text-white-pure animate-pulse shadow-md';
+                                  cardClass += ' bg-red-600 border-red-800 text-white-pure animate-pulse shadow-md';
+                                } else {
+                                  dynamicStyle = { backgroundColor: styles.bg, borderColor: styles.border, color: styles.text };
                                 }
                                 return (
                                   <div 
@@ -2328,11 +2361,15 @@ export default function CRMPage() {
                                       setNewApptDate(day.dateString);
                                       setAgendaView('diaria');
                                     }}
-                                    className={`border-l-2 p-2 rounded-lg relative hover:shadow-sm transition-all cursor-pointer ${cardClass}`}
+                                    className={cardClass}
+                                    style={dynamicStyle}
                                   >
-                                    <p className="text-[8px] text-outline font-bold">{appt.hora}</p>
-                                    <p className="font-manrope text-[11px] font-extrabold text-on-surface truncate">{appt.clienteNome}</p>
-                                    <p className="text-[9px] text-on-surface-variant truncate">{appt.procedimento}</p>
+                                    <p className="text-[9px] font-bold opacity-80">{appt.hora} ({durAppt}m)</p>
+                                    <p className="font-manrope text-[11px] font-extrabold mt-0.5 line-clamp-2">{appt.clienteNome}</p>
+                                    <p className="text-[10px] opacity-90 line-clamp-2 flex items-start gap-1 mt-0.5">
+                                      <span className="material-symbols-outlined text-[12px] shrink-0 mt-0.5">{styles.icon}</span>
+                                      <span>{appt.procedimento}</span>
+                                    </p>
                                   </div>
                                 );
                               })}
@@ -6069,24 +6106,44 @@ export default function CRMPage() {
 
               {/* Procedure */}
               <div className="space-y-1.5">
-                <label className="font-bold text-on-surface-variant">Procedimento</label>
-                <select
-                  value={newApptProcedure}
-                  onChange={(e) => {
-                     setNewApptProcedure(e.target.value);
-                     const sel = services.find(s => s.nome === e.target.value);
-                     if(sel) {
-                       setNewApptCategory(sel.categoria as any);
-                     }
-                  }}
-                  className="w-full p-2.5 bg-surface rounded-xl border border-outline-variant/60 focus:outline-none focus:ring-1 focus:ring-primary/40 text-[13px] font-medium custom-select-arrow"
-                  required
-                >
-                  <option value="" disabled>Selecione um procedimento...</option>
-                  {services.slice().sort((a,b) => a.nome.localeCompare(b.nome)).map(s => (
-                    <option key={s.id} value={s.nome}>{s.nome} (R$ {s.preco})</option>
-                  ))}
-                </select>
+                <div className="flex justify-between items-center">
+                  <label className="font-bold text-on-surface-variant">Procedimento</label>
+                  <button type="button" onClick={() => setNewApptProcedure(prev => prev ? prev + ' + ' : '')} className="text-[10px] bg-primary/10 text-primary px-2 py-0.5 rounded-lg font-bold hover:bg-primary/20 transition-colors flex items-center gap-1">
+                    <span className="material-symbols-outlined text-[14px]">add</span> Adicionar
+                  </button>
+                </div>
+                {(newApptProcedure.split(' + ').length === 0 ? [''] : newApptProcedure.split(' + ')).map((proc, index, arr) => (
+                  <div key={index} className="flex items-center gap-2 mt-2 first:mt-0">
+                    <select
+                      value={proc}
+                      onChange={(e) => {
+                         const newArr = [...arr];
+                         newArr[index] = e.target.value;
+                         setNewApptProcedure(newArr.join(' + '));
+                         const sel = services.find(s => s.nome === e.target.value);
+                         if(index === 0 && sel) {
+                           setNewApptCategory(sel.categoria as any);
+                         }
+                      }}
+                      className="flex-1 p-2.5 bg-surface rounded-xl border border-outline-variant/60 focus:outline-none focus:ring-1 focus:ring-primary/40 text-[13px] font-medium custom-select-arrow"
+                      required
+                    >
+                      <option value="" disabled>Selecione um procedimento...</option>
+                      {services.slice().sort((a,b) => a.nome.localeCompare(b.nome)).map(s => (
+                        <option key={s.id} value={s.nome}>{s.nome} (R$ {s.preco})</option>
+                      ))}
+                    </select>
+                    {arr.length > 1 && (
+                      <button type="button" onClick={() => {
+                        const newArr = [...arr];
+                        newArr.splice(index, 1);
+                        setNewApptProcedure(newArr.join(' + '));
+                      }} className="p-2 text-error hover:bg-error/10 rounded-xl transition-colors shrink-0">
+                        <span className="material-symbols-outlined text-[18px]">close</span>
+                      </button>
+                    )}
+                  </div>
+                ))}
               </div>
 
               {/* Professional, Date and Time grid */}
