@@ -1367,11 +1367,17 @@ export default function CRMPage() {
                   <p className="font-manrope text-[14px] text-on-surface font-bold leading-none">{currentUser?.name}</p>
                   <p className="text-[10px] text-on-surface-variant uppercase tracking-wider font-semibold mt-1">{currentUser?.role}</p>
                 </div>
-                <Image width={500} height={500} unoptimized 
-                  alt="Perfil" 
-                  className="w-10 h-10 rounded-full object-cover border-2 border-primary/20 transition-all hover:border-primary" 
-                  src={currentUser?.avatar || `https://api.dicebear.com/7.x/notionists/svg?seed=${(currentUser?.name || 'User').replace(/\s+/g, '')}`} sizes="(max-width: 768px) 100vw, 500px"
-                />
+                {currentUser?.avatar && !currentUser.avatar.includes('dicebear') ? (
+                  <Image width={500} height={500} unoptimized 
+                    alt="Perfil" 
+                    className="w-10 h-10 rounded-full object-cover border-2 border-primary/20 transition-all hover:border-primary shrink-0" 
+                    src={currentUser.avatar} sizes="(max-width: 768px) 100vw, 500px"
+                  />
+                ) : (
+                  <div className="w-10 h-10 rounded-full border-2 border-primary/20 bg-surface flex items-center justify-center text-primary font-bold shrink-0">
+                    {(currentUser?.name || 'U').charAt(0).toUpperCase()}
+                  </div>
+                )}
               </div>
               
               {isProfileMenuOpen && (
@@ -1582,8 +1588,8 @@ export default function CRMPage() {
                         title={prof.name}
                         className="w-8 h-8 rounded-full border-2 border-surface bg-primary/10 flex items-center justify-center text-[10px] font-bold text-primary hover:z-10 transition-transform hover:scale-110"
                       >
-                        {prof.avatar ? (
-                          <Image width={500} height={500} unoptimized alt={prof.name} className="w-8 h-8 rounded-full object-cover" src={prof.avatar} sizes="(max-width: 768px) 100vw, 500px" />
+                        {prof.avatar && !prof.avatar.includes('dicebear') ? (
+                          <Image width={500} height={500} unoptimized alt={prof.name} className="w-8 h-8 rounded-full object-cover shrink-0" src={prof.avatar} sizes="(max-width: 768px) 100vw, 500px" />
                         ) : (
                           prof.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()
                         )}
@@ -2383,7 +2389,13 @@ export default function CRMPage() {
                     {selectedPatientId === patient.id && (
                       <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary"></div>
                     )}
-                    <Image width={500} height={500} unoptimized className="h-10 w-10 rounded-full object-cover" src={patient.avatar} alt={patient.nome} sizes="(max-width: 768px) 100vw, 500px" />
+                    {patient.avatar && !patient.avatar.includes('dicebear') ? (
+                      <Image width={500} height={500} unoptimized className="h-10 w-10 rounded-full object-cover shrink-0" src={patient.avatar} alt={patient.nome} sizes="(max-width: 768px) 100vw, 500px" />
+                    ) : (
+                      <div className="h-10 w-10 rounded-full bg-surface flex items-center justify-center shrink-0 border border-outline-variant/40 text-on-surface-variant font-bold">
+                        {patient.nome.charAt(0).toUpperCase()}
+                      </div>
+                    )}
                     <div className="flex-1 min-w-0">
                       <p 
                         onClick={(e) => {
@@ -3741,7 +3753,13 @@ export default function CRMPage() {
                 {commissionLeaders.map((lead, idx) => (
                   <div key={idx} className="flex items-center justify-between p-4 rounded-2xl border border-outline-variant/30 hover:bg-surface-container transition-colors">
                     <div className="flex items-center gap-3.5 min-w-0">
-                      <Image width={500} height={500} unoptimized className="w-11 h-11 rounded-full object-cover flex-shrink-0" src={lead.avatar} alt={lead.name} sizes="(max-width: 768px) 100vw, 500px" />
+                      {lead.avatar && !lead.avatar.includes('dicebear') ? (
+                        <Image width={500} height={500} unoptimized className="w-11 h-11 rounded-full object-cover flex-shrink-0" src={lead.avatar} alt={lead.name} sizes="(max-width: 768px) 100vw, 500px" />
+                      ) : (
+                        <div className="w-11 h-11 rounded-full bg-surface flex items-center justify-center flex-shrink-0 border border-outline-variant/40 text-on-surface-variant font-bold">
+                          {lead.name.charAt(0).toUpperCase()}
+                        </div>
+                      )}
                       <div className="min-w-0">
                         <p className="text-[14px] font-bold text-on-surface truncate">{lead.name}</p>
                         <p className="text-[12px] text-on-surface-variant uppercase tracking-wider">Fat: R$ {lead.revenue.toLocaleString('pt-BR')}</p>
@@ -4041,7 +4059,13 @@ export default function CRMPage() {
                         <tr key={p.id} className="border-b border-outline-variant/30 hover:bg-[#fcfaf7]">
                           <td className="px-4 py-4">
                             <div className="flex items-center gap-3">
-                              <Image width={500} height={500} unoptimized src={p.avatar} alt="avatar" className="w-10 h-10 rounded-full border border-primary/20 object-cover" sizes="(max-width: 768px) 100vw, 500px" />
+                              {p.avatar && !p.avatar.includes('dicebear') ? (
+                                <Image width={500} height={500} unoptimized src={p.avatar} alt="avatar" className="w-10 h-10 rounded-full border border-primary/20 object-cover shrink-0" sizes="(max-width: 768px) 100vw, 500px" />
+                              ) : (
+                                <div className="w-10 h-10 rounded-full bg-surface-container flex items-center justify-center border border-primary/20 text-on-surface-variant font-bold shrink-0">
+                                  {p.nome.charAt(0).toUpperCase()}
+                                </div>
+                              )}
                               <div className="flex flex-col">
                                 <span className="font-extrabold text-on-surface text-[14px] font-manrope">
                                   {p.pronome ? p.pronome + ' ' : ''}{p.nome}
@@ -4422,7 +4446,13 @@ export default function CRMPage() {
                     {appUsers.map(u => (
                       <tr key={u.id}>
                         <td className="px-6 py-4 flex items-center gap-3 font-bold text-on-surface">
-                          <Image width={32} height={32} src={u.avatar || 'https://api.dicebear.com/7.x/notionists/svg?seed=' + u.username} alt={u.name} className="h-8 w-8 rounded-full object-cover" />
+                          {u.avatar && !u.avatar.includes('dicebear') ? (
+                            <Image width={32} height={32} src={u.avatar} alt={u.name} className="h-8 w-8 rounded-full object-cover shrink-0" />
+                          ) : (
+                            <div className="h-8 w-8 rounded-full bg-surface-container flex items-center justify-center shrink-0 border border-outline-variant/40 text-on-surface-variant font-bold text-[10px]">
+                              {u.name.charAt(0).toUpperCase()}
+                            </div>
+                          )}
                           {u.name}
                         </td>
                         <td className="px-6 py-4 text-on-surface-variant">{u.specialty || u.role}</td>
@@ -4500,7 +4530,13 @@ export default function CRMPage() {
                     {patients.slice().sort((a, b) => b.totalGasto - a.totalGasto).slice(0, 10).map(p => (
                       <tr key={p.id}>
                         <td className="px-6 py-4 flex items-center gap-3 font-bold text-on-surface">
-                          <Image width={32} height={32} src={p.avatar} alt={p.nome} className="h-8 w-8 rounded-full object-cover" />
+                          {p.avatar && !p.avatar.includes('dicebear') ? (
+                            <Image width={32} height={32} src={p.avatar} alt={p.nome} className="h-8 w-8 rounded-full object-cover shrink-0" />
+                          ) : (
+                            <div className="h-8 w-8 rounded-full bg-surface-container flex items-center justify-center shrink-0 border border-outline-variant/40 text-on-surface-variant font-bold text-[10px]">
+                              {p.nome.charAt(0).toUpperCase()}
+                            </div>
+                          )}
                           {p.nome}
                         </td>
                         <td className="px-6 py-4 text-emerald-600 font-bold">R$ {p.totalGasto.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
@@ -5847,7 +5883,13 @@ export default function CRMPage() {
             </button>
 
             <div className="text-center space-y-4">
-              <Image width={500} height={500} unoptimized className="h-16 w-16 rounded-full object-cover border-2 border-primary/20 mx-auto" src={interactClient.avatar} alt={interactClient.nome} sizes="100vw" />
+              {interactClient.avatar && !interactClient.avatar.includes('dicebear') ? (
+                <Image width={500} height={500} unoptimized className="h-16 w-16 rounded-full object-cover border-2 border-primary/20 mx-auto" src={interactClient.avatar} alt={interactClient.nome} sizes="100vw" />
+              ) : (
+                <div className="h-16 w-16 rounded-full bg-surface flex items-center justify-center border border-outline-variant/40 text-on-surface-variant font-bold mx-auto text-xl">
+                  {interactClient.nome.charAt(0).toUpperCase()}
+                </div>
+              )}
               <div>
                 <h3 className="font-manrope text-[18px] font-bold text-on-surface leading-tight">{interactClient.nome}</h3>
                 <p className="text-[12px] text-on-surface-variant font-semibold mt-0.5">{interactClient.telefone || 'Sem telefone cadastrado'}</p>
