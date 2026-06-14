@@ -557,14 +557,20 @@ export default function CRMPage() {
         { data: trans },
         { data: servs },
         { data: inv },
-        { data: usrs }
+        { data: usrs },
+        { data: msgs },
+        { data: desp },
+        { data: compData }
       ] = await Promise.all([
         supabase.from('clientes').select('*'),
         supabase.from('agendamentos').select('*, clientes(id, nome, avatar)'),
         supabase.from('cobrancas').select('*'),
         supabase.from('servicos').select('*'),
         supabase.from('inventory').select('*'),
-        supabase.from('users').select('*')
+        supabase.from('users').select('*'),
+        supabase.from('mensagens_predefinidas').select('*').order('created_at', { ascending: false }),
+        supabase.from('despesas').select('*').order('data', { ascending: false }),
+        supabase.from('configuracoes_empresa').select('*').limit(1)
       ]);
 
       if (pats) {
@@ -588,6 +594,9 @@ export default function CRMPage() {
       if (servs) setServices(servs.map(mapServicoToFrontend));
       if (inv) setInventory(inv.map(mapInventoryToFrontend));
       if (usrs) setAppUsers(usrs.map(mapUserToFrontend));
+      if (msgs) setMensagensPredefinidas(msgs);
+      if (desp) setDespesas(desp);
+      if (compData && compData.length > 0) setCompanyData(prev => ({ ...prev, ...compData[0] }));
       
       setIsInitialLoading(false);
     };
