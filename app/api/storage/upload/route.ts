@@ -11,11 +11,27 @@ export async function POST(request: NextRequest) {
   try {
     const { bucket, path, base64, contentType } = await request.json();
 
+    const ALLOWED_BUCKETS = ['avatars', 'patient-photos', 'documents', 'financeiro'];
+    const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'application/pdf', 'image/svg+xml'];
+    const MAX_SIZE_MB = 10;
+
     if (!bucket || !path || !base64) {
       return NextResponse.json(
         { error: 'bucket, path e base64 são obrigatórios.' },
         { status: 400 }
       );
+    }
+
+    if (!ALLOWED_BUCKETS.includes(bucket)) {
+      return NextResponse.json({ error: 'Bucket não permitido.' }, { status: 400 });
+    }
+
+    if (contentType && !ALLOWED_TYPES.includes(contentType)) {
+      return NextResponse.json({ error: 'Tipo de arquivo não permitido.' }, { status: 400 });
+    }
+
+    if (base64.length > MAX_SIZE_MB * 1024 * 1024 * 1.37) {
+      return NextResponse.json({ error: 'Arquivo excede o limite de 10MB.' }, { status: 400 });
     }
 
     const url = await uploadBase64ToStorage(bucket, path, base64, contentType);

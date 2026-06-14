@@ -5103,7 +5103,7 @@ export default function CRMPage() {
                 <span className="material-symbols-outlined text-[18px]">close</span>
               </button>
             </div>
-            <form onSubmit={saveMsgPredefinida} className="p-6 space-y-5 bg-white-pure">
+            <form key={editingMsg?.id || 'new'} onSubmit={saveMsgPredefinida} className="p-6 space-y-5 bg-white-pure">
               <div>
                 <label className="block text-[12px] font-bold text-on-surface-variant mb-1.5 uppercase tracking-wider">Título do Modelo</label>
                 <input required name="title" defaultValue={editingMsg?.title || ''} className="w-full bg-surface border border-outline-variant rounded-xl px-4 py-3 text-[14px] text-on-surface focus:outline-none focus:border-primary transition-colors" placeholder="Ex: Pós-Procedimento D+15" />
@@ -6288,27 +6288,28 @@ export default function CRMPage() {
                   Abrir chat
                 </a>
 
-                <a
-                  href={`https://wa.me/55${(interactClient.telefone || '').replace(/\D/g, '')}?text=${encodeURIComponent(`Olá ${interactClient.nome}! Passando para lembrar do seu agendamento em nossa clínica. Estamos te aguardando!`)}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  onClick={() => setIsClientInteractModalOpen(false)}
-                  className="w-full text-left py-2.5 px-3 hover:bg-surface rounded-xl font-bold text-primary flex items-center gap-2"
-                >
-                  <span className="material-symbols-outlined text-emerald-500 text-[18px]">notifications</span>
-                  Enviar lembrete
-                </a>
-
-                <a
-                  href={`https://wa.me/55${(interactClient.telefone || '').replace(/\D/g, '')}?text=${encodeURIComponent(`Olá ${interactClient.nome}! Como está a evolução do seu pós-procedimento? Qualquer dúvida ou retorno, por favor entre em contato.`)}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  onClick={() => setIsClientInteractModalOpen(false)}
-                  className="w-full text-left py-2.5 px-3 hover:bg-surface rounded-xl font-bold text-primary flex items-center gap-2"
-                >
-                  <span className="material-symbols-outlined text-emerald-500 text-[18px]">quickreply</span>
-                  Enviar mensagem pré-definida
-                </a>
+                {mensagensPredefinidas.length > 0 ? (
+                  mensagensPredefinidas.map(msg => (
+                    <a
+                      key={msg.id}
+                      href={`https://wa.me/55${(interactClient.telefone || '').replace(/\D/g, '')}?text=${encodeURIComponent(msg.content.replace(/\[nome\]/gi, interactClient.nome).replace(/\[data\]/gi, new Date().toLocaleDateString('pt-BR')))}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={() => setIsClientInteractModalOpen(false)}
+                      className="w-full text-left py-2.5 px-3 hover:bg-surface rounded-xl font-bold text-primary flex items-center gap-2"
+                    >
+                      <span className="material-symbols-outlined text-emerald-500 text-[18px]">
+                        {msg.trigger_type === 'Agenda' ? 'notifications' : 
+                         msg.trigger_type === 'Aniversário' ? 'cake' : 'quickreply'}
+                      </span>
+                      {msg.title}
+                    </a>
+                  ))
+                ) : (
+                  <div className="text-center py-2 text-on-surface-variant italic">
+                    Nenhuma mensagem pré-definida cadastrada.
+                  </div>
+                )}
 
                 <button
                   onClick={() => setIsWhatsAppSubmenuOpen(false)}

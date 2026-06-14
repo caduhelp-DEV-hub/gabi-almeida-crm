@@ -35,7 +35,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const finalPassword = password && password.trim() !== '' ? password : '123';
+    if (!password || password.trim().length < 6) {
+      return NextResponse.json(
+        { error: 'A senha deve ter no mínimo 6 caracteres.' },
+        { status: 400 }
+      );
+    }
+
+    const finalPassword = password;
     const passwordHash = await bcrypt.hash(finalPassword, SALT_ROUNDS);
 
     const newUser = {
