@@ -6,6 +6,7 @@ interface AnamneseLimpezaProps {
   onCancel: () => void;
   onSave: (data: {
     healthToggles: Record<string, boolean>;
+    healthDetails: Record<string, string>;
     otherHealth: string;
     generalObs: string;
     oleosidade: string;
@@ -26,6 +27,7 @@ export default function AnamneseLimpeza({ patientName, patientPhone = '(11) 9743
 
   // Example toggles
   const [healthToggles, setHealthToggles] = useState<Record<string, boolean>>({});
+  const [healthDetails, setHealthDetails] = useState<Record<string, string>>({});
   const [otherHealth, setOtherHealth] = useState('');
   const [generalObs, setGeneralObs] = useState('');
   const [oleosidade, setOleosidade] = useState('');
@@ -123,6 +125,7 @@ export default function AnamneseLimpeza({ patientName, patientPhone = '(11) 9743
     }
     onSave({
       healthToggles,
+      healthDetails,
       otherHealth,
       generalObs,
       oleosidade,
@@ -173,32 +176,45 @@ export default function AnamneseLimpeza({ patientName, patientPhone = '(11) 9743
             {questions.map(q => {
               const isYes = !!healthToggles[q];
               return (
-                <div key={q} className="flex items-center justify-between border-b border-outline-variant/20 pb-3">
-                  <span className="text-[13px] text-on-surface font-medium pr-2">{q}</span>
-                  <div className="flex gap-1.5 shrink-0">
-                    <button
-                      type="button"
-                      onClick={() => setHealthToggles(prev => ({ ...prev, [q]: true }))}
-                      className={`min-h-[44px] min-w-[60px] px-4 py-2.5 rounded-lg text-[13px] font-bold border transition-all duration-300 cursor-pointer ${
-                        isYes 
-                          ? 'bg-emerald-50 border-emerald-600 text-emerald-700 scale-105 shadow-sm' 
-                          : 'border-outline-variant/50 text-on-surface-variant hover:bg-surface'
-                      }`}
-                    >
-                      SIM
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setHealthToggles(prev => ({ ...prev, [q]: false }))}
-                      className={`min-h-[44px] min-w-[60px] px-4 py-2.5 rounded-lg text-[13px] font-bold border transition-all duration-300 cursor-pointer ${
-                        !isYes 
-                          ? 'bg-[#ba1a1a]/10 border-[#ba1a1a] text-[#ba1a1a] scale-105 shadow-sm' 
-                          : 'border-outline-variant/50 text-on-surface-variant hover:bg-surface'
-                      }`}
-                    >
-                      NÃO
-                    </button>
+                <div key={q} className="flex flex-col border-b border-outline-variant/20 pb-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[13px] text-on-surface font-medium pr-2">{q}</span>
+                    <div className="flex gap-1.5 shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => setHealthToggles(prev => ({ ...prev, [q]: true }))}
+                        className={`min-h-[44px] min-w-[60px] px-4 py-2.5 rounded-lg text-[13px] font-bold border transition-all duration-300 cursor-pointer ${
+                          isYes 
+                            ? 'bg-emerald-50 border-emerald-600 text-emerald-700 scale-105 shadow-sm' 
+                            : 'border-outline-variant/50 text-on-surface-variant hover:bg-surface'
+                        }`}
+                      >
+                        SIM
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setHealthToggles(prev => ({ ...prev, [q]: false }))}
+                        className={`min-h-[44px] min-w-[60px] px-4 py-2.5 rounded-lg text-[13px] font-bold border transition-all duration-300 cursor-pointer ${
+                          !isYes 
+                            ? 'bg-[#ba1a1a]/10 border-[#ba1a1a] text-[#ba1a1a] scale-105 shadow-sm' 
+                            : 'border-outline-variant/50 text-on-surface-variant hover:bg-surface'
+                        }`}
+                      >
+                        NÃO
+                      </button>
+                    </div>
                   </div>
+                  {isYes && (
+                    <div className="mt-3 animate-slide-up">
+                      <input 
+                        type="text" 
+                        placeholder="Por favor, detalhe sua resposta..."
+                        value={healthDetails[q] || ''}
+                        onChange={(e) => setHealthDetails(prev => ({ ...prev, [q]: e.target.value }))}
+                        className="w-full text-[12px] p-2.5 bg-surface border border-outline-variant/50 rounded-xl focus:outline-none focus:border-primary transition-colors"
+                      />
+                    </div>
+                  )}
                 </div>
               );
             })}

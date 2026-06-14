@@ -767,10 +767,10 @@ export default function CRMPage() {
     try {
       const { error } = await supabase
         .from('clientes')
-        .update({ timeline: updatedTimeline })
+        .update({ historico: updatedTimeline })
         .eq('id', selectedPatient.id);
       if (error) throw error;
-      setPatients(prev => prev.map(p => p.id === selectedPatient.id ? { ...p, timeline: updatedTimeline } : p));
+      setPatients(prev => prev.map(p => p.id === selectedPatient.id ? { ...p, historico: updatedTimeline } : p));
     } catch (err: any) {
       console.error('Error updating patient timeline:', err);
       showAlert(`Erro ao salvar assinatura: ${err.message || err}`);
@@ -2921,11 +2921,11 @@ export default function CRMPage() {
                                 try {
                                   const { error } = await supabase
                                     .from('clientes')
-                                    .update({ timeline: updatedTimeline })
+                                    .update({ historico: updatedTimeline })
                                     .eq('id', selectedPatient.id);
                                   if (error) throw error;
                                   
-                                  setPatients(prev => prev.map(p => p.id === selectedPatient.id ? { ...p, timeline: updatedTimeline } : p));
+                                  setPatients(prev => prev.map(p => p.id === selectedPatient.id ? { ...p, historico: updatedTimeline } : p));
                                   showAlert('Protocolo adicionado ao prontuário do cliente!');
                                   el.value = '';
                                 } catch (err: any) {
@@ -3054,7 +3054,7 @@ export default function CRMPage() {
                             medications: medicationsStr,
                             previous_procedures: prevProceduresStr,
                             documents: updatedDocs,
-                            timeline: updatedTimeline
+                            historico: updatedTimeline
                           })
                           .eq('id', selectedPatient.id);
 
@@ -3068,7 +3068,7 @@ export default function CRMPage() {
                               allergies: allergiesStr,
                               medications: medicationsStr,
                               previousProcedures: prevProceduresStr,
-                              timeline: updatedTimeline
+                              historico: updatedTimeline
                             };
                           }
                           return p;
@@ -5135,37 +5135,8 @@ export default function CRMPage() {
               
               <div className="space-y-4 font-sans text-[13px]">
                 
-                {/* Avatar upload section */}
-                <div className="flex flex-col items-center mb-4">
-                  <div className="relative group cursor-pointer" onClick={() => document.getElementById('new_pat_avatar_file')?.click()}>
-                    <Image width={500} height={500} unoptimized
-                      className="h-20 w-20 rounded-2xl object-cover border-2 border-primary/20 hover:opacity-85 transition-opacity"
-                      src={newPatAvatar || (editingPatientId ? patients.find(p => p.id === editingPatientId)?.avatar : '') || 'https://api.dicebear.com/7.x/notionists/svg?seed=placeholder'}
-                      alt="Preview Avatar"
-                      sizes="(max-width: 768px) 100vw, 500px"
-                    />
-                    <div className="absolute inset-0 bg-black/40 rounded-2xl opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
-                      <span className="material-symbols-outlined text-white-pure text-[20px]">photo_camera</span>
-                    </div>
-                  </div>
-                  <input 
-                    type="file" 
-                    id="new_pat_avatar_file" 
-                    accept="image/*" 
-                    className="hidden" 
-                    onChange={(e) => {
-                      const file = e.target.files?.[0];
-                      if (file) {
-                        const reader = new FileReader();
-                        reader.onloadend = () => {
-                          setNewPatAvatar(reader.result as string);
-                        };
-                        reader.readAsDataURL(file);
-                      }
-                    }}
-                  />
-                  <p className="text-[10px] text-on-surface-variant/75 mt-1 font-semibold">Clique para carregar foto de perfil</p>
-                </div>
+                {/* Avatar upload section removed */}
+                <div className="hidden"></div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
                   <div className="sm:col-span-1">
@@ -5600,17 +5571,19 @@ export default function CRMPage() {
               <div className="space-y-1.5">
                 <label className="font-bold text-on-surface-variant">Cliente</label>
                 <div className="flex gap-2">
-                  <select 
+                  <input 
+                    list="clientes_list"
                     value={newApptPatient}
                     onChange={(e) => setNewApptPatient(e.target.value)}
                     className="w-full p-2.5 bg-surface rounded-xl border border-outline-variant/60 focus:outline-none focus:ring-1 focus:ring-primary/40 font-medium flex-1"
+                    placeholder="Digite para buscar..."
                     required
-                  >
-                    <option value="" disabled>Selecione um cliente</option>
+                  />
+                  <datalist id="clientes_list">
                     {patients.map(p => (
-                      <option key={p.id} value={p.nome}>{p.nome}</option>
+                      <option key={p.id} value={p.nome} />
                     ))}
-                  </select>
+                  </datalist>
                   <button type="button" onClick={() => {
                     setNewApptPatient("Cliente Importado");
                     showAlert("Sincronizando com WhatsApp... \n\nCliente encontrado e importado para o agendamento com sucesso!");
@@ -5632,7 +5605,8 @@ export default function CRMPage() {
               {/* Procedure */}
               <div className="space-y-1.5">
                 <label className="font-bold text-on-surface-variant">Procedimento</label>
-                <select
+                <input
+                  list="servicos_list"
                   value={newApptProcedure}
                   onChange={(e) => {
                      setNewApptProcedure(e.target.value);
@@ -5641,14 +5615,15 @@ export default function CRMPage() {
                        setNewApptCategory(sel.categoria as any);
                      }
                   }}
-                  className="w-full p-2.5 bg-surface rounded-xl border border-outline-variant/60 focus:outline-none focus:ring-1 focus:ring-primary/40 text-[13px] font-medium custom-select-arrow appearance-none"
+                  className="w-full p-2.5 bg-surface rounded-xl border border-outline-variant/60 focus:outline-none focus:ring-1 focus:ring-primary/40 text-[13px] font-medium custom-select-arrow"
+                  placeholder="Digite para buscar procedimento..."
                   required
-                >
-                  <option value="" disabled>Selecione um procedimento</option>
+                />
+                <datalist id="servicos_list">
                   {services.map(s => (
                     <option key={s.id} value={s.nome}>{s.nome} (R$ {s.preco})</option>
                   ))}
-                </select>
+                </datalist>
               </div>
 
               {/* Professional, Date and Time grid */}
@@ -5656,15 +5631,18 @@ export default function CRMPage() {
                 
                 <div className="space-y-1.5">
                   <label className="font-bold text-on-surface-variant">Profissional</label>
-                  <select
+                  <input
+                    list="prof_list"
                     value={newApptProfessional}
                     onChange={(e) => setNewApptProfessional(e.target.value)}
                     className="w-full p-2.5 bg-surface rounded-xl border border-outline-variant/60 focus:outline-none focus:ring-1 focus:ring-primary/40 font-medium font-sans text-[13px]"
-                  >
+                    placeholder="Digite profissional..."
+                  />
+                  <datalist id="prof_list">
                     {appUsers.filter(u => u.status === 'active').map(u => (
-                      <option key={u.id} value={u.name}>{u.name}</option>
+                      <option key={u.id} value={u.name} />
                     ))}
-                  </select>
+                  </datalist>
                 </div>
 
                 <div className="space-y-1.5">
@@ -5933,43 +5911,38 @@ export default function CRMPage() {
                   Este é um serviço provido pelo Whats. Requer conexão com a internet.
                 </p>
                 
-                <button
-                  onClick={() => {
-                    const cleanPhone = (interactClient.telefone || '').replace(/\D/g, '');
-                    window.open(`https://wa.me/55${cleanPhone}`, '_blank');
-                    setIsClientInteractModalOpen(false);
-                  }}
+                <a
+                  href={`https://wa.me/55${(interactClient.telefone || '').replace(/\D/g, '')}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={() => setIsClientInteractModalOpen(false)}
                   className="w-full text-left py-2.5 px-3 hover:bg-surface rounded-xl font-bold text-primary flex items-center gap-2"
                 >
                   <span className="material-symbols-outlined text-emerald-500 text-[18px]">chat</span>
                   Abrir chat
-                </button>
+                </a>
 
-                <button
-                  onClick={() => {
-                    const cleanPhone = (interactClient.telefone || '').replace(/\D/g, '');
-                    const message = encodeURIComponent(`Olá ${interactClient.nome}! Passando para lembrar do seu agendamento em nossa clínica. Estamos te aguardando!`);
-                    window.open(`https://wa.me/55${cleanPhone}?text=${message}`, '_blank');
-                    setIsClientInteractModalOpen(false);
-                  }}
+                <a
+                  href={`https://wa.me/55${(interactClient.telefone || '').replace(/\D/g, '')}?text=${encodeURIComponent(`Olá ${interactClient.nome}! Passando para lembrar do seu agendamento em nossa clínica. Estamos te aguardando!`)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={() => setIsClientInteractModalOpen(false)}
                   className="w-full text-left py-2.5 px-3 hover:bg-surface rounded-xl font-bold text-primary flex items-center gap-2"
                 >
                   <span className="material-symbols-outlined text-emerald-500 text-[18px]">notifications</span>
                   Enviar lembrete
-                </button>
+                </a>
 
-                <button
-                  onClick={() => {
-                    const cleanPhone = (interactClient.telefone || '').replace(/\D/g, '');
-                    const message = encodeURIComponent(`Olá ${interactClient.nome}! Como está a evolução do seu pós-procedimento? Qualquer dúvida ou retorno, por favor entre em contato.`);
-                    window.open(`https://wa.me/55${cleanPhone}?text=${message}`, '_blank');
-                    setIsClientInteractModalOpen(false);
-                  }}
+                <a
+                  href={`https://wa.me/55${(interactClient.telefone || '').replace(/\D/g, '')}?text=${encodeURIComponent(`Olá ${interactClient.nome}! Como está a evolução do seu pós-procedimento? Qualquer dúvida ou retorno, por favor entre em contato.`)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={() => setIsClientInteractModalOpen(false)}
                   className="w-full text-left py-2.5 px-3 hover:bg-surface rounded-xl font-bold text-primary flex items-center gap-2"
                 >
                   <span className="material-symbols-outlined text-emerald-500 text-[18px]">quickreply</span>
                   Enviar mensagem pré-definida
-                </button>
+                </a>
 
                 <button
                   onClick={() => setIsWhatsAppSubmenuOpen(false)}
