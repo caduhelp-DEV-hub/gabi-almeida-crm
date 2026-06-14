@@ -1227,7 +1227,7 @@ export default function CRMPage() {
               <span>Acesso seguro. Todos os dados são criptografados.</span>
               <span>© 2026 Gabi Almeida Estética.</span>
               <span>Desenvolvido: caduhelp-dev</span>
-              <span>Ver. 2.0</span>
+              <span>Ver. 2.1</span>
             </div>
         </div>
       </div>
@@ -5042,6 +5042,18 @@ export default function CRMPage() {
                 <div className="space-y-4">
                   <h3 className="text-[14px] font-bold text-primary border-b border-outline-variant/30 pb-2">Histórico de Versões (Changelog)</h3>
                   
+                  <div className="bg-surface-container-lowest rounded-2xl p-4 border border-outline-variant/50 mb-4">
+                    <div className="flex justify-between items-center mb-2">
+                      <span className="font-bold text-[14px] text-on-surface">Versão 2.1.0</span>
+                      <span className="text-[11px] font-bold text-on-surface-variant px-2 py-1 bg-surface-container rounded-lg">Junho 2026</span>
+                    </div>
+                    <ul className="list-disc pl-5 space-y-1.5 text-[13px] text-on-surface-variant mt-3">
+                      <li><strong className="text-on-surface">Múltiplos Procedimentos:</strong> Adicionado suporte a múltiplos procedimentos no mesmo agendamento, com cálculo automático da duração somada.</li>
+                      <li><strong className="text-on-surface">UI da Agenda:</strong> Cores dinâmicas para cada procedimento e ícones contextuais automáticos, tornando a agenda mais intuitiva e colorida.</li>
+                      <li><strong className="text-on-surface">Agendamento Flexível:</strong> Texto da agenda configurado com quebra de linha inteligente para não "cortar" informações em agendamentos mais curtos.</li>
+                      <li><strong className="text-on-surface">Dados Vazios:</strong> Seleção de pacientes e procedimentos agora iniciam forçadamente em branco no modal para evitar falhas de cadastro.</li>
+                    </ul>
+                  </div>
                   <div className="bg-surface-container-lowest rounded-2xl p-4 border border-outline-variant/50">
                     <div className="flex justify-between items-center mb-2">
                       <span className="font-bold text-[14px] text-on-surface">Versão 2.0.0</span>
