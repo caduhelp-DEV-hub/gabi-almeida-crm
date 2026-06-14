@@ -755,7 +755,7 @@ export default function CRMPage() {
     
     const newTimelineItem = {
       id: Date.now().toString(),
-      data: new Date().toLocaleDateString('pt-BR'),
+      date: new Date().toLocaleDateString('pt-BR'),
       title: 'Validação de Protocolo',
       description: 'Protocolo de atendimento clínico assinado e validado com sucesso pelo cliente.',
       category: 'Validação',
@@ -2914,7 +2914,7 @@ export default function CRMPage() {
                                   date: new Date().toLocaleDateString('pt-BR'),
                                   title: 'Procedimento Clínico',
                                   description: text,
-                                  categoria: 'Procedimento',
+                                  category: 'Procedimento',
                                   status: 'Concluído'
                                 };
                                 const updatedTimeline = [newTimelineItem, ...(selectedPatient.historico || [])];
