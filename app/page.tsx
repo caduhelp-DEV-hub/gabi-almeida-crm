@@ -1185,9 +1185,12 @@ export default function CRMPage() {
               </button>
            </form>
            
-           <div className="text-center mt-12 mb-6 opacity-60 text-[11px] font-bold text-on-surface-variant flex flex-col items-center gap-2">
-              <span className="material-symbols-outlined text-[16px]">lock</span>
-              Acesso seguro. Todos os dados são criptografados.<br/>© 2026 Gabi Almeida Estética. Ver. 2.0 - Desenvolvido: caduhelp-dev
+           <div className="text-center mt-12 mb-6 opacity-60 text-[11px] font-bold text-on-surface-variant flex flex-col items-center gap-1">
+              <span className="material-symbols-outlined text-[16px] mb-1">lock</span>
+              <span>Acesso seguro. Todos os dados são criptografados.</span>
+              <span>© 2026 Gabi Almeida Estética.</span>
+              <span>Desenvolvido: caduhelp-dev</span>
+              <span>Ver. 2.0</span>
             </div>
         </div>
       </div>
