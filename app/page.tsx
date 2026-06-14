@@ -2116,7 +2116,19 @@ export default function CRMPage() {
                                 <div className="w-[70px] flex-shrink-0 text-center text-[12px] font-bold text-on-surface-variant/60 pt-3 border-r border-outline-variant/30 bg-surface/30 z-10">
                                   {formattedHour}
                                 </div>
-                                <div className="flex-1 relative bg-transparent transition-colors group-hover:bg-surface-container-lowest/50">
+                                <div 
+                                  className="flex-1 relative bg-transparent transition-colors group-hover:bg-surface-container-lowest/50 cursor-pointer"
+                                  onClick={(e) => {
+                                    if (e.target === e.currentTarget) {
+                                      setEditingAppointment(null);
+                                      setNewApptPatient('');
+                                      setNewApptProcedure(services[0]?.nome || '');
+                                      setNewApptTime(formattedHour);
+                                      setNewApptDate(dateStr);
+                                      setIsNewAppointmentOpen(true);
+                                    }
+                                  }}
+                                >
                                   {hourAppts.length > 0 ? (
                                     hourAppts.map((appt, i) => {
                                       const isConsult = appt.categoria === 'Consulta';
@@ -5931,19 +5943,17 @@ export default function CRMPage() {
               <div className="space-y-1.5">
                 <label className="font-bold text-on-surface-variant">Cliente</label>
                 <div className="flex gap-2">
-                  <input 
-                    list="clientes_list"
+                  <select 
                     value={newApptPatient}
                     onChange={(e) => setNewApptPatient(e.target.value)}
                     className="w-full p-2.5 bg-surface rounded-xl border border-outline-variant/60 focus:outline-none focus:ring-1 focus:ring-primary/40 font-medium flex-1"
-                    placeholder="Digite para buscar..."
                     required
-                  />
-                  <datalist id="clientes_list">
+                  >
+                    <option value="" disabled>Selecione um cliente...</option>
                     {patients.map(p => (
-                      <option key={p.id} value={p.nome} />
+                      <option key={p.id} value={p.nome}>{p.nome}</option>
                     ))}
-                  </datalist>
+                  </select>
                   <button type="button" onClick={() => {
                     setNewApptPatient("Cliente Importado");
                     showAlert("Sincronizando com WhatsApp... \n\nCliente encontrado e importado para o agendamento com sucesso!");
