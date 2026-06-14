@@ -6067,8 +6067,7 @@ export default function CRMPage() {
               {/* Procedure */}
               <div className="space-y-1.5">
                 <label className="font-bold text-on-surface-variant">Procedimento</label>
-                <input
-                  list="servicos_list"
+                <select
                   value={newApptProcedure}
                   onChange={(e) => {
                      setNewApptProcedure(e.target.value);
@@ -6078,14 +6077,13 @@ export default function CRMPage() {
                      }
                   }}
                   className="w-full p-2.5 bg-surface rounded-xl border border-outline-variant/60 focus:outline-none focus:ring-1 focus:ring-primary/40 text-[13px] font-medium custom-select-arrow"
-                  placeholder="Digite para buscar procedimento..."
                   required
-                />
-                <datalist id="servicos_list">
-                  {services.map(s => (
+                >
+                  <option value="" disabled>Selecione um procedimento...</option>
+                  {services.slice().sort((a,b) => a.nome.localeCompare(b.nome)).map(s => (
                     <option key={s.id} value={s.nome}>{s.nome} (R$ {s.preco})</option>
                   ))}
-                </datalist>
+                </select>
               </div>
 
               {/* Professional, Date and Time grid */}
@@ -6391,22 +6389,29 @@ export default function CRMPage() {
                 </a>
 
                 {mensagensPredefinidas.length > 0 ? (
-                  mensagensPredefinidas.map(msg => (
-                    <a
-                      key={msg.id}
-                      href={`https://wa.me/55${(interactClient.telefone || '').replace(/\D/g, '')}?text=${encodeURIComponent((msg.content || '').replace(/\[nome\]/gi, interactClient.nome || '').replace(/\[data\]/gi, new Date().toLocaleDateString('pt-BR')))}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      onClick={() => setIsClientInteractModalOpen(false)}
-                      className="w-full text-left py-2.5 px-3 hover:bg-surface rounded-xl font-bold text-primary flex items-center gap-2"
-                    >
-                      <span className="material-symbols-outlined text-emerald-500 text-[18px]">
-                        {msg.trigger_type === 'Agenda' ? 'notifications' : 
-                         msg.trigger_type === 'Aniversário' ? 'cake' : 'quickreply'}
-                      </span>
-                      {msg.title}
-                    </a>
-                  ))
+                  (() => {
+                    const targetAppt = interactAppointmentId ? appointments.find(a => a.id === interactAppointmentId) : null;
+                    const apptDateStr = targetAppt?.data ? targetAppt.data.split('-').reverse().join('/') : new Date().toLocaleDateString('pt-BR');
+                    const apptTimeStr = targetAppt?.hora || new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+                    const apptProc = targetAppt?.procedimento || 'Procedimento';
+                    
+                    return mensagensPredefinidas.map(msg => (
+                      <a
+                        key={msg.id}
+                        href={`https://wa.me/55${(interactClient.telefone || '').replace(/\D/g, '')}?text=${encodeURIComponent((msg.content || '').replace(/\[nome\]/gi, interactClient.nome || '').replace(/\[data\]/gi, apptDateStr).replace(/\[hora\]/gi, apptTimeStr).replace(/\[procedimento\]/gi, apptProc))}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={() => setIsClientInteractModalOpen(false)}
+                        className="w-full text-left py-2.5 px-3 hover:bg-surface rounded-xl font-bold text-primary flex items-center gap-2"
+                      >
+                        <span className="material-symbols-outlined text-emerald-500 text-[18px]">
+                          {msg.trigger_type === 'Agenda' ? 'notifications' : 
+                           msg.trigger_type === 'Aniversário' ? 'cake' : 'quickreply'}
+                        </span>
+                        {msg.title}
+                      </a>
+                    ));
+                  })()
                 ) : (
                   <div className="text-center py-2 text-on-surface-variant italic">
                     Nenhuma mensagem pré-definida cadastrada.
