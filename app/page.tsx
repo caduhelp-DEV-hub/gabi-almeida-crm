@@ -109,6 +109,7 @@ export default function CRMPage() {
   const [interactClient, setInteractClient] = useState<Cliente | null>(null);
   const [interactAppointmentId, setInteractAppointmentId] = useState<string | null>(null);
   const [isWhatsAppSubmenuOpen, setIsWhatsAppSubmenuOpen] = useState(false);
+  const [isClientDetailsWhatsAppOpen, setIsClientDetailsWhatsAppOpen] = useState(false);
 
   // Cliente Sub-tabs Financial & Document Lists States
   interface PatientFinancialItem {
@@ -492,12 +493,14 @@ export default function CRMPage() {
       if (editingMsg?.id) {
         const { data, error } = await supabase.from('mensagens_predefinidas').update({ title, trigger_type, content: contentText }).eq('id', editingMsg.id).select();
         if (error) throw error;
-        setMensagensPredefinidas(prev => prev.map(m => m.id === editingMsg.id ? data[0] : m));
+        const updatedObj = (data && data.length > 0) ? data[0] : { ...editingMsg, title, trigger_type, content: contentText };
+        setMensagensPredefinidas(prev => prev.map(m => m.id === editingMsg.id ? updatedObj : m));
         showAlert('Mensagem atualizada com sucesso!');
       } else {
         const { data, error } = await supabase.from('mensagens_predefinidas').insert([{ title, trigger_type, content: contentText }]).select();
         if (error) throw error;
-        setMensagensPredefinidas(prev => [data[0], ...prev]);
+        const newObj = (data && data.length > 0) ? data[0] : { id: crypto.randomUUID(), title, trigger_type, content: contentText, created_at: new Date().toISOString() };
+        setMensagensPredefinidas(prev => [newObj, ...prev]);
         showAlert('Mensagem criada com sucesso!');
       }
       setIsMsgModalOpen(false);
@@ -2118,15 +2121,13 @@ export default function CRMPage() {
                                 </div>
                                 <div 
                                   className="flex-1 relative bg-transparent transition-colors group-hover:bg-surface-container-lowest/50 cursor-pointer"
-                                  onClick={(e) => {
-                                    if (e.target === e.currentTarget) {
-                                      setEditingAppointment(null);
-                                      setNewApptPatient('');
-                                      setNewApptProcedure(services[0]?.nome || '');
-                                      setNewApptTime(formattedHour);
-                                      setNewApptDate(dateStr);
-                                      setIsNewAppointmentOpen(true);
-                                    }
+                                  onClick={() => {
+                                    setEditingAppointment(null);
+                                    setNewApptPatient('');
+                                    setNewApptProcedure(services[0]?.nome || '');
+                                    setNewApptTime(formattedHour);
+                                    setNewApptDate(dateStr);
+                                    setIsNewAppointmentOpen(true);
                                   }}
                                 >
                                   {hourAppts.length > 0 ? (
@@ -2739,6 +2740,49 @@ export default function CRMPage() {
                         </p>
                       </div>
                       <div className="flex flex-col sm:flex-row gap-2 mt-4 md:mt-0 items-center justify-center">
+                        <div className="relative w-full sm:w-auto">
+                          <button 
+                            onClick={() => setIsClientDetailsWhatsAppOpen(!isClientDetailsWhatsAppOpen)}
+                            className="w-full px-4 py-2 border border-[#25D366] text-[#25D366] rounded-xl font-manrope text-[12px] font-extrabold hover:bg-[#25D366] hover:text-white-pure transition-all cursor-pointer flex items-center justify-center gap-1"
+                          >
+                            <span className="material-symbols-outlined text-[16px]">chat</span>
+                            WhatsApp
+                          </button>
+                          {isClientDetailsWhatsAppOpen && (
+                            <div className="absolute right-0 sm:left-0 top-full mt-2 w-64 bg-white-pure border border-outline-variant/60 rounded-2xl p-3 shadow-xl z-50 text-[12px]">
+                              <a
+                                href={`https://wa.me/55${(selectedPatient.telefone || '').replace(/\D/g, '')}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                onClick={() => setIsClientDetailsWhatsAppOpen(false)}
+                                className="w-full text-left py-2 px-3 hover:bg-surface rounded-xl font-bold text-primary flex items-center gap-2 mb-1"
+                              >
+                                <span className="material-symbols-outlined text-emerald-500 text-[16px]">chat</span>
+                                Chat Livre
+                              </a>
+                              <div className="border-t border-outline-variant/30 my-1"></div>
+                              {mensagensPredefinidas.map(msg => (
+                                <a
+                                  key={msg.id}
+                                  href={`https://wa.me/55${(selectedPatient.telefone || '').replace(/\D/g, '')}?text=${encodeURIComponent((msg.content || '').replace(/\[nome\]/gi, selectedPatient.nome || '').replace(/\[data\]/gi, new Date().toLocaleDateString('pt-BR')))}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  onClick={() => setIsClientDetailsWhatsAppOpen(false)}
+                                  className="w-full text-left py-2 px-3 hover:bg-surface rounded-xl font-bold text-primary flex items-center gap-2"
+                                >
+                                  <span className="material-symbols-outlined text-emerald-500 text-[14px]">
+                                    {msg.trigger_type === 'Agenda' ? 'notifications' : 
+                                     msg.trigger_type === 'Aniversário' ? 'cake' : 'quickreply'}
+                                  </span>
+                                  <span className="truncate">{msg.title}</span>
+                                </a>
+                              ))}
+                              {mensagensPredefinidas.length === 0 && (
+                                <p className="text-center text-on-surface-variant italic py-2">Sem mensagens cadastradas</p>
+                              )}
+                            </div>
+                          )}
+                        </div>
                         <button 
                           onClick={() => {
                             // Simple print invocation to generate PDF via browser
@@ -5950,7 +5994,7 @@ export default function CRMPage() {
                     required
                   >
                     <option value="" disabled>Selecione um cliente...</option>
-                    {patients.map(p => (
+                    {patients.slice().sort((a, b) => a.nome.localeCompare(b.nome)).map(p => (
                       <option key={p.id} value={p.nome}>{p.nome}</option>
                     ))}
                   </select>
