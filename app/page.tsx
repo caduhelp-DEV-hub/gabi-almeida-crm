@@ -6302,7 +6302,7 @@ export default function CRMPage() {
                   mensagensPredefinidas.map(msg => (
                     <a
                       key={msg.id}
-                      href={`https://wa.me/55${(interactClient.telefone || '').replace(/\D/g, '')}?text=${encodeURIComponent(msg.content.replace(/\[nome\]/gi, interactClient.nome).replace(/\[data\]/gi, new Date().toLocaleDateString('pt-BR')))}`}
+                      href={`https://wa.me/55${(interactClient.telefone || '').replace(/\D/g, '')}?text=${encodeURIComponent((msg.content || '').replace(/\[nome\]/gi, interactClient.nome || '').replace(/\[data\]/gi, new Date().toLocaleDateString('pt-BR')))}`}
                       target="_blank"
                       rel="noopener noreferrer"
                       onClick={() => setIsClientInteractModalOpen(false)}
