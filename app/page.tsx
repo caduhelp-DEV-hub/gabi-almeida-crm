@@ -2424,11 +2424,19 @@ export default function CRMPage() {
                 {/* Profile header visual block card */}
                 <div className="bg-white-pure rounded-3xl p-5 lg:p-6 border border-outline-variant shadow-sm flex flex-col lg:flex-row gap-6 items-center lg:items-start relative overflow-hidden text-center lg:text-left">
                   <div className="relative group">
-                    <Image width={500} height={500} unoptimized 
-                      className="h-28 w-28 rounded-2xl object-cover border-2 border-primary/20 mx-auto lg:mx-0" 
-                      src={selectedPatient.fotoDetalhes} 
-                      alt={selectedPatient.nome} sizes="(max-width: 768px) 100vw, 500px" 
-                    />
+                    {selectedPatient.fotoDetalhes && !selectedPatient.fotoDetalhes.includes('dicebear') ? (
+                      <Image width={500} height={500} unoptimized 
+                        className="h-28 w-28 rounded-2xl object-cover border-2 border-primary/20 mx-auto lg:mx-0 bg-white-pure" 
+                        src={selectedPatient.fotoDetalhes} 
+                        alt={selectedPatient.nome} sizes="(max-width: 768px) 100vw, 500px" 
+                      />
+                    ) : (
+                      <div className="h-28 w-28 rounded-2xl border-2 border-dashed border-outline-variant/40 bg-surface mx-auto lg:mx-0 flex items-center justify-center">
+                        <span className="text-4xl font-bold text-on-surface-variant/40 uppercase">
+                          {selectedPatient.nome.charAt(0)}
+                        </span>
+                      </div>
+                    )}
                     <button 
                       onClick={() => document.getElementById('patient_details_avatar_upload')?.click()}
                       className="absolute -bottom-2 -right-2 bg-primary text-on-primary p-2 rounded-full shadow-lg hover:scale-110 transition-transform cursor-pointer"
@@ -5095,8 +5103,8 @@ export default function CRMPage() {
                     telefone,
                     cpf,
                     pronome,
-                    avatar: newPatAvatar || ('https://api.dicebear.com/7.x/notionists/svg?seed=' + nome.replace(/\s+/g, '')),
-                    fotoDetalhes: newPatAvatar || ('https://api.dicebear.com/7.x/notionists/svg?seed=' + nome.replace(/\s+/g, '')),
+                    avatar: newPatAvatar || '',
+                    fotoDetalhes: newPatAvatar || '',
                     status: 'Standard',
                     tier: 'Cliente Avaliação',
                     since: 'Hoje',
