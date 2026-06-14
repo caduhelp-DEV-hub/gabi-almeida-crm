@@ -1,6 +1,6 @@
 'use client';
 
-import React, {useState, useEffect, useRef} from 'react';
+import React, {useState, useEffect, useRef, useCallback} from 'react';
 import Image from 'next/image';
 import AnamneseLimpezaDePele from '../components/AnamneseLimpezaDePele';
 import DocumentViewerModal from '../components/DocumentViewerModal';
@@ -198,7 +198,9 @@ export default function CRMPage() {
 
   // Drawing signature pad states
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const signatureContainerRef = useRef<HTMLDivElement | null>(null);
   const [isDrawing, setIsDrawing] = useState(false);
+  const isDrawingRef = useRef(false);
   const [signatureSaved, setSignatureSaved] = useState<boolean>(false);
 
   // New appointment dialog options
@@ -790,6 +792,43 @@ export default function CRMPage() {
   };
 
   // Canvas drawing handler for signature pad
+  // ========== Resize canvas to match container, accounting for devicePixelRatio ==========
+  const resizeSignatureCanvas = useCallback(() => {
+    const canvas = canvasRef.current;
+    const container = signatureContainerRef.current;
+    if (!canvas || !container) return;
+
+    const tempCanvas = document.createElement('canvas');
+    tempCanvas.width = canvas.width;
+    tempCanvas.height = canvas.height;
+    const tempCtx = tempCanvas.getContext('2d');
+    if (tempCtx) tempCtx.drawImage(canvas, 0, 0);
+
+    const dpr = window.devicePixelRatio || 1;
+    const displayWidth = container.clientWidth;
+    const displayHeight = container.clientHeight;
+
+    canvas.width = Math.round(displayWidth * dpr);
+    canvas.height = Math.round(displayHeight * dpr);
+
+    const ctx = canvas.getContext('2d');
+    if (ctx) {
+      ctx.scale(dpr, dpr);
+      ctx.drawImage(tempCanvas, 0, 0, tempCanvas.width, tempCanvas.height, 0, 0, displayWidth, displayHeight);
+    }
+  }, []);
+
+  useEffect(() => {
+    resizeSignatureCanvas();
+    const container = signatureContainerRef.current;
+    if (!container) return;
+    const observer = new ResizeObserver(() => resizeSignatureCanvas());
+    observer.observe(container);
+    const handleOrientation = () => setTimeout(resizeSignatureCanvas, 150);
+    window.addEventListener('orientationchange', handleOrientation);
+    return () => { observer.disconnect(); window.removeEventListener('orientationchange', handleOrientation); };
+  }, [resizeSignatureCanvas]);
+
   const getCoordinates = (e: React.PointerEvent) => {
     if (!canvasRef.current) return {x: 0, y: 0};
     const canvas = canvasRef.current;
@@ -809,17 +848,21 @@ export default function CRMPage() {
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    ctx.strokeStyle = '#7B2FBE'; // Primary color
-    ctx.lineWidth = 2.5;
+    canvas.setPointerCapture(e.pointerId);
+
+    ctx.strokeStyle = '#7B2FBE';
+    ctx.lineWidth = e.pointerType === 'pen' ? 2.5 : 2.5;
     ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
     ctx.beginPath();
     ctx.moveTo(coords.x, coords.y);
+    isDrawingRef.current = true;
     setIsDrawing(true);
     setSignatureSaved(false);
   };
 
   const drawSignature = (e: React.PointerEvent) => {
-    if (!isDrawing) return;
+    if (!isDrawingRef.current) return;
     e.preventDefault();
     const coords = getCoordinates(e);
     const canvas = canvasRef.current;
@@ -827,12 +870,23 @@ export default function CRMPage() {
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
+    if (e.pointerType === 'pen' && e.pressure > 0) {
+      ctx.lineWidth = 1 + e.pressure * 3;
+    }
+
     ctx.lineTo(coords.x, coords.y);
     ctx.stroke();
   };
 
-  const stopSignatureDrawing = () => {
-    setIsDrawing(false);
+  const stopSignatureDrawing = (e: React.PointerEvent) => {
+    if (isDrawingRef.current) {
+      isDrawingRef.current = false;
+      setIsDrawing(false);
+      const canvas = canvasRef.current;
+      if (canvas) {
+        try { canvas.releasePointerCapture(e.pointerId); } catch (_) {}
+      }
+    }
   };
 
   const clearSignatureCanvas = () => {
@@ -840,7 +894,8 @@ export default function CRMPage() {
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    const dpr = window.devicePixelRatio || 1;
+    ctx.clearRect(0, 0, canvas.width / dpr, canvas.height / dpr);
     setSignatureSaved(false);
   };
 
@@ -3037,16 +3092,19 @@ export default function CRMPage() {
                         </h4>
                         
                         {/* Interactive HTML5 drawing board */}
-                        <div className="relative border-2 border-dashed border-outline-variant rounded-2xl h-36 bg-surface overflow-hidden group">
+                        <div 
+                          ref={signatureContainerRef}
+                          className="relative border-2 border-dashed border-outline-variant rounded-2xl bg-surface overflow-hidden group"
+                          style={{ height: '144px', touchAction: 'none' }}
+                        >
                           <canvas 
                             ref={canvasRef}
-                            width={260}
-                            height={140}
                             onPointerDown={startSignatureDrawing}
                             onPointerMove={drawSignature}
                             onPointerUp={stopSignatureDrawing}
                             onPointerLeave={stopSignatureDrawing}
-                            className="w-full h-full cursor-crosshair z-10 relative touch-none"
+                            className="absolute inset-0 w-full h-full cursor-crosshair"
+                            style={{ touchAction: 'none' }}
                           />
                           {!isDrawing && !signatureSaved && (
                             <div className="absolute inset-0 flex flex-col items-center justify-center p-3 text-center text-[10px] text-outline pointer-events-none select-none">

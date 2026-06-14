@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, useEffect, useCallback } from 'react';
 
 interface AnamneseLimpezaProps {
   patientName: string;
@@ -20,12 +20,12 @@ interface AnamneseLimpezaProps {
 }
 
 export default function AnamneseLimpeza({ patientName, patientPhone = '(11) 97434-5511', onCancel, onSave }: AnamneseLimpezaProps) {
-  // Can add specific state here if needed
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const canvasContainerRef = useRef<HTMLDivElement>(null);
   const [isDrawing, setIsDrawing] = useState(false);
   const [signatureSaved, setSignatureSaved] = useState(false);
+  const isDrawingRef = useRef(false);
 
-  // Example toggles
   const [healthToggles, setHealthToggles] = useState<Record<string, boolean>>({});
   const [healthDetails, setHealthDetails] = useState<Record<string, string>>({});
   const [otherHealth, setOtherHealth] = useState('');
@@ -60,43 +60,120 @@ export default function AnamneseLimpeza({ patientName, patientPhone = '(11) 9743
     "Hirsutismo", "Nódulos", "Telangiectasias", "Hipocromia", "Marcas", "Outra"
   ];
 
+  // ========== Canvas resize: sync buffer size with CSS display size ==========
+  const resizeCanvas = useCallback(() => {
+    const canvas = canvasRef.current;
+    const container = canvasContainerRef.current;
+    if (!canvas || !container) return;
+
+    // Save current drawing before resize
+    const tempCanvas = document.createElement('canvas');
+    tempCanvas.width = canvas.width;
+    tempCanvas.height = canvas.height;
+    const tempCtx = tempCanvas.getContext('2d');
+    if (tempCtx) tempCtx.drawImage(canvas, 0, 0);
+
+    const dpr = window.devicePixelRatio || 1;
+    const displayWidth = container.clientWidth;
+    const displayHeight = container.clientHeight;
+
+    // Set the canvas buffer to match the display size × device pixel ratio
+    canvas.width = Math.round(displayWidth * dpr);
+    canvas.height = Math.round(displayHeight * dpr);
+
+    // Scale the context so drawing coordinates match CSS pixels
+    const ctx = canvas.getContext('2d');
+    if (ctx) {
+      ctx.scale(dpr, dpr);
+      // Restore previous drawing
+      ctx.drawImage(tempCanvas, 0, 0, tempCanvas.width, tempCanvas.height, 0, 0, displayWidth, displayHeight);
+    }
+  }, []);
+
+  useEffect(() => {
+    resizeCanvas();
+
+    const container = canvasContainerRef.current;
+    if (!container) return;
+
+    const observer = new ResizeObserver(() => {
+      resizeCanvas();
+    });
+    observer.observe(container);
+
+    const handleOrientationChange = () => {
+      setTimeout(resizeCanvas, 150);
+    };
+    window.addEventListener('orientationchange', handleOrientationChange);
+
+    return () => {
+      observer.disconnect();
+      window.removeEventListener('orientationchange', handleOrientationChange);
+    };
+  }, [resizeCanvas]);
+
+  // ========== Coordinate calculation: CSS pixels, properly scaled ==========
+  const getCanvasCoords = (e: React.PointerEvent<HTMLCanvasElement>) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return { x: 0, y: 0 };
+    const rect = canvas.getBoundingClientRect();
+    return {
+      x: e.clientX - rect.left,
+      y: e.clientY - rect.top
+    };
+  };
+
   const startDrawing = (e: React.PointerEvent<HTMLCanvasElement>) => {
+    e.preventDefault();
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
+
+    // Capture the pointer so events continue even if finger/pen moves fast
+    canvas.setPointerCapture(e.pointerId);
+
+    const { x, y } = getCanvasCoords(e);
+    isDrawingRef.current = true;
     setIsDrawing(true);
     setSignatureSaved(false);
 
-    const rect = canvas.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
-
+    ctx.strokeStyle = '#311059';
+    ctx.lineWidth = e.pointerType === 'pen' ? 2.5 : 2;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
     ctx.beginPath();
     ctx.moveTo(x, y);
   };
 
   const draw = (e: React.PointerEvent<HTMLCanvasElement>) => {
-    if (!isDrawing) return;
+    if (!isDrawingRef.current) return;
+    e.preventDefault();
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    const rect = canvas.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
+    const { x, y } = getCanvasCoords(e);
+
+    // Support Apple Pencil pressure if available
+    if (e.pointerType === 'pen' && e.pressure > 0) {
+      ctx.lineWidth = 1 + e.pressure * 3;
+    }
 
     ctx.lineTo(x, y);
-    ctx.strokeStyle = '#311059'; // primary color or dark purple
-    ctx.lineWidth = 2;
     ctx.stroke();
   };
 
-  const stopDrawing = () => {
-    if (isDrawing) {
+  const stopDrawing = (e: React.PointerEvent<HTMLCanvasElement>) => {
+    if (isDrawingRef.current) {
+      isDrawingRef.current = false;
       setIsDrawing(false);
       setSignatureSaved(true);
+      const canvas = canvasRef.current;
+      if (canvas) {
+        try { canvas.releasePointerCapture(e.pointerId); } catch (_) {}
+      }
     }
   };
 
@@ -105,7 +182,8 @@ export default function AnamneseLimpeza({ patientName, patientPhone = '(11) 9743
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    const dpr = window.devicePixelRatio || 1;
+    ctx.clearRect(0, 0, canvas.width / dpr, canvas.height / dpr);
     setSignatureSaved(false);
   };
 
@@ -375,25 +453,25 @@ export default function AnamneseLimpeza({ patientName, patientPhone = '(11) 9743
         {/* Autenticacao */}
         <div className="space-y-4">
           <h3 className="font-bold text-[14px] text-primary tracking-wider uppercase ml-1">Autenticação de Consentimento de Limpeza de Pele</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            <div className="bg-white-pure rounded-2xl border border-outline-variant/60 shadow-sm p-6 flex flex-col justify-between">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8">
+            <div className="bg-white-pure rounded-2xl border border-outline-variant/60 shadow-sm p-4 sm:p-6 flex flex-col justify-between">
                <div>
                   <div className="inline-block bg-surface px-3 py-1.5 rounded text-[10px] font-bold uppercase tracking-wider text-on-surface mb-4">
                     Termo de Tratamento de Limpeza de Pele
                   </div>
-                  <p className="text-[13px] text-on-surface-variant leading-relaxed text-justify">
+                  <p className="text-[12px] sm:text-[13px] text-on-surface-variant leading-relaxed text-justify">
                     Declaro que fui informado(a) minuciosamente dos benefícios, riscos e do protocolo previsto para o procedimento de Limpeza de Pele Estética. Autorizo o profissional esteta qualificado a realizar os procedimentos de extração mecânica de comedões, aplicação de loções de higienização, esfoliação e drenagem facial indicada. Relatei fielmente meu histórico de saúde e hábitos diários, aceitando as devidas responsabilidades pelo pós-procedimento.
                   </p>
                </div>
                
-               <label className="mt-8 flex items-start gap-3 cursor-pointer p-4 rounded-xl bg-primary/5 border border-primary/20 hover:bg-primary/10 transition-colors">
+               <label className="mt-6 sm:mt-8 flex items-start gap-3 cursor-pointer p-3 sm:p-4 rounded-xl bg-primary/5 border border-primary/20 hover:bg-primary/10 transition-colors">
                   <input 
                     type="checkbox" 
                     checked={consentGiven}
                     onChange={(e) => setConsentGiven(e.target.checked)}
-                    className="w-5 h-5 rounded text-primary border-primary focus:ring-primary accent-primary mt-0.5 shrink-0" 
+                    className="w-6 h-6 sm:w-5 sm:h-5 rounded text-primary border-primary focus:ring-primary accent-primary mt-0.5 shrink-0" 
                   />
-                  <span className="text-[13px] font-bold text-primary leading-snug">
+                  <span className="text-[12px] sm:text-[13px] font-bold text-primary leading-snug">
                     Confirmo o termo de limpeza de pele e autorizo o procedimento.
                   </span>
                </label>
@@ -401,34 +479,56 @@ export default function AnamneseLimpeza({ patientName, patientPhone = '(11) 9743
             
             <div className="bg-white-pure flex flex-col">
               <div className="mb-2">
-                <h4 className="font-bold text-[12px] uppercase tracking-wider text-on-surface">Assinatura Digital de Consentimento (Desenhe na tela)</h4>
-                <p className="text-[11px] text-on-surface-variant mt-1">Clique/Toque e arraste para desenhar o traço oficial.</p>
+                <h4 className="font-bold text-[12px] uppercase tracking-wider text-on-surface">Assinatura Digital de Consentimento</h4>
+                <p className="text-[11px] text-on-surface-variant mt-1">Toque e arraste com o dedo ou caneta para assinar.</p>
               </div>
-              <div className="relative flex-1 bg-white-pure border-2 border-outline-variant/50 rounded-2xl overflow-hidden min-h-[220px]">
+              {/* Canvas container — the ResizeObserver measures this div */}
+              <div 
+                ref={canvasContainerRef}
+                className="relative bg-white-pure border-2 rounded-2xl overflow-hidden"
+                style={{ minHeight: '200px', height: '220px', touchAction: 'none' }}
+              >
                   <canvas 
                     ref={canvasRef}
                     onPointerDown={startDrawing}
                     onPointerMove={draw}
                     onPointerUp={stopDrawing}
-                    onPointerOut={stopDrawing}
-                    className="w-full h-full cursor-crosshair relative z-10 touch-none"
+                    onPointerLeave={stopDrawing}
+                    className="absolute inset-0 w-full h-full cursor-crosshair"
+                    style={{ touchAction: 'none' }}
                   />
-                  <div className="absolute top-3 right-3 z-20">
-                     <button onClick={clearCanvas} className="px-3 py-1.5 bg-surface text-on-surface text-[11px] font-bold border border-outline-variant rounded-lg hover:bg-outline-variant/20 shadow-sm transition-all cursor-pointer">
-                        Limpar canva
-                     </button>
-                  </div>
+                  {!isDrawing && !signatureSaved && (
+                    <div className="absolute inset-0 flex flex-col items-center justify-center p-3 text-center pointer-events-none select-none">
+                      <span className="material-symbols-outlined text-4xl text-outline/40">draw</span>
+                      <p className="text-[11px] text-outline/60 mt-1 font-medium">Assine aqui com o dedo ou caneta</p>
+                    </div>
+                  )}
+                  {signatureSaved && (
+                    <div className="absolute top-2 right-2 pointer-events-none">
+                      <span className="material-symbols-outlined text-emerald-500 text-[20px]">verified</span>
+                    </div>
+                  )}
               </div>
-              <p className="text-[10px] text-on-surface-variant/70 text-center mt-3">
-                 A assinatura desenhada será persistida em string Base64 PNG de modo permanente.
-              </p>
+              <div className="flex items-center justify-between mt-2">
+                <p className="text-[10px] text-on-surface-variant/70">
+                   Assinatura persistida em Base64 PNG.
+                </p>
+                <button 
+                  onClick={clearCanvas} 
+                  type="button"
+                  className="px-3 py-1.5 bg-surface text-on-surface text-[11px] font-bold border border-outline-variant rounded-lg hover:bg-outline-variant/20 shadow-sm transition-all cursor-pointer flex items-center gap-1"
+                >
+                  <span className="material-symbols-outlined text-[14px]">refresh</span>
+                  Limpar
+                </button>
+              </div>
             </div>
           </div>
         </div>
 
         {/* Save Button */}
-        <div className="flex justify-end pt-4 pb-12">
-            <button onClick={handleSave} className="px-8 py-3.5 bg-[#a322d8] hover:bg-[#861cae] text-white-pure font-bold rounded-2xl text-[15px] shadow-lg hover:shadow-xl hover:-translate-y-0.5 transition-all flex items-center gap-2 cursor-pointer">
+        <div className="flex justify-center sm:justify-end pt-4 pb-12">
+            <button onClick={handleSave} className="w-full sm:w-auto px-8 py-4 sm:py-3.5 bg-[#a322d8] hover:bg-[#861cae] text-white-pure font-bold rounded-2xl text-[15px] shadow-lg hover:shadow-xl hover:-translate-y-0.5 transition-all flex items-center justify-center gap-2 cursor-pointer">
                <span className="material-symbols-outlined text-[18px]">check</span>
                Salvar Ficha de Limpeza de Pele
             </button>
