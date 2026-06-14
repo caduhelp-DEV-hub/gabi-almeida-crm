@@ -66,6 +66,12 @@ export default function CRMPage() {
   // Sidebar tab control
   const [currentTab, setCurrentTab] = useState<'dashboard' | 'agenda' | 'clientes' | 'financeiro' | 'usuarios' | 'cadastro-cliente' | 'servicos' | 'estoque' | 'comandas' | 'mensagens-pre' | 'despesas' | 'funcionarios' | 'relatorios-performance' | 'relatorios-financeiro' | 'relatorios-melhores-clientes' | 'configuracoes' | 'dados-empresa'>('agenda');
   const [dashboardPeriod, setDashboardPeriod] = useState('Hoje');
+  const [editingTimelineItemId, setEditingTimelineItemId] = useState<string | null>(null);
+  const [editingTimelineText, setEditingTimelineText] = useState('');
+  const [clearedNotifications, setClearedNotifications] = useState(false);
+  const [mensagensPredefinidas, setMensagensPredefinidas] = useState<any[]>([]);
+  const [isMsgModalOpen, setIsMsgModalOpen] = useState(false);
+  const [editingMsg, setEditingMsg] = useState<any | null>(null);
   
   // Agenda View Control (Diária / Semanal / Mensal)
   const [agendaView, setAgendaView] = useState<'diaria' | 'semanal' | 'mensal' | 'lista'>('diaria');
@@ -383,7 +389,11 @@ export default function CRMPage() {
   const currentRevenuePercent = Math.min(100, Math.round((totalRevenueThisMonth / primaryRevenueTarget) * 100));
 
   // Active Alerts state derived from inventory
-  const criticalAlerts = [
+  
+  const currentDateStr = new Date().toLocaleDateString('en-CA'); // local YYYY-MM-DD
+  const todaysAppointments = appointments.filter(a => a.data === currentDateStr && a.status !== 'Finalizado');
+  
+  const criticalAlerts = clearedNotifications ? [] : [
     ...inventory.filter(i => i.quantity <= i.minQuantity).map(i => ({
       id: `inv-${i.id}`,
       type: 'inventory',
@@ -392,8 +402,16 @@ export default function CRMPage() {
       icon: 'inventory_2',
       alertClass: 'bg-primary/5 border-primary text-on-surface'
     })),
-    { id: 'al2', type: 'followup', title: 'Retorno Pendente', text: 'Cliente Luísa Costa atingiu D+15 do pós-procedimento.', icon: 'assignment_late', alertClass: 'bg-secondary/5 border-secondary text-on-surface' }
+    ...todaysAppointments.map(a => ({
+      id: `appt-${a.id}`,
+      type: 'appointment',
+      title: 'Agendamento Hoje',
+      text: `${a.hora} - ${a.clienteNome} (${a.procedimento})`,
+      icon: 'event',
+      alertClass: 'bg-secondary/5 border-secondary text-on-surface'
+    }))
   ];
+
 
   // Handle patient avatar initialization in edit mode
   useEffect(() => {
@@ -425,6 +443,72 @@ export default function CRMPage() {
     };
     checkAI();
   }, []);
+
+  const deleteTimelineItem = async (patientId: string, itemId: string) => {
+    if (!window.confirm('Tem certeza que deseja excluir este protocolo?')) return;
+    try {
+      const patient = patients.find(p => p.id === patientId);
+      if (!patient) return;
+      const newHistorico = patient.historico.filter(item => item.id !== itemId);
+      const { error } = await supabase.from('clientes').update({ historico: newHistorico }).eq('id', patientId);
+      if (error) throw error;
+      setPatients(prev => prev.map(p => p.id === patientId ? { ...p, historico: newHistorico } : p));
+      
+    } catch (err: any) {
+      showAlert('Erro ao excluir: ' + err.message);
+    }
+  };
+
+  const saveTimelineItem = async (patientId: string, itemId: string) => {
+    try {
+      const patient = patients.find(p => p.id === patientId);
+      if (!patient) return;
+      const newHistorico = patient.historico.map(item => item.id === itemId ? { ...item, description: editingTimelineText } : item);
+      const { error } = await supabase.from('clientes').update({ historico: newHistorico }).eq('id', patientId);
+      if (error) throw error;
+      setPatients(prev => prev.map(p => p.id === patientId ? { ...p, historico: newHistorico } : p));
+      
+      setEditingTimelineItemId(null);
+    } catch (err: any) {
+      showAlert('Erro ao atualizar: ' + err.message);
+    }
+  };
+
+  const saveMsgPredefinida = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const formData = new FormData(e.currentTarget);
+    const title = formData.get('title') as string;
+    const trigger_type = formData.get('trigger_type') as string;
+    const contentText = formData.get('content') as string;
+    
+    try {
+      if (editingMsg?.id) {
+        const { data, error } = await supabase.from('mensagens_predefinidas').update({ title, trigger_type, content: contentText }).eq('id', editingMsg.id).select();
+        if (error) throw error;
+        setMensagensPredefinidas(prev => prev.map(m => m.id === editingMsg.id ? data[0] : m));
+        showAlert('Mensagem atualizada com sucesso!');
+      } else {
+        const { data, error } = await supabase.from('mensagens_predefinidas').insert([{ title, trigger_type, content: contentText }]).select();
+        if (error) throw error;
+        setMensagensPredefinidas(prev => [data[0], ...prev]);
+        showAlert('Mensagem criada com sucesso!');
+      }
+      setIsMsgModalOpen(false);
+    } catch (err: any) {
+      showAlert('Erro ao salvar mensagem: ' + err.message);
+    }
+  };
+
+  const deleteMsgPredefinida = async (id: string) => {
+    if (!window.confirm('Excluir esta mensagem?')) return;
+    try {
+      const { error } = await supabase.from('mensagens_predefinidas').delete().eq('id', id);
+      if (error) throw error;
+      setMensagensPredefinidas(prev => prev.filter(m => m.id !== id));
+    } catch (err: any) {
+      showAlert('Erro ao excluir: ' + err.message);
+    }
+  };
 
   // 1. Session check on mount
   useEffect(() => {
@@ -2974,7 +3058,30 @@ export default function CRMPage() {
                                   <h4 className="font-manrope text-[13px] font-bold text-on-surface">{item.title}</h4>
                                   <span className="text-[11px] text-on-surface-variant font-medium">{item.date}</span>
                                 </div>
-                                <p className="text-[12px] text-on-surface-variant leading-relaxed mt-1">{item.description}</p>
+                                <div className="absolute right-4 top-4 flex gap-2">
+                                  <button onClick={() => { setEditingTimelineItemId(item.id); setEditingTimelineText(item.description); }} className="text-on-surface-variant hover:text-primary transition-colors">
+                                    <span className="material-symbols-outlined text-[16px]">edit</span>
+                                  </button>
+                                  <button onClick={() => deleteTimelineItem(selectedPatient.id, item.id)} className="text-on-surface-variant hover:text-error transition-colors">
+                                    <span className="material-symbols-outlined text-[16px]">delete</span>
+                                  </button>
+                                </div>
+                                {editingTimelineItemId === item.id ? (
+                                  <div className="mt-2 space-y-2">
+                                    <textarea 
+                                      className="w-full bg-white-pure border border-outline-variant rounded-xl p-3 text-[13px] text-on-surface focus:outline-none focus:border-primary resize-none" 
+                                      rows={3} 
+                                      value={editingTimelineText}
+                                      onChange={(e) => setEditingTimelineText(e.target.value)}
+                                    ></textarea>
+                                    <div className="flex justify-end gap-2">
+                                      <button onClick={() => setEditingTimelineItemId(null)} className="px-3 py-1.5 text-[11px] font-bold text-on-surface-variant hover:bg-surface-container rounded-lg">Cancelar</button>
+                                      <button onClick={() => saveTimelineItem(selectedPatient.id, item.id)} className="px-3 py-1.5 text-[11px] font-bold bg-primary text-white-pure hover:opacity-90 rounded-lg">Salvar</button>
+                                    </div>
+                                  </div>
+                                ) : (
+                                  <p className="text-[12px] text-on-surface-variant leading-relaxed mt-1">{item.description}</p>
+                                )}
                                 <div className="flex gap-2 mt-3">
                                   <span className="bg-[#fed65b] text-[#745c00] px-2.5 py-0.5 rounded-full text-[9px] font-bold uppercase">
                                     {item.category}
@@ -4816,6 +4923,46 @@ export default function CRMPage() {
       )}
 
       {/* Dynamic ICP UI User Registration Modal */}
+
+      {/* Modal Mensagem Predefinida */}
+      {isMsgModalOpen && (
+        <div className="fixed inset-0 bg-[#31302fd0] backdrop-blur-sm flex items-center justify-center z-[100] p-4 animate-fade-in" onClick={() => setIsMsgModalOpen(false)}>
+          <div className="bg-[#f7f3f0] rounded-3xl border border-outline-variant w-full max-w-lg overflow-hidden shadow-2xl relative" onClick={(e) => e.stopPropagation()}>
+            <div className="p-6 border-b border-outline-variant/30 flex justify-between items-center bg-white-pure">
+              <h2 className="font-manrope text-[20px] font-bold text-primary">{editingMsg ? 'Editar Modelo' : 'Novo Modelo de Mensagem'}</h2>
+              <button onClick={() => setIsMsgModalOpen(false)} className="w-8 h-8 rounded-full bg-surface-container flex items-center justify-center text-on-surface hover:bg-surface-container-high transition-colors">
+                <span className="material-symbols-outlined text-[18px]">close</span>
+              </button>
+            </div>
+            <form onSubmit={saveMsgPredefinida} className="p-6 space-y-5 bg-white-pure">
+              <div>
+                <label className="block text-[12px] font-bold text-on-surface-variant mb-1.5 uppercase tracking-wider">Título do Modelo</label>
+                <input required name="title" defaultValue={editingMsg?.title || ''} className="w-full bg-surface border border-outline-variant rounded-xl px-4 py-3 text-[14px] text-on-surface focus:outline-none focus:border-primary transition-colors" placeholder="Ex: Pós-Procedimento D+15" />
+              </div>
+              <div>
+                <label className="block text-[12px] font-bold text-on-surface-variant mb-1.5 uppercase tracking-wider">Gatilho</label>
+                <select required name="trigger_type" defaultValue={editingMsg?.trigger_type || 'Agenda'} className="w-full bg-surface border border-outline-variant rounded-xl px-4 py-3 text-[14px] text-on-surface focus:outline-none focus:border-primary transition-colors">
+                  <option value="Agenda">Agenda (Lembrete)</option>
+                  <option value="Pós-Procedimento">Pós-Procedimento</option>
+                  <option value="Aniversário">Aniversário</option>
+                  <option value="Inativo">Cliente Inativo</option>
+                  <option value="Livre">Mensagem Livre</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-[12px] font-bold text-on-surface-variant mb-1.5 uppercase tracking-wider">Conteúdo da Mensagem</label>
+                <textarea required name="content" defaultValue={editingMsg?.content || ''} rows={5} className="w-full bg-surface border border-outline-variant rounded-xl px-4 py-3 text-[14px] text-on-surface focus:outline-none focus:border-primary transition-colors resize-none" placeholder="Olá [nome]! Confirmamos..."></textarea>
+                <p className="text-[10px] text-on-surface-variant mt-2">Dica: Use [nome], [data], [hora], [procedimento] como variáveis dinâmicas se sua integração WhatsApp suportar.</p>
+              </div>
+              <div className="pt-4 flex gap-3">
+                <button type="button" onClick={() => setIsMsgModalOpen(false)} className="flex-1 py-3.5 rounded-xl font-bold text-[14px] text-on-surface hover:bg-surface-container transition-colors">Cancelar</button>
+                <button type="submit" className="flex-1 bg-primary text-white-pure py-3.5 rounded-xl font-bold text-[14px] hover:opacity-90 transition-opacity">Salvar Modelo</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       {isNewUserModalOpen && (
         <div className="fixed inset-0 bg-[#31302fd0] backdrop-blur-md flex items-center justify-center z-50 p-0 sm:p-4 animate-fade-in">
           <div className="bg-white-pure sm:rounded-3xl border border-outline-variant w-full max-w-xl p-5 sm:p-8 shadow-2xl relative h-full sm:h-auto sm:max-h-[90vh] overflow-y-auto select-none">
