@@ -1185,9 +1185,10 @@ export default function CRMPage() {
               </button>
            </form>
            
-           <p className="text-[11px] text-on-surface-variant mt-8 text-center font-manrope">
-              Acesso seguro. Todos os dados são criptografados.<br/>© 2026 Gabi Almeida Estética.
-           </p>
+           <div className="text-center mt-12 mb-6 opacity-60 text-[11px] font-bold text-on-surface-variant flex flex-col items-center gap-2">
+              <span className="material-symbols-outlined text-[16px]">lock</span>
+              Acesso seguro. Todos os dados são criptografados.<br/>© 2026 Gabi Almeida Estética. Ver. 2.0 - Desenvolvido: caduhelp-dev
+            </div>
         </div>
       </div>
     );
@@ -1431,6 +1432,15 @@ export default function CRMPage() {
           >
             <span className="material-symbols-outlined text-primary text-[18px]" style={{fontVariationSettings: currentTab === 'dados-empresa' ? "'FILL' 1" : "'FILL' 0"}}>business</span>
             <span className="font-manrope text-[13px] leading-none text-primary">Dados da Empresa</span>
+          </button>
+
+          <button 
+            id="nav-sobre"
+            onClick={() => { setCurrentTab('sobre'); setSearchQuery(''); setIsMobileMenuOpen(false); }}
+            className={`flex items-center gap-4 px-4 py-2 rounded-xl transition-all duration-300 text-left ${currentTab === 'sobre' ? 'text-primary font-bold border-r-4 border-primary bg-primary/10' : 'text-on-surface-variant hover:text-primary hover:bg-surface-container'}`}
+          >
+            <span className="material-symbols-outlined text-primary text-[18px]" style={{fontVariationSettings: currentTab === 'sobre' ? "'FILL' 1" : "'FILL' 0"}}>info</span>
+            <span className="font-manrope text-[13px] leading-none text-primary">Sobre (Versão)</span>
           </button>
         </nav>
 
@@ -4969,6 +4979,44 @@ export default function CRMPage() {
                     </div>
                   )}
                 </form>
+              </div>
+            </div>
+          </section>
+        )}
+
+        {currentTab === 'sobre' && (
+          <section className="flex-1 overflow-y-auto p-4 sm:p-8 bg-surface">
+            <div className="max-w-4xl mx-auto space-y-6">
+              <h1 className="font-manrope text-[24px] font-bold text-primary">Sobre o Sistema</h1>
+              <div className="bg-white-pure rounded-3xl p-6 border border-outline-variant space-y-4">
+                <div className="flex items-center gap-3 mb-6">
+                  <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
+                    <span className="material-symbols-outlined text-primary text-[24px]">verified</span>
+                  </div>
+                  <div>
+                    <h2 className="text-[18px] font-bold text-on-surface">Gabi Almeida Estética CRM</h2>
+                    <p className="text-[13px] text-on-surface-variant font-bold">Versão atual: 2.0.0</p>
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  <h3 className="text-[14px] font-bold text-primary border-b border-outline-variant/30 pb-2">Histórico de Versões (Changelog)</h3>
+                  
+                  <div className="bg-surface-container-lowest rounded-2xl p-4 border border-outline-variant/50">
+                    <div className="flex justify-between items-center mb-2">
+                      <span className="font-bold text-[14px] text-on-surface">Versão 2.0.0</span>
+                      <span className="text-[11px] font-bold text-on-surface-variant px-2 py-1 bg-surface-container rounded-lg">Junho 2026</span>
+                    </div>
+                    <ul className="list-disc pl-5 space-y-1.5 text-[13px] text-on-surface-variant mt-3">
+                      <li><strong className="text-on-surface">Módulo de Mensagens:</strong> Adicionado envio de WhatsApp a partir do perfil do cliente.</li>
+                      <li><strong className="text-on-surface">UI/UX Responsivo:</strong> Correções na exibição de botões para dispositivos móveis (tablets e celulares).</li>
+                      <li><strong className="text-on-surface">Agenda:</strong> Melhoria na área de clique para criar agendamentos e ordenação alfabética de clientes.</li>
+                      <li><strong className="text-on-surface">Segurança:</strong> Implementação de versionamento para acompanhamento de mudanças (Changelog).</li>
+                      <li><strong className="text-on-surface">Desenvolvedor:</strong> caduhelp-dev.</li>
+                    </ul>
+                  </div>
+
+                </div>
               </div>
             </div>
           </section>
