@@ -64,7 +64,7 @@ export default function CRMPage() {
   const [loginError, setLoginError] = useState('');
 
   // Sidebar tab control
-  const [currentTab, setCurrentTab] = useState<'dashboard' | 'agenda' | 'clientes' | 'financeiro' | 'usuarios' | 'cadastro-cliente' | 'servicos' | 'estoque' | 'comandas' | 'mensagens-pre' | 'despesas' | 'funcionarios' | 'relatorios-performance' | 'relatorios-financeiro' | 'relatorios-melhores-clientes' | 'configuracoes' | 'dados-empresa'>('agenda');
+  const [currentTab, setCurrentTab] = useState<'dashboard' | 'agenda' | 'clientes' | 'financeiro' | 'usuarios' | 'cadastro-cliente' | 'servicos' | 'estoque' | 'comandas' | 'mensagens-pre' | 'despesas' | 'funcionarios' | 'relatorios-performance' | 'relatorios-financeiro' | 'relatorios-melhores-clientes' | 'configuracoes' | 'dados-empresa' | 'sobre'>('agenda');
   
   const [despesas, setDespesas] = useState<{id: string, descricao: string, valor: number, data: string, categoria: string, status: string}[]>([]);
   const [isDespesaModalOpen, setIsDespesaModalOpen] = useState(false);
