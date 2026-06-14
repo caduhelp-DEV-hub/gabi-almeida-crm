@@ -2185,8 +2185,20 @@ export default function CRMPage() {
                                       const isConsult = appt.categoria === 'Consulta';
                                       
                                       const styles = getProcedureStyles(appt.procedimento);
-                                      let dynamicStyle: any = { top: `${topPx}px`, height: `${Math.max(heightPx, 40)}px`, left: '8px', right: '8px' };
+                                      const durAppt = getServiceDuration(appt.procedimento);
+                                      const startMinute = parseInt(appt.hora.split(':')[1] || '0');
+                                      const topPx = (startMinute / 60) * 90;
+                                      const heightPx = (durAppt / 60) * 90;
+                                      
+                                      let dynamicStyle: any = { top: `${topPx}px`, height: `${Math.max(heightPx, 45)}px`, left: '8px', right: '8px' };
                                       let cardColorClass = 'z-20 border-l-4 shadow-sm hover:shadow-md transition-all cursor-pointer absolute p-1.5 sm:p-2 rounded-xl flex flex-col gap-0.5 overflow-hidden text-[10px] sm:text-[11px] leading-tight';
+                                      
+                                      const apptIndex = appointments.findIndex(a => a.id === appt.id);
+                                      const isConflicted = appointments.some((a, idx) => {
+                                        if (idx >= apptIndex || a.data !== appt.data) return false;
+                                        const durA = getServiceDuration(a.procedimento);
+                                        return checkTimeOverlap(a.hora.slice(0, 5), durA, appt.hora.slice(0, 5), durAppt);
+                                      });
                                       
                                       if (isConflicted || appt.notas?.includes('[CONFLITO]')) {
                                         cardColorClass += ' bg-red-600 border-red-800 text-white-pure shadow-xl z-30 scale-[0.98] origin-left';
@@ -2201,12 +2213,6 @@ export default function CRMPage() {
                                           : appt.status === 'Confirmado' 
                                             ? 'bg-amber-500 text-white-pure' 
                                             : 'bg-slate-400 text-white-pure';
-
-                                      const startMinute = parseInt(appt.hora.split(':')[1] || '0');
-                                      const topPx = (startMinute / 60) * 90;
-                                      const heightPx = (durAppt / 60) * 90;
-                                      dynamicStyle.top = `${topPx}px`;
-                                      dynamicStyle.height = `${Math.max(heightPx, 45)}px`;
 
                                       return (
                                         <div 
