@@ -769,8 +769,33 @@ export default function CRMPage() {
       }
 
       if (appts) {
+        const todayStr = new Date().toLocaleDateString('en-CA');
         const validAppts = appts.filter((a: any) => a.cliente_id && a.clientes);
-        setAppointments(validAppts.map(mapAgendamentoToFrontend));
+        
+        // Auto-finalize past appointments
+        const hasOutdated = validAppts.some((a: any) => a.data && a.data < todayStr && a.status !== 'Finalizado');
+        if (hasOutdated) {
+          supabase
+            .from('agendamentos')
+            .update({ status: 'Finalizado' })
+            .lt('data', todayStr)
+            .neq('status', 'Finalizado')
+            .then((res: any) => {
+              if (res.error) console.error("Error auto-finalizing appointments:", res.error);
+            });
+          
+          setAppointments(
+            validAppts.map((a: any) => {
+              const mapped = mapAgendamentoToFrontend(a);
+              if (mapped.data && mapped.data < todayStr && mapped.status !== 'Finalizado') {
+                mapped.status = 'Finalizado';
+              }
+              return mapped;
+            })
+          );
+        } else {
+          setAppointments(validAppts.map(mapAgendamentoToFrontend));
+        }
       }
 
       if (trans) setTransactions(trans.map(mapCobrancaToFrontend));
@@ -812,6 +837,18 @@ export default function CRMPage() {
           const { data } = await supabase.from('agendamentos').select('*, clientes(id, nome, avatar)').eq('id', payload.new.id).single();
           if (data && data.cliente_id && data.clientes) {
             const mapped = mapAgendamentoToFrontend(data);
+            const todayStr = new Date().toLocaleDateString('en-CA');
+            if (mapped.data && mapped.data < todayStr && mapped.status !== 'Finalizado') {
+              mapped.status = 'Finalizado';
+              // Update in DB (fire and forget)
+              supabase
+                .from('agendamentos')
+                .update({ status: 'Finalizado' })
+                .eq('id', mapped.id)
+                .then((res: any) => {
+                  if (res.error) console.error("Error auto-finalizing realtime appointment:", res.error);
+                });
+            }
             setAppointments(prev => {
               const exists = prev.find(a => a.id === mapped.id);
               return exists ? prev.map(a => a.id === mapped.id ? mapped : a) : [...prev, mapped];
@@ -1409,7 +1446,7 @@ export default function CRMPage() {
               <span>Acesso seguro. Todos os dados são criptografados.</span>
             </div>
             <span>© 2026 Gabi Almeida Estética.</span>
-            <span>Desenvolvido: caduhelp-dev | Ver. 3.2</span>
+            <span>Desenvolvido: caduhelp-dev | Ver. 3.3</span>
           </div>
         </div>
       </div>
@@ -5493,13 +5530,23 @@ export default function CRMPage() {
                   </div>
                   <div>
                     <h2 className="text-[18px] font-bold text-on-surface">Gabi Almeida Estética CRM</h2>
-                    <p className="text-[13px] text-on-surface-variant font-bold">Versão atual: 3.2.0</p>
+                    <p className="text-[13px] text-on-surface-variant font-bold">Versão atual: 3.3.0</p>
                   </div>
                 </div>
 
                 <div className="space-y-4">
                   <h3 className="text-[14px] font-bold text-primary border-b border-outline-variant/30 pb-2">Histórico de Versões (Changelog)</h3>
                   
+                  <div className="bg-surface-container-lowest rounded-2xl p-4 border border-outline-variant/50 mb-4">
+                    <div className="flex justify-between items-center mb-2">
+                      <span className="font-bold text-[14px] text-on-surface">Versão 3.3.0</span>
+                      <span className="text-[11px] font-bold text-on-surface-variant px-2 py-1 bg-surface-container rounded-lg">15 Junho 2026</span>
+                    </div>
+                    <ul className="list-disc pl-5 space-y-1.5 text-[13px] text-on-surface-variant mt-3">
+                      <li><strong className="text-on-surface">Auto-Finalização de Agendamentos:</strong> Implementada regra de negócio que muda automaticamente qualquer agendamento de dias anteriores para o status de "Finalizado" tanto no carregamento inicial quanto ao receber atualizações em tempo real, evitando agendamentos esquecidos no passado.</li>
+                    </ul>
+                  </div>
+
                   <div className="bg-surface-container-lowest rounded-2xl p-4 border border-outline-variant/50 mb-4">
                     <div className="flex justify-between items-center mb-2">
                       <span className="font-bold text-[14px] text-on-surface">Versão 3.2.0</span>
