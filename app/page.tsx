@@ -1403,9 +1403,13 @@ export default function CRMPage() {
               </button>
            </form>
            
-           <div className="absolute bottom-6 left-0 w-full px-6 flex items-center justify-between text-[11px] font-bold text-on-surface-variant/50">
-            <span>Studio Gabi Almeida</span>
-            <span>v2.8.0</span>
+           <div className="absolute -bottom-16 left-0 w-full px-6 flex flex-col items-center text-center text-[11px] font-bold text-on-surface-variant/50 space-y-1">
+            <div className="flex items-center gap-1">
+              <span className="material-symbols-outlined text-[14px]">lock</span>
+              <span>Acesso seguro. Todos os dados são criptografados.</span>
+            </div>
+            <span>© 2026 Gabi Almeida Estética.</span>
+            <span>Desenvolvido: caduhelp-dev | Ver. 2.9</span>
           </div>
         </div>
       </div>
@@ -2616,7 +2620,7 @@ export default function CRMPage() {
                             <span className="material-symbols-outlined text-[18px]">chevron_right</span>
                           </button>
                         </div>
-                        <span className="text-[12px] text-on-surface-variant font-bold">Studio Activa</span>
+                        <span className="text-[12px] text-on-surface-variant font-bold">Studio Gabi Almeida</span>
                       </div>
 
                       {/* Calendar grid headers */}
