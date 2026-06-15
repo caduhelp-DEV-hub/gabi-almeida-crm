@@ -2189,27 +2189,49 @@ export default function CRMPage() {
                   </div>
 
                   {/* Métricas Resumidas */}
-                  <div className="pt-3 border-t border-outline-variant/40 space-y-3">
-                    <p className="text-[10px] text-outline font-extrabold uppercase tracking-widest">Métricas do Dia</p>
-                    <div className="flex gap-3 items-center">
-                      <div className="w-8 h-8 rounded-xl bg-primary/10 flex items-center justify-center text-primary flex-shrink-0">
-                        <span className="material-symbols-outlined text-[16px]">trending_up</span>
+                  {(() => {
+                    const formattedDay = String(agendaNavDate.getDate()).padStart(2, '0');
+                    const formattedMonth = String(agendaNavDate.getMonth() + 1).padStart(2, '0');
+                    const dateStr = `${agendaNavDate.getFullYear()}-${formattedMonth}-${formattedDay}`;
+                    const dayAppts = appointments.filter(a => a.data === dateStr && a.status !== 'Cancelado');
+                    
+                    let totalRev = 0;
+                    let occupiedMins = 0;
+                    dayAppts.forEach(appt => {
+                      const svc = services.find(s => s.nome === appt.procedimento);
+                      if (svc) {
+                        totalRev += Number(svc.preco || 0);
+                        occupiedMins += getServiceDuration(appt.procedimento);
+                      } else {
+                        occupiedMins += getServiceDuration(appt.procedimento);
+                      }
+                    });
+                    const occupation = Math.min(100, Math.round((occupiedMins / 540) * 100)); // Considera 9h de trabalho (540min)
+                    
+                    return (
+                      <div className="pt-3 border-t border-outline-variant/40 space-y-3">
+                        <p className="text-[10px] text-outline font-extrabold uppercase tracking-widest">Métricas do Dia</p>
+                        <div className="flex gap-3 items-center">
+                          <div className="w-8 h-8 rounded-xl bg-primary/10 flex items-center justify-center text-primary flex-shrink-0">
+                            <span className="material-symbols-outlined text-[16px]">trending_up</span>
+                          </div>
+                          <div className="min-w-0">
+                            <p className="text-[10px] text-on-surface-variant leading-tight">Faturamento Estimado</p>
+                            <p className="font-bold text-[13px] text-primary truncate">R$ {totalRev.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</p>
+                          </div>
+                        </div>
+                        <div className="flex gap-3 items-center">
+                          <div className="w-8 h-8 rounded-xl bg-secondary/10 flex items-center justify-center text-secondary flex-shrink-0">
+                            <span className="material-symbols-outlined text-[16px]">person_check</span>
+                          </div>
+                          <div className="min-w-0">
+                            <p className="text-[10px] text-on-surface-variant leading-tight">Taxa Ocupacional</p>
+                            <p className="font-bold text-[13px] text-on-surface">{occupation}%</p>
+                          </div>
+                        </div>
                       </div>
-                      <div className="min-w-0">
-                        <p className="text-[10px] text-on-surface-variant leading-tight">Faturamento Estimado</p>
-                        <p className="font-bold text-[13px] text-primary truncate">R$ 16.700,00</p>
-                      </div>
-                    </div>
-                    <div className="flex gap-3 items-center">
-                      <div className="w-8 h-8 rounded-xl bg-secondary/10 flex items-center justify-center text-secondary flex-shrink-0">
-                        <span className="material-symbols-outlined text-[16px]">person_check</span>
-                      </div>
-                      <div className="min-w-0">
-                        <p className="text-[10px] text-on-surface-variant leading-tight">Taxa Ocupacional</p>
-                        <p className="font-bold text-[13px] text-on-surface">92%</p>
-                      </div>
-                    </div>
-                  </div>
+                    );
+                  })()}
                 </div>
               </aside>
 
@@ -2369,7 +2391,7 @@ export default function CRMPage() {
                                       const heightPx = (durAppt / 60) * 90;
                                       
                                       let dynamicStyle: any = { top: `${topPx}px`, height: `${heightPx}px`, left: '8px', right: '8px' };
-                                      let cardColorClass = 'z-20 border-l-[3px] shadow-sm hover:shadow-md transition-all cursor-pointer absolute px-1.5 py-0.5 rounded-lg flex flex-col gap-0 text-[9px] sm:text-[10px] leading-tight overflow-hidden';
+                                      let cardColorClass = 'z-20 border-l-[3px] shadow-sm hover:shadow-md transition-all cursor-pointer absolute px-2 py-1 sm:px-3 sm:py-1.5 rounded-lg overflow-hidden group/card';
                                       
                                       const apptIndex = appointments.findIndex(a => a.id === appt.id);
                                       const isConflicted = appointments.some((a, idx) => {
@@ -2414,73 +2436,55 @@ export default function CRMPage() {
                                                }
                                             }}
                                           >
-                                            <div className="flex flex-col h-full w-full justify-start overflow-hidden relative group/card">
-                                              {/* Top Row: Time, Badges and Action Buttons */}
-                                              <div className="flex justify-between items-start shrink-0">
-                                                <div className="flex gap-1 items-center">
-                                                  <span className="font-extrabold text-[9px] sm:text-[10px] opacity-90">{appt.hora} - {formattedEndTime}</span>
-                                                  {!isCompact && (
-                                                    <span className={`text-[7px] sm:text-[8px] px-1 py-0 rounded-sm font-bold uppercase tracking-wide ${badgeBg}`}>
-                                                      {appt.status}
-                                                    </span>
-                                                  )}
-                                                </div>
-                                                
-                                                <div className="flex gap-1 shrink-0 bg-white-pure/60 rounded-md px-1 py-0.5 ml-2 backdrop-blur-sm shadow-sm border border-black/5">
-                                                  <button 
-                                                    onClick={(e) => {
-                                                      e.stopPropagation();
-                                                      setEditingAppointment(appt);
-                                                      setNewApptPatient(appt.clienteNome);
-                                                      setNewApptProcedure(appt.procedimento);
-                                                      setNewApptProfessional(appt.profissional);
-                                                      setNewApptTime(appt.hora);
-                                                      setNewApptDate(appt.data);
-                                                      setNewApptCategory(appt.categoria);
-                                                      setNewApptStatus(appt.status);
-                                                      setIsNewAppointmentOpen(true);
-                                                    }}
-                                                    className="p-0.5 hover:text-primary transition-colors flex items-center justify-center" title="Editar"
-                                                  >
-                                                    <span className="material-symbols-outlined text-[13px]">edit</span>
-                                                  </button>
-                                                  <button 
-                                                    onClick={(e) => {
-                                                      e.stopPropagation();
-                                                      showConfirm(`Remover agendamento de ${appt.clienteNome}?`, async () => {
-                                                        try {
-                                                          const { error } = await supabase.from('agendamentos').delete().eq('id', appt.id);
-                                                          if (error) throw error;
-                                                          setAppointments(prev => prev.filter(a => a.id !== appt.id));
-                                                          showAlert('Agendamento removido.');
-                                                        } catch (err: any) {
-                                                          showAlert(`Erro ao excluir: ${err.message}`);
-                                                        }
-                                                      });
-                                                    }}
-                                                    className="p-0.5 hover:text-error transition-colors flex items-center justify-center" title="Excluir"
-                                                  >
-                                                    <span className="material-symbols-outlined text-[13px]">delete</span>
-                                                  </button>
-                                                </div>
+                                            <div className="flex flex-col h-full w-full justify-start overflow-hidden relative">
+                                              
+                                              {/* Action Buttons (Absolute, visible on hover) */}
+                                              <div className="absolute top-0 right-0 hidden group-hover/card:flex gap-1 bg-white-pure/80 backdrop-blur-md rounded-bl-lg p-0.5 shadow-sm border-b border-l border-black/5 z-10">
+                                                <button onClick={(e) => { e.stopPropagation(); setEditingAppointment(appt); setNewApptPatient(appt.clienteNome); setNewApptProcedure(appt.procedimento); setNewApptProfessional(appt.profissional); setNewApptTime(appt.hora); setNewApptDate(appt.data); setNewApptCategory(appt.categoria); setNewApptStatus(appt.status); setIsNewAppointmentOpen(true); }} className="p-0.5 hover:text-primary transition-colors flex items-center justify-center" title="Editar">
+                                                  <span className="material-symbols-outlined text-[13px]">edit</span>
+                                                </button>
+                                                <button onClick={(e) => { e.stopPropagation(); showConfirm(`Remover agendamento de ${appt.clienteNome}?`, async () => { try { const { error } = await supabase.from('agendamentos').delete().eq('id', appt.id); if (error) throw error; setAppointments(prev => prev.filter(a => a.id !== appt.id)); showAlert('Agendamento removido.'); } catch (err: any) { showAlert(`Erro ao excluir: ${err.message}`); } }); }} className="p-0.5 hover:text-error transition-colors flex items-center justify-center" title="Excluir">
+                                                  <span className="material-symbols-outlined text-[13px]">delete</span>
+                                                </button>
                                               </div>
 
-                                              {/* Content Row: Flex-row if compact, Flex-col if tall */}
-                                              <div className={`flex ${isCompact ? 'flex-row items-center gap-2' : 'flex-col gap-0 mt-0.5'}`}>
-                                                <div className="flex items-center gap-1 font-extrabold text-[10px] sm:text-[11px] truncate shrink-0">
-                                                  <span className="material-symbols-outlined text-[11px]">person</span>
-                                                  <span className="truncate">{appt.clienteNome}</span>
+                                              {isCompact ? (
+                                                <div className="flex flex-col justify-center h-full gap-0.5 w-full pr-8">
+                                                  <div className="flex items-center gap-1.5">
+                                                    <span className="font-extrabold text-[10px] sm:text-[11px] opacity-90">{appt.hora} - {formattedEndTime}</span>
+                                                    <span className={`text-[7px] sm:text-[8px] px-1.5 py-0.5 rounded-sm font-bold uppercase tracking-wide ${badgeBg}`}>
+                                                      {appt.status}
+                                                    </span>
+                                                  </div>
+                                                  <div className="flex items-center gap-3 font-medium text-[11px] sm:text-[12px]">
+                                                    <div className="flex items-center gap-1 shrink-0">
+                                                      <span className="material-symbols-outlined text-[13px] opacity-80">person</span>
+                                                      <span className="truncate max-w-[110px] font-extrabold text-on-surface">{appt.clienteNome}</span>
+                                                    </div>
+                                                    <div className="flex items-center gap-1 shrink-0 opacity-90">
+                                                      <span className="material-symbols-outlined text-[13px] opacity-80">{styles.icon}</span>
+                                                      <span className="truncate max-w-[110px]">{appt.procedimento}</span>
+                                                    </div>
+                                                  </div>
                                                 </div>
-                                                <div className="flex items-center gap-1 font-medium text-[9px] sm:text-[10px] opacity-90 truncate">
-                                                  <span className="material-symbols-outlined text-[11px]">{styles.icon}</span>
-                                                  <span className="truncate">{appt.procedimento}</span>
+                                              ) : (
+                                                <div className="flex flex-col justify-start h-full gap-1 w-full pr-8 mt-0.5">
+                                                  <div className="flex items-center gap-1.5">
+                                                    <span className="font-extrabold text-[11px] sm:text-[12px] opacity-90">{appt.hora} - {formattedEndTime}</span>
+                                                    <span className={`text-[8px] sm:text-[9px] px-1.5 py-0.5 rounded-sm font-bold uppercase tracking-wide ${badgeBg}`}>
+                                                      {appt.status}
+                                                    </span>
+                                                  </div>
+                                                  <div className="flex items-center gap-1.5 font-extrabold text-[12px] sm:text-[13px] text-on-surface mt-0.5">
+                                                    <span className="material-symbols-outlined text-[15px] opacity-80">person</span>
+                                                    <span className="truncate">{appt.clienteNome}</span>
+                                                  </div>
+                                                  <div className="flex items-center gap-1.5 font-medium text-[11px] sm:text-[12px] opacity-90">
+                                                    <span className="material-symbols-outlined text-[15px] opacity-80">{styles.icon}</span>
+                                                    <span className="truncate">{appt.procedimento}</span>
+                                                  </div>
                                                 </div>
-                                                {isCompact && (
-                                                  <span className={`text-[7px] sm:text-[8px] px-1 py-0 rounded-sm font-bold uppercase tracking-wide ${badgeBg} ml-auto shrink-0`}>
-                                                    {appt.status}
-                                                  </span>
-                                                )}
-                                              </div>
+                                              )}
                                             </div>
                                           </div>
                                         );
@@ -5509,13 +5513,25 @@ export default function CRMPage() {
                   </div>
                   <div>
                     <h2 className="text-[18px] font-bold text-on-surface">Gabi Almeida Estética CRM</h2>
-                    <p className="text-[13px] text-on-surface-variant font-bold">Versão atual: 2.8.0</p>
+                    <p className="text-[13px] text-on-surface-variant font-bold">Versão atual: 2.9.0</p>
                   </div>
                 </div>
 
                 <div className="space-y-4">
                   <h3 className="text-[14px] font-bold text-primary border-b border-outline-variant/30 pb-2">Histórico de Versões (Changelog)</h3>
                   
+                  <div className="bg-surface-container-lowest rounded-2xl p-4 border border-outline-variant/50 mb-4">
+                    <div className="flex justify-between items-center mb-2">
+                      <span className="font-bold text-[14px] text-on-surface">Versão 2.9.0</span>
+                      <span className="text-[11px] font-bold text-on-surface-variant px-2 py-1 bg-surface-container rounded-lg">15 Junho 2026</span>
+                    </div>
+                    <ul className="list-disc pl-5 space-y-1.5 text-[13px] text-on-surface-variant mt-3">
+                      <li><strong className="text-on-surface">Métricas Dinâmicas:</strong> O Faturamento Estimado e a Taxa Ocupacional agora são calculados automaticamente em tempo real com base nos agendamentos do dia ativo.</li>
+                      <li><strong className="text-on-surface">Tipografia da Agenda Diária e Sem Cortes:</strong> As caixinhas dos agendamentos agora adotam duas configurações de visualização, garantindo que mesmo os procedimentos rápidos de 30min exibam todas as informações em linhas sem cortar ou extrapolar os limites do tempo (botões de edição aparecem apenas ao passar o mouse).</li>
+                      <li><strong className="text-on-surface">Correção Mensal:</strong> Ajuste definitivo no início da contagem dos dias do mês na grade do calendário.</li>
+                    </ul>
+                  </div>
+
                   <div className="bg-surface-container-lowest rounded-2xl p-4 border border-outline-variant/50 mb-4">
                     <div className="flex justify-between items-center mb-2">
                       <span className="font-bold text-[14px] text-on-surface">Versão 2.8.0</span>
