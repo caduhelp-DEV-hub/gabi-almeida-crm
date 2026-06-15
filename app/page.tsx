@@ -1328,7 +1328,7 @@ export default function CRMPage() {
               <span>Acesso seguro. Todos os dados são criptografados.</span>
               <span>© 2026 Gabi Almeida Estética.</span>
               <span>Desenvolvido: caduhelp-dev</span>
-              <span>Ver. 2.4</span>
+              <span>Ver. 2.5</span>
             </div>
         </div>
       </div>
@@ -2343,14 +2343,14 @@ export default function CRMPage() {
 
                                           <p className="text-[11px] sm:text-[13px] font-bold mt-0.5 sm:mt-1 flex items-start gap-1.5">
                                             <span className="material-symbols-outlined text-[14px] sm:text-[16px]">person</span>
-                                            <span className="line-clamp-2">{appt.clienteNome}</span>
+                                            <span className="break-words max-w-full leading-tight">{appt.clienteNome}</span>
                                           </p>
 
                                           <p className="text-[10px] sm:text-[12px] font-medium flex items-start gap-1.5 opacity-90 leading-tight">
                                             <span className="material-symbols-outlined text-[12px] sm:text-[15px] shrink-0 mt-0.5">
                                               {styles.icon}
                                             </span>
-                                            <span className="line-clamp-2">{appt.procedimento}</span>
+                                            <span className="break-words max-w-full">{appt.procedimento}</span>
                                           </p>
 
                                           <div className="flex gap-2 justify-end mt-1 pt-2 border-t border-black/5 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -2472,8 +2472,8 @@ export default function CRMPage() {
                                     style={dynamicStyle}
                                   >
                                     <p className="text-[9px] font-bold opacity-80">{appt.hora} ({durAppt}m)</p>
-                                    <p className="font-manrope text-[11px] font-extrabold mt-0.5 line-clamp-2">{appt.clienteNome}</p>
-                                    <p className="text-[10px] opacity-90 line-clamp-2 flex items-start gap-1 mt-0.5">
+                                    <p className="font-manrope text-[11px] font-extrabold mt-0.5 break-words max-w-full leading-tight">{appt.clienteNome}</p>
+                                    <p className="text-[10px] opacity-90 break-words max-w-full flex items-start gap-1 mt-0.5 leading-tight">
                                       <span className="material-symbols-outlined text-[12px] shrink-0 mt-0.5">{styles.icon}</span>
                                       <span>{appt.procedimento}</span>
                                     </p>
@@ -5237,6 +5237,17 @@ export default function CRMPage() {
                   
                   <div className="bg-surface-container-lowest rounded-2xl p-4 border border-outline-variant/50 mb-4">
                     <div className="flex justify-between items-center mb-2">
+                      <span className="font-bold text-[14px] text-on-surface">Versão 2.5.0</span>
+                      <span className="text-[11px] font-bold text-on-surface-variant px-2 py-1 bg-surface-container rounded-lg">Junho 2026</span>
+                    </div>
+                    <ul className="list-disc pl-5 space-y-1.5 text-[13px] text-on-surface-variant mt-3">
+                      <li><strong className="text-on-surface">Agendamento Z-Index:</strong> Corrigido o empilhamento de modais. Agora, ao cadastrar um novo cliente na tela de agendamento, o modal de cliente abrirá sobrepondo corretamente a tela atual.</li>
+                      <li><strong className="text-on-surface">Textos Completos:</strong> Removido o truncamento e 'line-clamp' dos cards da agenda. Nomes de pacientes e procedimentos completos agora quebram linha organicamente.</li>
+                    </ul>
+                  </div>
+
+                  <div className="bg-surface-container-lowest rounded-2xl p-4 border border-outline-variant/50 mb-4">
+                    <div className="flex justify-between items-center mb-2">
                       <span className="font-bold text-[14px] text-on-surface">Versão 2.4.0</span>
                       <span className="text-[11px] font-bold text-on-surface-variant px-2 py-1 bg-surface-container rounded-lg">Junho 2026</span>
                     </div>
@@ -5780,7 +5791,7 @@ export default function CRMPage() {
 
       {/* Dynamic Cliente Registration Modal */}
       {isPatientModalOpen && (
-        <div className="fixed inset-0 bg-[#31302fd0] backdrop-blur-md flex items-center justify-center z-50 p-0 sm:p-4 animate-fade-in">
+        <div className="fixed inset-0 bg-[#31302fd0] backdrop-blur-md flex items-center justify-center z-[60] p-0 sm:p-4 animate-fade-in">
           <div className="bg-white-pure sm:rounded-3xl border border-outline-variant w-full max-w-xl p-5 sm:p-8 shadow-2xl relative h-full sm:h-auto sm:max-h-[90vh] overflow-y-auto select-none">
             
             <button 
