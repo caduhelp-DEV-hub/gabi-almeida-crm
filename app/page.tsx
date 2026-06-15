@@ -781,7 +781,19 @@ export default function CRMPage() {
     let totalDur = 0;
     names.forEach(name => {
       const s = services.find(srv => srv.nome.trim() === name.trim());
-      totalDur += s ? parseInt(s.duracao) || 30 : 30;
+      if (s && s.duracao) {
+         let d = s.duracao.toLowerCase().trim();
+         if (d.includes('h')) {
+           const parts = d.split('h');
+           const hours = parseInt(parts[0]) || 0;
+           const mins = parseInt(parts[1]) || 0;
+           totalDur += (hours * 60) + mins;
+         } else {
+           totalDur += parseInt(d) || 30;
+         }
+      } else {
+         totalDur += 30;
+      }
     });
     return totalDur > 0 ? totalDur : 30;
   };
@@ -1100,6 +1112,10 @@ export default function CRMPage() {
   const [clientesSearchQuery, setClientesSearchQuery] = useState('');
   const [clientesSortOrder, setClientesSortOrder] = useState<'asc' | 'desc'>('asc');
 
+  // Unified Lists Filter/Sort State
+  const [listSearchQuery, setListSearchQuery] = useState('');
+  const [listSortOrder, setListSortOrder] = useState<'asc' | 'desc'>('asc');
+
   // Filter patients by global search query
   const filteredPatients = patients.filter(p => 
     p.nome.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -1328,7 +1344,7 @@ export default function CRMPage() {
               <span>Acesso seguro. Todos os dados são criptografados.</span>
               <span>© 2026 Gabi Almeida Estética.</span>
               <span>Desenvolvido: caduhelp-dev</span>
-              <span>Ver. 2.6</span>
+              <span>Ver. 2.7</span>
             </div>
         </div>
       </div>
@@ -2353,7 +2369,7 @@ export default function CRMPage() {
                                             <span className="break-words max-w-full">{appt.procedimento}</span>
                                           </p>
 
-                                          <div className="flex gap-2 justify-end mt-1 pt-2 border-t border-black/5 opacity-0 group-hover:opacity-100 transition-opacity">
+                                          <div className="flex gap-2 justify-end mt-1 pt-2 border-t border-black/5 transition-opacity">
                                             <button 
                                               onClick={(e) => {
                                                 e.stopPropagation();
@@ -4429,6 +4445,30 @@ export default function CRMPage() {
                 </button>
               </div>
 
+              {/* Filter Controls */}
+              <div className="flex flex-col sm:flex-row gap-4 bg-white-pure p-4 rounded-2xl border border-outline-variant shadow-sm mb-4 mt-2">
+                <div className="flex-1 relative">
+                  <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant">search</span>
+                  <input 
+                    type="text"
+                    value={listSearchQuery}
+                    onChange={(e) => setListSearchQuery(e.target.value)}
+                    placeholder="Buscar por nome do serviço ou categoria..."
+                    className="w-full pl-10 p-2.5 bg-surface rounded-xl border border-outline-variant/60 focus:outline-none focus:ring-1 focus:ring-primary/40 font-medium text-[13px]"
+                  />
+                </div>
+                <div className="sm:w-64">
+                  <select 
+                    value={listSortOrder}
+                    onChange={(e) => setListSortOrder(e.target.value as 'asc' | 'desc')}
+                    className="w-full p-2.5 bg-surface rounded-xl border border-outline-variant/60 focus:outline-none focus:ring-1 focus:ring-primary/40 text-[13px] font-medium"
+                  >
+                    <option value="asc">Ordem Crescente (A-Z)</option>
+                    <option value="desc">Ordem Decrescente (Z-A)</option>
+                  </select>
+                </div>
+              </div>
+
               <div className="bg-white-pure rounded-3xl p-6 border border-outline-variant shadow-sm flex flex-col gap-6 relative overflow-hidden group">
                 <div className="overflow-x-auto">
                   <table className="w-full text-left font-sans text-[13px]">
@@ -4442,7 +4482,10 @@ export default function CRMPage() {
                       </tr>
                     </thead>
                     <tbody>
-                      {services.map(s => (
+                      {services
+                        .filter(s => s.nome.toLowerCase().includes(listSearchQuery.toLowerCase()) || s.categoria.toLowerCase().includes(listSearchQuery.toLowerCase()))
+                        .sort((a,b) => listSortOrder === 'asc' ? a.nome.localeCompare(b.nome) : b.nome.localeCompare(a.nome))
+                        .map(s => (
                         <tr key={s.id} className="border-b border-outline-variant/30 hover:bg-[#fcfaf7]">
                           <td className="px-4 py-4 font-bold text-on-surface">{s.nome}</td>
                           <td className="px-4 py-4"><span className="bg-surface-container px-2.5 py-1 rounded-md text-[10px] font-bold">{s.categoria}</span></td>
@@ -4482,6 +4525,30 @@ export default function CRMPage() {
                 </button>
               </div>
 
+              {/* Filter Controls */}
+              <div className="flex flex-col sm:flex-row gap-4 bg-white-pure p-4 rounded-2xl border border-outline-variant shadow-sm mb-4 mt-2">
+                <div className="flex-1 relative">
+                  <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant">search</span>
+                  <input 
+                    type="text"
+                    value={listSearchQuery}
+                    onChange={(e) => setListSearchQuery(e.target.value)}
+                    placeholder="Buscar por nome do material..."
+                    className="w-full pl-10 p-2.5 bg-surface rounded-xl border border-outline-variant/60 focus:outline-none focus:ring-1 focus:ring-primary/40 font-medium text-[13px]"
+                  />
+                </div>
+                <div className="sm:w-64">
+                  <select 
+                    value={listSortOrder}
+                    onChange={(e) => setListSortOrder(e.target.value as 'asc' | 'desc')}
+                    className="w-full p-2.5 bg-surface rounded-xl border border-outline-variant/60 focus:outline-none focus:ring-1 focus:ring-primary/40 text-[13px] font-medium"
+                  >
+                    <option value="asc">Ordem Crescente (A-Z)</option>
+                    <option value="desc">Ordem Decrescente (Z-A)</option>
+                  </select>
+                </div>
+              </div>
+
               <div className="bg-white-pure rounded-3xl p-6 border border-outline-variant shadow-sm flex flex-col gap-6 relative overflow-hidden group">
                 <div className="overflow-x-auto">
                   <table className="w-full text-left font-sans text-[13px]">
@@ -4495,7 +4562,10 @@ export default function CRMPage() {
                       </tr>
                     </thead>
                     <tbody>
-                      {inventory.map(i => {
+                      {inventory
+                        .filter(i => i.name.toLowerCase().includes(listSearchQuery.toLowerCase()))
+                        .sort((a,b) => listSortOrder === 'asc' ? a.name.localeCompare(b.name) : b.name.localeCompare(a.name))
+                        .map(i => {
                         const isLow = i.quantity <= i.minQuantity;
                         return (
                           <tr key={i.id} className={`border-b border-outline-variant/30 hover:bg-[#fcfaf7] ${isLow ? 'bg-error/5' : ''}`}>
@@ -4556,6 +4626,30 @@ export default function CRMPage() {
                 </button>
               </div>
 
+              {/* Filter Controls */}
+              <div className="flex flex-col sm:flex-row gap-4 bg-white-pure p-4 rounded-2xl border border-outline-variant shadow-sm mb-4 mt-2">
+                <div className="flex-1 relative">
+                  <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant">search</span>
+                  <input 
+                    type="text"
+                    value={listSearchQuery}
+                    onChange={(e) => setListSearchQuery(e.target.value)}
+                    placeholder="Buscar por nome do cliente ou status..."
+                    className="w-full pl-10 p-2.5 bg-surface rounded-xl border border-outline-variant/60 focus:outline-none focus:ring-1 focus:ring-primary/40 font-medium text-[13px]"
+                  />
+                </div>
+                <div className="sm:w-64">
+                  <select 
+                    value={listSortOrder}
+                    onChange={(e) => setListSortOrder(e.target.value as 'asc' | 'desc')}
+                    className="w-full p-2.5 bg-surface rounded-xl border border-outline-variant/60 focus:outline-none focus:ring-1 focus:ring-primary/40 text-[13px] font-medium"
+                  >
+                    <option value="asc">Ordem Crescente (A-Z)</option>
+                    <option value="desc">Ordem Decrescente (Z-A)</option>
+                  </select>
+                </div>
+              </div>
+
               {/* Data Table Panel */}
               <div className="bg-white-pure rounded-3xl p-6 border border-outline-variant shadow-sm flex flex-col gap-6 relative overflow-hidden group">
                 <div className="overflow-x-auto">
@@ -4570,7 +4664,10 @@ export default function CRMPage() {
                       </tr>
                     </thead>
                     <tbody>
-                      {filteredPatients.map(p => (
+                      {patients
+                        .filter(p => p.nome.toLowerCase().includes(listSearchQuery.toLowerCase()) || p.status.toLowerCase().includes(listSearchQuery.toLowerCase()))
+                        .sort((a,b) => listSortOrder === 'asc' ? a.nome.localeCompare(b.nome) : b.nome.localeCompare(a.nome))
+                        .map(p => (
                         <tr key={p.id} className="border-b border-outline-variant/30 hover:bg-[#fcfaf7]">
                           <td className="px-4 py-4">
                             <div className="flex items-center gap-3">
@@ -4914,6 +5011,30 @@ export default function CRMPage() {
                   Nova Despesa
                 </button>
               </div>
+              {/* Filter Controls */}
+              <div className="flex flex-col sm:flex-row gap-4 bg-white-pure p-4 rounded-2xl border border-outline-variant shadow-sm mb-4 mt-2">
+                <div className="flex-1 relative">
+                  <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant">search</span>
+                  <input 
+                    type="text"
+                    value={listSearchQuery}
+                    onChange={(e) => setListSearchQuery(e.target.value)}
+                    placeholder="Buscar por descrição da despesa..."
+                    className="w-full pl-10 p-2.5 bg-surface rounded-xl border border-outline-variant/60 focus:outline-none focus:ring-1 focus:ring-primary/40 font-medium text-[13px]"
+                  />
+                </div>
+                <div className="sm:w-64">
+                  <select 
+                    value={listSortOrder}
+                    onChange={(e) => setListSortOrder(e.target.value as 'asc' | 'desc')}
+                    className="w-full p-2.5 bg-surface rounded-xl border border-outline-variant/60 focus:outline-none focus:ring-1 focus:ring-primary/40 text-[13px] font-medium"
+                  >
+                    <option value="asc">Ordem Crescente (A-Z)</option>
+                    <option value="desc">Ordem Decrescente (Z-A)</option>
+                  </select>
+                </div>
+              </div>
+
               <div className="bg-white-pure rounded-3xl border border-outline-variant overflow-hidden">
                 <table className="w-full text-left text-[13px]">
                   <thead className="bg-surface-container-lowest border-b border-outline-variant">
@@ -4926,7 +5047,10 @@ export default function CRMPage() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-outline-variant">
-                    {despesas.map(d => (
+                    {despesas
+                      .filter(d => d.descricao.toLowerCase().includes(listSearchQuery.toLowerCase()))
+                      .sort((a,b) => listSortOrder === 'asc' ? a.descricao.localeCompare(b.descricao) : b.descricao.localeCompare(a.descricao))
+                      .map(d => (
                       <tr key={d.id} className="hover:bg-surface-container-lowest/50 transition-colors">
                         <td className="px-6 py-4 font-medium text-primary">{d.descricao}</td>
                         <td className="px-6 py-4 text-on-surface-variant">{new Date(d.data).toLocaleDateString('pt-BR')}</td>
@@ -4968,6 +5092,30 @@ export default function CRMPage() {
                   <p className="text-[13px] text-on-surface-variant">Equipe técnica e controle de comissões/agendas</p>
                 </div>
               </div>
+              {/* Filter Controls */}
+              <div className="flex flex-col sm:flex-row gap-4 bg-white-pure p-4 rounded-2xl border border-outline-variant shadow-sm mb-4 mt-2">
+                <div className="flex-1 relative">
+                  <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant">search</span>
+                  <input 
+                    type="text"
+                    value={listSearchQuery}
+                    onChange={(e) => setListSearchQuery(e.target.value)}
+                    placeholder="Buscar por nome ou especialidade..."
+                    className="w-full pl-10 p-2.5 bg-surface rounded-xl border border-outline-variant/60 focus:outline-none focus:ring-1 focus:ring-primary/40 font-medium text-[13px]"
+                  />
+                </div>
+                <div className="sm:w-64">
+                  <select 
+                    value={listSortOrder}
+                    onChange={(e) => setListSortOrder(e.target.value as 'asc' | 'desc')}
+                    className="w-full p-2.5 bg-surface rounded-xl border border-outline-variant/60 focus:outline-none focus:ring-1 focus:ring-primary/40 text-[13px] font-medium"
+                  >
+                    <option value="asc">Ordem Crescente (A-Z)</option>
+                    <option value="desc">Ordem Decrescente (Z-A)</option>
+                  </select>
+                </div>
+              </div>
+
               <div className="bg-white-pure rounded-3xl border border-outline-variant overflow-hidden">
                 <table className="w-full text-left font-sans text-[13px]">
                   <thead className="bg-[#f7f3f0]/50 border-b border-outline-variant">
@@ -4978,7 +5126,10 @@ export default function CRMPage() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-outline-variant/40">
-                    {appUsers.map(u => (
+                    {appUsers
+                      .filter(u => u.name.toLowerCase().includes(listSearchQuery.toLowerCase()) || (u.specialty || '').toLowerCase().includes(listSearchQuery.toLowerCase()))
+                      .sort((a,b) => listSortOrder === 'asc' ? a.name.localeCompare(b.name) : b.name.localeCompare(a.name))
+                      .map(u => (
                       <tr key={u.id}>
                         <td className="px-6 py-4 flex items-center gap-3 font-bold text-on-surface">
                           {u.avatar && !u.avatar.includes('dicebear') ? (
@@ -5114,6 +5265,30 @@ export default function CRMPage() {
           <section className="flex-1 overflow-y-auto p-4 sm:p-8 bg-surface">
             <div className="max-w-4xl mx-auto space-y-6">
               <h1 className="font-manrope text-[24px] font-bold text-primary">Melhores Clientes</h1>
+              {/* Filter Controls */}
+              <div className="flex flex-col sm:flex-row gap-4 bg-white-pure p-4 rounded-2xl border border-outline-variant shadow-sm mb-4 mt-2">
+                <div className="flex-1 relative">
+                  <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant">search</span>
+                  <input 
+                    type="text"
+                    value={listSearchQuery}
+                    onChange={(e) => setListSearchQuery(e.target.value)}
+                    placeholder="Buscar cliente..."
+                    className="w-full pl-10 p-2.5 bg-surface rounded-xl border border-outline-variant/60 focus:outline-none focus:ring-1 focus:ring-primary/40 font-medium text-[13px]"
+                  />
+                </div>
+                <div className="sm:w-64">
+                  <select 
+                    value={listSortOrder}
+                    onChange={(e) => setListSortOrder(e.target.value as 'asc' | 'desc')}
+                    className="w-full p-2.5 bg-surface rounded-xl border border-outline-variant/60 focus:outline-none focus:ring-1 focus:ring-primary/40 text-[13px] font-medium"
+                  >
+                    <option value="desc">Maior Gasto</option>
+                    <option value="asc">Menor Gasto</option>
+                  </select>
+                </div>
+              </div>
+
               <div className="bg-white-pure rounded-3xl border border-outline-variant overflow-hidden">
                 <table className="w-full text-left font-sans text-[13px]">
                   <thead className="bg-[#f7f3f0]/50 border-b border-outline-variant">
@@ -5124,7 +5299,11 @@ export default function CRMPage() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-outline-variant/40">
-                    {patients.slice().sort((a, b) => b.totalGasto - a.totalGasto).slice(0, 10).map(p => (
+                    {patients
+                      .filter(p => p.nome.toLowerCase().includes(listSearchQuery.toLowerCase()))
+                      .sort((a,b) => listSortOrder === 'asc' ? a.totalGasto - b.totalGasto : b.totalGasto - a.totalGasto)
+                      .slice(0, 100)
+                      .map(p => (
                       <tr key={p.id}>
                         <td className="px-6 py-4 flex items-center gap-3 font-bold text-on-surface">
                           {p.avatar && !p.avatar.includes('dicebear') ? (
@@ -5257,6 +5436,18 @@ export default function CRMPage() {
                 <div className="space-y-4">
                   <h3 className="text-[14px] font-bold text-primary border-b border-outline-variant/30 pb-2">Histórico de Versões (Changelog)</h3>
                   
+                  <div className="bg-surface-container-lowest rounded-2xl p-4 border border-outline-variant/50 mb-4">
+                    <div className="flex justify-between items-center mb-2">
+                      <span className="font-bold text-[14px] text-on-surface">Versão 2.7.0</span>
+                      <span className="text-[11px] font-bold text-on-surface-variant px-2 py-1 bg-surface-container rounded-lg">Junho 2026</span>
+                    </div>
+                    <ul className="list-disc pl-5 space-y-1.5 text-[13px] text-on-surface-variant mt-3">
+                      <li><strong className="text-on-surface">Tempo Exato da Agenda:</strong> Corrigido bug de interpretação de horas no cadastro de serviços. A agenda visual agora ocupa estritamente os minutos da duração configurada (ex: 60min ocupa bloco de 1h).</li>
+                      <li><strong className="text-on-surface">Botões da Agenda Visíveis:</strong> Os botões Editar e Cancelar dentro dos blocos de horário da agenda deixaram de ser ocultos. Agora ficam transparentes e 100% visíveis sempre.</li>
+                      <li><strong className="text-on-surface">Busca Universal nas Listas:</strong> Adicionado barra de pesquisa e filtro de ordem Alfabética/Crescente e Decrescente em Cadastro de Clientes, Serviços, Funcionários, Despesas, Estoque e Melhores Clientes.</li>
+                    </ul>
+                  </div>
+
                   <div className="bg-surface-container-lowest rounded-2xl p-4 border border-outline-variant/50 mb-4">
                     <div className="flex justify-between items-center mb-2">
                       <span className="font-bold text-[14px] text-on-surface">Versão 2.6.0</span>
