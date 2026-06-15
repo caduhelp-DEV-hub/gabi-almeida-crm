@@ -1409,7 +1409,7 @@ export default function CRMPage() {
               <span>Acesso seguro. Todos os dados são criptografados.</span>
             </div>
             <span>© 2026 Gabi Almeida Estética.</span>
-            <span>Desenvolvido: caduhelp-dev | Ver. 3.1</span>
+            <span>Desenvolvido: caduhelp-dev | Ver. 3.2</span>
           </div>
         </div>
       </div>
@@ -2323,8 +2323,9 @@ export default function CRMPage() {
 
                 {/* Card list view (replaces timeline on desktop) */}
                 {agendaView !== 'mensal' && (
-                  <div className="flex-1 overflow-y-auto p-4 lg:p-6 space-y-3 bg-[#fbfaf8] flex flex-col">
-                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-2">
+                  <div className="flex-1 overflow-hidden flex flex-col bg-[#fbfaf8]">
+                    {/* Sticky header - always visible above scroll */}
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 px-4 lg:px-6 py-3 bg-white-pure border-b border-outline-variant/30 shrink-0 z-10">
                       <p className="text-[14px] font-medium text-primary text-center sm:text-left">
                         {(() => {
                           const d = agendaNavDate;
@@ -2364,7 +2365,7 @@ export default function CRMPage() {
                       const hours = Array.from({length: TOTAL_HOURS + 1}, (_, i) => i + START_HOUR);
 
                       return (
-                        <div className="relative mt-4 bg-white-pure rounded-2xl border border-outline-variant/50 shadow-sm overflow-hidden flex flex-col max-h-[65vh] overflow-y-auto custom-scrollbar">
+                        <div className={`relative mt-4 bg-white-pure rounded-2xl border border-outline-variant/50 shadow-sm overflow-hidden flex flex-col max-h-[65vh] overflow-y-auto custom-scrollbar ${agendaView === 'semanal' ? 'lg:hidden' : ''}`}>
                           {/* Single continuous timeline container */}
                           <div className="relative" style={{ height: `${TOTAL_HOURS * HOUR_HEIGHT}px` }}>
                             
@@ -2478,74 +2479,89 @@ export default function CRMPage() {
                         </div>
                       );
                     })()}
-                  </div>
-                )}
-                
-                {/* 4.2 Weekly View Layout */}
-                {agendaView === 'semanal' && (
-                  <div className="agenda-grid w-full h-full hidden lg:flex flex-col overflow-x-auto overflow-y-hidden bg-white-pure custom-scrollbar">
-                    <div className="flex flex-col min-w-[800px] h-full overflow-hidden">
-                      {/* Header: Weekdays */}
-                      <div className="grid grid-cols-7 border-b border-outline-variant bg-surface-container/30">
-                        {weekDays.map((day, idx) => (
-                          <div key={idx} className={`p-3 text-center border-r border-outline-variant/60 relative ${day.active ? 'bg-primary/5' : ''}`}>
-                            <p className="text-[10px] text-outline font-extrabold uppercase tracking-wider">{day.label}</p>
-                            <p className={`font-manrope text-[14px] font-bold mt-1 ${day.active ? 'text-primary' : 'text-on-surface'}`}>{day.date}</p>
-                            {day.active && <span className="absolute bottom-0 inset-x-0 h-1 bg-primary"></span>}
-                          </div>
-                        ))}
-                      </div>
 
-                      {/* Columns grid body */}
-                      <div className="grid grid-cols-7 flex-1 divide-x divide-outline-variant/40 overflow-y-auto custom-scrollbar p-2 bg-[#fbfaf8]">
-                        {weekDays.map((day, idx) => {
-                          const dayAppts = appointments.filter(appt => appt.data === day.dateString);
-                          return (
-                            <div key={idx} className={`p-1.5 space-y-3 ${day.active ? 'bg-primary/[0.01]' : ''}`}>
-                              {dayAppts.map(appt => {
-                                const styles = getProcedureStyles(appt.procedimento);
-                                let cardClass = 'border-l-4 p-2 rounded-lg relative hover:shadow-sm transition-all cursor-pointer leading-tight';
-                                let dynamicStyle: any = {};
-                                
-                                const durAppt = getServiceDuration(appt.procedimento);
-                                const apptIndex = appointments.findIndex(a => a.id === appt.id);
-                                const isConflicted = appointments.some((a, idx) => {
-                                  if (idx >= apptIndex || a.data !== appt.data) return false;
-                                  const durA = getServiceDuration(a.procedimento);
-                                  return checkTimeOverlap(a.hora.slice(0, 5), durA, appt.hora.slice(0, 5), durAppt);
-                                });
-                                if (isConflicted || appt.notas?.includes('[CONFLITO]')) {
-                                  cardClass += ' bg-red-600 border-red-800 text-white-pure animate-pulse shadow-md';
-                                } else {
-                                  dynamicStyle = { backgroundColor: styles.bg, borderColor: styles.border, color: styles.text };
-                                }
-                                return (
-                                  <div 
-                                    key={appt.id} 
-                                    onClick={() => {
-                                      setNewApptDate(day.dateString);
-                                      setAgendaView('diaria');
-                                    }}
-                                    className={cardClass}
-                                    style={dynamicStyle}
-                                  >
-                                    <p className="text-[9px] font-bold opacity-80">{appt.hora} ({durAppt}m)</p>
-                                    <p className="font-manrope text-[11px] font-extrabold mt-0.5 break-words max-w-full leading-tight">{appt.clienteNome}</p>
-                                    <p className="text-[10px] opacity-90 break-words max-w-full flex items-start gap-1 mt-0.5 leading-tight">
-                                      <span className="material-symbols-outlined text-[12px] shrink-0 mt-0.5">{styles.icon}</span>
-                                      <span>{appt.procedimento}</span>
-                                    </p>
-                                  </div>
-                                );
-                              })}
-                              {dayAppts.length === 0 && (
-                                <div className="text-center py-8 text-outline text-[9px] italic">Sem agendamentos</div>
-                              )}
-                            </div>
-                          );
-                        })}
+                    {/* 4.2 Weekly View Layout - Rendered inside the header container */}
+                    {agendaView === 'semanal' && (
+                      <div className="agenda-grid flex-1 w-full h-full hidden lg:flex flex-col overflow-x-auto overflow-y-hidden bg-white-pure custom-scrollbar mt-4">
+                        <div className="flex flex-col min-w-[800px] h-full overflow-hidden">
+                          {/* Header: Weekdays */}
+                          <div className="grid grid-cols-7 border-b border-outline-variant bg-surface-container/30">
+                            {weekDays.map((day, idx) => (
+                              <div key={idx} className={`p-3 text-center border-r border-outline-variant/60 relative ${day.active ? 'bg-primary/5' : ''}`}>
+                                <p className="text-[10px] text-outline font-extrabold uppercase tracking-wider">{day.label}</p>
+                                <p className={`font-manrope text-[14px] font-bold mt-1 ${day.active ? 'text-primary' : 'text-on-surface'}`}>{day.date}</p>
+                                {day.active && <span className="absolute bottom-0 inset-x-0 h-1 bg-primary"></span>}
+                              </div>
+                            ))}
+                          </div>
+
+                          {/* Columns grid body */}
+                          <div className="grid grid-cols-7 flex-1 divide-x divide-outline-variant/40 overflow-y-auto custom-scrollbar p-2 bg-[#fbfaf8]">
+                            {weekDays.map((day, idx) => {
+                              const dayAppts = appointments.filter(appt => appt.data === day.dateString);
+                              return (
+                                <div key={idx} className={`p-1.5 space-y-3 ${day.active ? 'bg-primary/[0.01]' : ''}`}>
+                                  {dayAppts.map(appt => {
+                                    const styles = getProcedureStyles(appt.procedimento);
+                                    let cardClass = 'border-l-4 p-2 rounded-lg relative hover:shadow-sm transition-all cursor-pointer leading-tight';
+                                    let dynamicStyle: any = {};
+                                    
+                                    const durAppt = getServiceDuration(appt.procedimento);
+                                    const apptIndex = appointments.findIndex(a => a.id === appt.id);
+                                    const isConflicted = appointments.some((a, idx) => {
+                                      if (idx >= apptIndex || a.data !== appt.data) return false;
+                                      const durA = getServiceDuration(a.procedimento);
+                                      return checkTimeOverlap(a.hora.slice(0, 5), durA, appt.hora.slice(0, 5), durAppt);
+                                    });
+                                    if (isConflicted || appt.notas?.includes('[CONFLITO]')) {
+                                      cardClass += ' bg-red-600 border-red-800 text-white-pure animate-pulse shadow-md';
+                                    } else {
+                                      dynamicStyle = { backgroundColor: styles.bg, borderColor: styles.border, color: styles.text };
+                                    }
+                                    return (
+                                      <div 
+                                        key={appt.id} 
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          const client = patients.find(p => p.nome.toLowerCase() === appt.clienteNome.toLowerCase() || p.id === appt.clienteId);
+                                          if (client) {
+                                            setInteractClient(client);
+                                            setInteractAppointmentId(appt.id);
+                                            setIsWhatsAppSubmenuOpen(false);
+                                            setIsClientInteractModalOpen(true);
+                                          }
+                                        }}
+                                        className={`${cardClass} group/card`}
+                                        style={dynamicStyle}
+                                      >
+                                        {/* Hover action buttons */}
+                                        <div className="absolute top-0 right-0 hidden group-hover/card:flex gap-0.5 bg-white-pure/80 backdrop-blur-sm rounded-bl-md p-0.5 z-10">
+                                          <button onClick={(e) => { e.stopPropagation(); setEditingAppointment(appt); setNewApptPatient(appt.clienteNome); setNewApptProcedure(appt.procedimento); setNewApptProfessional(appt.profissional); setNewApptTime(appt.hora); setNewApptDate(appt.data); setNewApptCategory(appt.categoria); setNewApptStatus(appt.status); setIsNewAppointmentOpen(true); }} className="p-0.5 hover:text-primary" title="Editar">
+                                            <span className="material-symbols-outlined text-[12px]">edit</span>
+                                          </button>
+                                          <button onClick={(e) => { e.stopPropagation(); showConfirm(`Remover agendamento de ${appt.clienteNome}?`, async () => { try { const { error } = await supabase.from('agendamentos').delete().eq('id', appt.id); if (error) throw error; setAppointments(prev => prev.filter(a => a.id !== appt.id)); showAlert('Agendamento removido.'); } catch (err: any) { showAlert(`Erro ao excluir: ${err.message}`); } }); }} className="p-0.5 hover:text-error" title="Excluir">
+                                            <span className="material-symbols-outlined text-[12px]">delete</span>
+                                          </button>
+                                        </div>
+                                        <p className="text-[9px] font-bold opacity-80">{appt.hora} ({durAppt}m)</p>
+                                        <p className="font-manrope text-[11px] font-extrabold mt-0.5 break-words max-w-full leading-tight">{appt.clienteNome}</p>
+                                        <p className="text-[10px] opacity-90 break-words max-w-full flex items-start gap-1 mt-0.5 leading-tight">
+                                          <span className="material-symbols-outlined text-[12px] shrink-0 mt-0.5">{styles.icon}</span>
+                                          <span>{appt.procedimento}</span>
+                                        </p>
+                                      </div>
+                                    );
+                                  })}
+                                  {dayAppts.length === 0 && (
+                                    <div className="text-center py-8 text-outline text-[9px] italic">Sem agendamentos</div>
+                                  )}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
                       </div>
-                    </div>
+                    )}
                   </div>
                 )}
 
@@ -5477,13 +5493,25 @@ export default function CRMPage() {
                   </div>
                   <div>
                     <h2 className="text-[18px] font-bold text-on-surface">Gabi Almeida Estética CRM</h2>
-                    <p className="text-[13px] text-on-surface-variant font-bold">Versão atual: 3.1.0</p>
+                    <p className="text-[13px] text-on-surface-variant font-bold">Versão atual: 3.2.0</p>
                   </div>
                 </div>
 
                 <div className="space-y-4">
                   <h3 className="text-[14px] font-bold text-primary border-b border-outline-variant/30 pb-2">Histórico de Versões (Changelog)</h3>
                   
+                  <div className="bg-surface-container-lowest rounded-2xl p-4 border border-outline-variant/50 mb-4">
+                    <div className="flex justify-between items-center mb-2">
+                      <span className="font-bold text-[14px] text-on-surface">Versão 3.2.0</span>
+                      <span className="text-[11px] font-bold text-on-surface-variant px-2 py-1 bg-surface-container rounded-lg">15 Junho 2026</span>
+                    </div>
+                    <ul className="list-disc pl-5 space-y-1.5 text-[13px] text-on-surface-variant mt-3">
+                      <li><strong className="text-on-surface">Correção de Layout Semanal:</strong> Integrada a visualização semanal diretamente no container principal com a timeline diária ocultada no desktop, evitando qualquer sobreposição do cabeçalho de datas e do botão de novo agendamento.</li>
+                      <li><strong className="text-on-surface">Ações Rápidas na Semana:</strong> Adicionados botões de hover para editar e excluir agendamentos nos cards da semana, idêntico à visualização diária.</li>
+                      <li><strong className="text-on-surface">Interação Rápida:</strong> Cliques em cards na semana agora abrem o modal de detalhes do cliente e ações, em vez de apenas redirecionar para a visualização do dia.</li>
+                    </ul>
+                  </div>
+
                   <div className="bg-surface-container-lowest rounded-2xl p-4 border border-outline-variant/50 mb-4">
                     <div className="flex justify-between items-center mb-2">
                       <span className="font-bold text-[14px] text-on-surface">Versão 3.1.0</span>
