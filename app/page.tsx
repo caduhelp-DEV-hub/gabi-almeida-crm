@@ -407,7 +407,7 @@ export default function CRMPage() {
     const d = new Date();
     d.setDate(d.getDate() - (6 - i));
     const ds = d.toISOString().split('T')[0];
-    const count = appointments.filter(a => a.data === ds && a.status !== 'Cancelado').length;
+    const count = appointments.filter(a => a.data === ds).length;
     return {
       label: d.toLocaleDateString('pt-BR', { weekday: 'short' }).replace('.', ''),
       count
