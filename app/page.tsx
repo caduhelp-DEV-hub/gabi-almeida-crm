@@ -2197,7 +2197,7 @@ export default function CRMPage() {
                     const formattedDay = String(agendaNavDate.getDate()).padStart(2, '0');
                     const formattedMonth = String(agendaNavDate.getMonth() + 1).padStart(2, '0');
                     const dateStr = `${agendaNavDate.getFullYear()}-${formattedMonth}-${formattedDay}`;
-                    const dayAppts = appointments.filter(a => a.data === dateStr && a.status !== 'Cancelado');
+                    const dayAppts = appointments.filter(a => a.data === dateStr);
                     
                     let totalRev = 0;
                     let occupiedMins = 0;
