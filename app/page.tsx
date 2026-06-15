@@ -1409,7 +1409,7 @@ export default function CRMPage() {
               <span>Acesso seguro. Todos os dados são criptografados.</span>
             </div>
             <span>© 2026 Gabi Almeida Estética.</span>
-            <span>Desenvolvido: caduhelp-dev | Ver. 2.9</span>
+            <span>Desenvolvido: caduhelp-dev | Ver. 3.0</span>
           </div>
         </div>
       </div>
@@ -2357,164 +2357,124 @@ export default function CRMPage() {
                       const dateStr = `${agendaNavDate.getFullYear()}-${formattedMonth}-${formattedDay}`;
                       const dayAppts = appointments.filter(appt => appt.data === dateStr);
 
-                      const hours = Array.from({length: 16}, (_, i) => i + 7); // 07:00 to 22:00
+                      const HOUR_HEIGHT = 60; // px per hour
+                      const START_HOUR = 7;
+                      const END_HOUR = 22;
+                      const TOTAL_HOURS = END_HOUR - START_HOUR;
+                      const hours = Array.from({length: TOTAL_HOURS + 1}, (_, i) => i + START_HOUR);
 
                       return (
                         <div className="relative mt-4 bg-white-pure rounded-2xl border border-outline-variant/50 shadow-sm overflow-hidden flex flex-col max-h-[60vh] overflow-y-auto custom-scrollbar">
-                          {hours.map(hour => {
-                            const formattedHour = `${String(hour).padStart(2, '0')}:00`;
-                            const hourAppts = dayAppts.filter(appt => {
-                              const apptHour = parseInt(appt.hora.split(':')[0]);
-                              return apptHour === hour;
-                            });
-
-                            return (
-                              <div key={hour} className="flex h-[90px] border-b border-outline-variant/30 last:border-0 relative group">
-                                <div className="w-[70px] flex-shrink-0 text-center text-[12px] font-bold text-on-surface-variant/60 pt-3 border-r border-outline-variant/30 bg-surface/30 z-10">
-                                  {formattedHour}
+                          {/* Single continuous timeline container */}
+                          <div className="relative" style={{ height: `${TOTAL_HOURS * HOUR_HEIGHT}px` }}>
+                            
+                            {/* Hour guide lines */}
+                            {hours.map((hour, idx) => {
+                              const topPx = (hour - START_HOUR) * HOUR_HEIGHT;
+                              const formattedHour = `${String(hour).padStart(2, '0')}:00`;
+                              return (
+                                <div key={hour} className="absolute left-0 right-0 flex" style={{ top: `${topPx}px`, height: `${HOUR_HEIGHT}px` }}>
+                                  <div className="w-[60px] flex-shrink-0 text-right pr-2 text-[11px] font-semibold text-on-surface-variant/50 -translate-y-[7px] select-none">
+                                    {formattedHour}
+                                  </div>
+                                  <div className="flex-1 border-t border-outline-variant/25 relative">
+                                    {/* Clickable area to add appointment */}
+                                    <div
+                                      className="absolute inset-0 cursor-pointer hover:bg-primary/[0.03] transition-colors"
+                                      onClick={() => {
+                                        setEditingAppointment(null);
+                                        setNewApptPatient('');
+                                        setNewApptProcedure('');
+                                        setNewApptTime(formattedHour);
+                                        setNewApptDate(dateStr);
+                                        setIsNewAppointmentOpen(true);
+                                      }}
+                                    />
+                                  </div>
                                 </div>
-                                <div 
-                                  className="flex-1 relative bg-transparent transition-colors group-hover:bg-surface-container-lowest/50 cursor-pointer"
-                                  onClick={() => {
-                                    setEditingAppointment(null);
-                                    setNewApptPatient('');
-                                    setNewApptProcedure('');
-                                    setNewApptTime(formattedHour);
-                                    setNewApptDate(dateStr);
-                                    setIsNewAppointmentOpen(true);
+                              );
+                            })}
+
+                            {/* Appointment cards - positioned absolutely across the full timeline */}
+                            {dayAppts.map((appt) => {
+                              const styles = getProcedureStyles(appt.procedimento);
+                              const durAppt = getServiceDuration(appt.procedimento);
+                              const [hStr, mStr] = appt.hora.split(':');
+                              const startH = parseInt(hStr) || 0;
+                              const startM = parseInt(mStr) || 0;
+                              const totalStartMinutes = startH * 60 + startM;
+                              const totalEndMinutes = totalStartMinutes + durAppt;
+                              const formattedEndTime = `${String(Math.floor(totalEndMinutes / 60)).padStart(2, '0')}:${String(totalEndMinutes % 60).padStart(2, '0')}`;
+
+                              const topPx = ((totalStartMinutes - START_HOUR * 60) / 60) * HOUR_HEIGHT;
+                              const heightPx = (durAppt / 60) * HOUR_HEIGHT;
+
+                              const badgeBg = appt.status === 'Finalizado' 
+                                ? 'bg-emerald-500 text-white-pure' 
+                                : appt.status === 'Em Atendimento' 
+                                  ? 'bg-cyan-500 text-white-pure' 
+                                  : appt.status === 'Confirmado' 
+                                    ? 'bg-amber-500 text-white-pure' 
+                                    : 'bg-slate-400 text-white-pure';
+
+                              const isConflicted = appt.notas?.includes('[CONFLITO]');
+                              const bgStyle = isConflicted 
+                                ? { backgroundColor: '#dc2626', borderColor: '#991b1b', color: '#fff' }
+                                : { backgroundColor: styles.bg, borderColor: styles.border, color: styles.text };
+
+                              return (
+                                <div
+                                  key={appt.id}
+                                  className="absolute rounded-md border-l-[3px] cursor-pointer hover:brightness-95 transition-all group/card"
+                                  style={{
+                                    top: `${topPx}px`,
+                                    height: `${heightPx}px`,
+                                    left: '62px',
+                                    right: '4px',
+                                    ...bgStyle,
+                                    zIndex: 20,
+                                  }}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    const client = patients.find(p => p.nome.toLowerCase() === appt.clienteNome.toLowerCase() || p.id === appt.clienteId);
+                                    if (client) {
+                                      setInteractClient(client);
+                                      setInteractAppointmentId(appt.id);
+                                      setIsWhatsAppSubmenuOpen(false);
+                                      setIsClientInteractModalOpen(true);
+                                    }
                                   }}
                                 >
-                                  {hourAppts.length > 0 ? (
-                                    hourAppts.map((appt, i) => {
-                                      const isConsult = appt.categoria === 'Consulta';
-                                      
-                                      const styles = getProcedureStyles(appt.procedimento);
-                                      const durAppt = getServiceDuration(appt.procedimento);
-                                      const startMinute = parseInt(appt.hora.split(':')[1] || '0');
-                                      const topPx = (startMinute / 60) * 90;
-                                      const heightPx = (durAppt / 60) * 90;
-                                      
-                                      let dynamicStyle: any = { top: `${topPx}px`, height: `${heightPx}px`, left: '8px', right: '8px' };
-                                      let cardColorClass = 'z-20 border-l-[3px] shadow-sm hover:shadow-md transition-all cursor-pointer absolute px-2 py-1 sm:px-3 sm:py-1.5 rounded-lg overflow-hidden group/card';
-                                      
-                                      const apptIndex = appointments.findIndex(a => a.id === appt.id);
-                                      const isConflicted = appointments.some((a, idx) => {
-                                        if (idx >= apptIndex || a.data !== appt.data) return false;
-                                        const durA = getServiceDuration(a.procedimento);
-                                        return checkTimeOverlap(a.hora.slice(0, 5), durA, appt.hora.slice(0, 5), durAppt);
-                                      });
-                                      
-                                      if (isConflicted || appt.notas?.includes('[CONFLITO]')) {
-                                        cardColorClass += ' bg-red-600 border-red-800 text-white-pure shadow-xl z-30 scale-[0.98] origin-left';
-                                      } else {
-                                        dynamicStyle = { ...dynamicStyle, backgroundColor: styles.bg, borderColor: styles.border, color: styles.text };
-                                      }
+                                  {/* Hover action buttons */}
+                                  <div className="absolute top-0 right-0 hidden group-hover/card:flex gap-0.5 bg-white-pure/80 backdrop-blur-sm rounded-bl-md p-0.5 z-10">
+                                    <button onClick={(e) => { e.stopPropagation(); setEditingAppointment(appt); setNewApptPatient(appt.clienteNome); setNewApptProcedure(appt.procedimento); setNewApptProfessional(appt.profissional); setNewApptTime(appt.hora); setNewApptDate(appt.data); setNewApptCategory(appt.categoria); setNewApptStatus(appt.status); setIsNewAppointmentOpen(true); }} className="p-0.5 hover:text-primary" title="Editar">
+                                      <span className="material-symbols-outlined text-[12px]">edit</span>
+                                    </button>
+                                    <button onClick={(e) => { e.stopPropagation(); showConfirm(`Remover agendamento de ${appt.clienteNome}?`, async () => { try { const { error } = await supabase.from('agendamentos').delete().eq('id', appt.id); if (error) throw error; setAppointments(prev => prev.filter(a => a.id !== appt.id)); showAlert('Agendamento removido.'); } catch (err: any) { showAlert(`Erro ao excluir: ${err.message}`); } }); }} className="p-0.5 hover:text-error" title="Excluir">
+                                      <span className="material-symbols-outlined text-[12px]">delete</span>
+                                    </button>
+                                  </div>
 
-                                      const badgeBg = appt.status === 'Finalizado' 
-                                        ? 'bg-emerald-500 text-white-pure' 
-                                        : appt.status === 'Em Atendimento' 
-                                          ? 'bg-cyan-500 text-white-pure' 
-                                          : appt.status === 'Confirmado' 
-                                            ? 'bg-amber-500 text-white-pure' 
-                                            : 'bg-slate-400 text-white-pure';
-
-                                        const startHour = parseInt(appt.hora.split(':')[0]);
-
-                                        const totalEndMinutes = startHour * 60 + startMinute + durAppt;
-                                        const formattedEndTime = `${String(Math.floor(totalEndMinutes / 60)).padStart(2, '0')}:${String(totalEndMinutes % 60).padStart(2, '0')}`;
-                                        const isCompact = durAppt <= 45;
-
-                                        return (
-                                          <div 
-                                            key={appt.id} 
-                                            style={dynamicStyle}
-                                            className={cardColorClass}
-                                            onClick={(e) => {
-                                               e.stopPropagation();
-                                               const client = patients.find(p => p.nome.toLowerCase() === appt.clienteNome.toLowerCase() || p.id === appt.clienteId);
-                                               if (client) {
-                                                 setInteractClient(client);
-                                                 setInteractAppointmentId(appt.id);
-                                                 setIsWhatsAppSubmenuOpen(false);
-                                                 setIsClientInteractModalOpen(true);
-                                               }
-                                            }}
-                                          >
-                                            <div className="flex flex-col h-full w-full justify-start overflow-hidden relative">
-                                              
-                                              {/* Action Buttons (Absolute, visible on hover) */}
-                                              <div className="absolute top-0 right-0 hidden group-hover/card:flex gap-1 bg-white-pure/80 backdrop-blur-md rounded-bl-lg p-0.5 shadow-sm border-b border-l border-black/5 z-10">
-                                                <button onClick={(e) => { e.stopPropagation(); setEditingAppointment(appt); setNewApptPatient(appt.clienteNome); setNewApptProcedure(appt.procedimento); setNewApptProfessional(appt.profissional); setNewApptTime(appt.hora); setNewApptDate(appt.data); setNewApptCategory(appt.categoria); setNewApptStatus(appt.status); setIsNewAppointmentOpen(true); }} className="p-0.5 hover:text-primary transition-colors flex items-center justify-center" title="Editar">
-                                                  <span className="material-symbols-outlined text-[13px]">edit</span>
-                                                </button>
-                                                <button onClick={(e) => { e.stopPropagation(); showConfirm(`Remover agendamento de ${appt.clienteNome}?`, async () => { try { const { error } = await supabase.from('agendamentos').delete().eq('id', appt.id); if (error) throw error; setAppointments(prev => prev.filter(a => a.id !== appt.id)); showAlert('Agendamento removido.'); } catch (err: any) { showAlert(`Erro ao excluir: ${err.message}`); } }); }} className="p-0.5 hover:text-error transition-colors flex items-center justify-center" title="Excluir">
-                                                  <span className="material-symbols-outlined text-[13px]">delete</span>
-                                                </button>
-                                              </div>
-
-                                              {isCompact ? (
-                                                <div className="flex flex-col justify-center h-full gap-0.5 w-full pr-8">
-                                                  <div className="flex items-center gap-1.5">
-                                                    <span className="font-extrabold text-[10px] sm:text-[11px] opacity-90">{appt.hora} - {formattedEndTime}</span>
-                                                    <span className={`text-[7px] sm:text-[8px] px-1.5 py-0.5 rounded-sm font-bold uppercase tracking-wide ${badgeBg}`}>
-                                                      {appt.status}
-                                                    </span>
-                                                  </div>
-                                                  <div className="flex items-center gap-3 font-medium text-[11px] sm:text-[12px]">
-                                                    <div className="flex items-center gap-1 shrink-0">
-                                                      <span className="material-symbols-outlined text-[13px] opacity-80">person</span>
-                                                      <span className="truncate max-w-[110px] font-extrabold text-on-surface">{appt.clienteNome}</span>
-                                                    </div>
-                                                    <div className="flex items-center gap-1 shrink-0 opacity-90">
-                                                      <span className="material-symbols-outlined text-[13px] opacity-80">{styles.icon}</span>
-                                                      <span className="truncate max-w-[110px]">{appt.procedimento}</span>
-                                                    </div>
-                                                  </div>
-                                                </div>
-                                              ) : (
-                                                <div className="flex flex-col justify-start h-full gap-1 w-full pr-8 mt-0.5">
-                                                  <div className="flex items-center gap-1.5">
-                                                    <span className="font-extrabold text-[11px] sm:text-[12px] opacity-90">{appt.hora} - {formattedEndTime}</span>
-                                                    <span className={`text-[8px] sm:text-[9px] px-1.5 py-0.5 rounded-sm font-bold uppercase tracking-wide ${badgeBg}`}>
-                                                      {appt.status}
-                                                    </span>
-                                                  </div>
-                                                  <div className="flex items-center gap-1.5 font-extrabold text-[12px] sm:text-[13px] text-on-surface mt-0.5">
-                                                    <span className="material-symbols-outlined text-[15px] opacity-80">person</span>
-                                                    <span className="truncate">{appt.clienteNome}</span>
-                                                  </div>
-                                                  <div className="flex items-center gap-1.5 font-medium text-[11px] sm:text-[12px] opacity-90">
-                                                    <span className="material-symbols-outlined text-[15px] opacity-80">{styles.icon}</span>
-                                                    <span className="truncate">{appt.procedimento}</span>
-                                                  </div>
-                                                </div>
-                                              )}
-                                            </div>
-                                          </div>
-                                        );
-                                    })
-                                  ) : (
-                                    <div className="w-full h-full min-h-[40px] flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                                      <button 
-                                        onClick={() => {
-                                          setEditingAppointment(null);
-                                          setNewApptPatient('');
-                                          setNewApptProcedure('');
-                                          setNewApptTime(formattedHour);
-                                          setNewApptDate(dateStr);
-                                          setIsNewAppointmentOpen(true);
-                                        }}
-                                        className="text-[11px] font-bold text-primary flex items-center gap-1 bg-primary/10 px-3 py-1 rounded-full hover:bg-primary/20"
-                                      >
-                                        <span className="material-symbols-outlined text-[14px]">add</span>
-                                        Agendar às {formattedHour}
-                                      </button>
+                                  {/* Content: 2 lines exactly like the reference */}
+                                  <div className="flex flex-col justify-start h-full overflow-hidden px-2 py-1">
+                                    {/* Line 1: Time range + Status badge */}
+                                    <div className="flex items-center gap-1.5 shrink-0">
+                                      <span className="font-bold text-[11px] leading-tight">{appt.hora} - {formattedEndTime}</span>
+                                      <span className={`text-[7px] px-1.5 py-0.5 rounded-sm font-bold uppercase leading-none ${badgeBg}`}>{appt.status}</span>
                                     </div>
-                                  )}
+                                    {/* Line 2: Person + Name · Service Icon + Service */}
+                                    <div className="flex items-center gap-1 mt-0.5 text-[11px] leading-tight">
+                                      <span className="material-symbols-outlined text-[13px] opacity-70">person</span>
+                                      <span className="font-bold">{appt.clienteNome}</span>
+                                      <span className="opacity-40 mx-0.5">·</span>
+                                      <span className="material-symbols-outlined text-[13px] opacity-70">{styles.icon}</span>
+                                      <span className="opacity-90">{appt.procedimento}</span>
+                                    </div>
+                                  </div>
                                 </div>
-                              </div>
-                            );
-                          })}
+                              );
+                            })}
+                          </div>
                         </div>
                       );
                     })()}
@@ -5517,13 +5477,27 @@ export default function CRMPage() {
                   </div>
                   <div>
                     <h2 className="text-[18px] font-bold text-on-surface">Gabi Almeida Estética CRM</h2>
-                    <p className="text-[13px] text-on-surface-variant font-bold">Versão atual: 2.9.0</p>
+                    <p className="text-[13px] text-on-surface-variant font-bold">Versão atual: 3.0.0</p>
                   </div>
                 </div>
 
                 <div className="space-y-4">
                   <h3 className="text-[14px] font-bold text-primary border-b border-outline-variant/30 pb-2">Histórico de Versões (Changelog)</h3>
                   
+                  <div className="bg-surface-container-lowest rounded-2xl p-4 border border-outline-variant/50 mb-4">
+                    <div className="flex justify-between items-center mb-2">
+                      <span className="font-bold text-[14px] text-on-surface">Versão 3.0.0</span>
+                      <span className="text-[11px] font-bold text-on-surface-variant px-2 py-1 bg-surface-container rounded-lg">15 Junho 2026</span>
+                    </div>
+                    <ul className="list-disc pl-5 space-y-1.5 text-[13px] text-on-surface-variant mt-3">
+                      <li><strong className="text-on-surface">Reescrita Completa da Agenda Diária:</strong> Arquitetura totalmente nova usando um container de timeline contínuo. Os agendamentos agora são posicionados de forma absoluta sobre toda a grade de horários, eliminando definitivamente cortes e sobreposições visuais.</li>
+                      <li><strong className="text-on-surface">Janela de Tempo Exata:</strong> Cada agendamento ocupa exatamente a sua janela de tempo (ex: 30min, 50min, 80min) com precisão de pixel, cruzando livremente as linhas de hora.</li>
+                      <li><strong className="text-on-surface">Layout 2 Linhas (Referência):</strong> Texto simplificado seguindo a referência: Linha 1 = Horário + Status, Linha 2 = Nome do cliente + Serviço. Sem truncamento, sem corte.</li>
+                      <li><strong className="text-on-surface">Métricas Dinâmicas:</strong> Faturamento e Taxa Ocupacional calculados em tempo real.</li>
+                      <li><strong className="text-on-surface">Rodapé Padronizado:</strong> Referências ao sistema corrigidas para Studio Gabi Almeida em todo o sistema.</li>
+                    </ul>
+                  </div>
+
                   <div className="bg-surface-container-lowest rounded-2xl p-4 border border-outline-variant/50 mb-4">
                     <div className="flex justify-between items-center mb-2">
                       <span className="font-bold text-[14px] text-on-surface">Versão 2.9.0</span>
