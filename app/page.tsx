@@ -1323,7 +1323,7 @@ export default function CRMPage() {
               <span>Acesso seguro. Todos os dados são criptografados.</span>
               <span>© 2026 Gabi Almeida Estética.</span>
               <span>Desenvolvido: caduhelp-dev</span>
-              <span>Ver. 2.3</span>
+              <span>Ver. 2.4</span>
             </div>
         </div>
       </div>
@@ -5230,6 +5230,18 @@ export default function CRMPage() {
                 <div className="space-y-4">
                   <h3 className="text-[14px] font-bold text-primary border-b border-outline-variant/30 pb-2">Histórico de Versões (Changelog)</h3>
                   
+                  <div className="bg-surface-container-lowest rounded-2xl p-4 border border-outline-variant/50 mb-4">
+                    <div className="flex justify-between items-center mb-2">
+                      <span className="font-bold text-[14px] text-on-surface">Versão 2.4.0</span>
+                      <span className="text-[11px] font-bold text-on-surface-variant px-2 py-1 bg-surface-container rounded-lg">Junho 2026</span>
+                    </div>
+                    <ul className="list-disc pl-5 space-y-1.5 text-[13px] text-on-surface-variant mt-3">
+                      <li><strong className="text-on-surface">Relatórios Dinâmicos:</strong> Aba de Performance e Resumo Financeiro agora são gerados dinamicamente com cálculos reais sobre os agendamentos, cobranças e despesas, retroativos a Jan/2026.</li>
+                      <li><strong className="text-on-surface">Dashboards Visuais:</strong> Adição de Gráficos Nativos demonstrando Entradas vs Saídas dos últimos 6 meses, e o Fluxo de Agendamentos dos últimos 7 dias.</li>
+                      <li><strong className="text-on-surface">Edição de Agenda:</strong> Adicionado o botão "Editar Agenda" diretamente do clique do paciente, permitindo remanejamentos instantâneos de datas, horas e procedimentos.</li>
+                    </ul>
+                  </div>
+
                   <div className="bg-surface-container-lowest rounded-2xl p-4 border border-outline-variant/50 mb-4">
                     <div className="flex justify-between items-center mb-2">
                       <span className="font-bold text-[14px] text-on-surface">Versão 2.3.0</span>
