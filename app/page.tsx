@@ -2368,8 +2368,8 @@ export default function CRMPage() {
                                       const topPx = (startMinute / 60) * 90;
                                       const heightPx = (durAppt / 60) * 90;
                                       
-                                      let dynamicStyle: any = { top: `${topPx}px`, minHeight: `${Math.max(heightPx, 45)}px`, left: '8px', right: '8px' };
-                                      let cardColorClass = 'z-20 border-l-4 shadow-sm hover:shadow-md transition-all cursor-pointer absolute p-1.5 sm:p-2 rounded-xl flex flex-col gap-0.5 text-[10px] sm:text-[11px] leading-tight';
+                                      let dynamicStyle: any = { top: `${topPx}px`, height: `${heightPx}px`, left: '8px', right: '8px' };
+                                      let cardColorClass = 'z-20 border-l-[3px] shadow-sm hover:shadow-md transition-all cursor-pointer absolute px-1.5 py-0.5 rounded-lg flex flex-col gap-0 text-[9px] sm:text-[10px] leading-tight overflow-hidden';
                                       
                                       const apptIndex = appointments.findIndex(a => a.id === appt.id);
                                       const isConflicted = appointments.some((a, idx) => {
@@ -2416,11 +2416,11 @@ export default function CRMPage() {
                                           >
                                             <div className="flex flex-col h-full w-full justify-start overflow-hidden relative group/card">
                                               {/* Top Row: Time, Badges and Action Buttons */}
-                                              <div className="flex justify-between items-start mb-0.5 shrink-0">
-                                                <div className="flex gap-1.5 items-center">
-                                                  <span className="font-extrabold text-[11px] sm:text-[12px] opacity-90">{appt.hora} - {formattedEndTime}</span>
+                                              <div className="flex justify-between items-start shrink-0">
+                                                <div className="flex gap-1 items-center">
+                                                  <span className="font-extrabold text-[9px] sm:text-[10px] opacity-90">{appt.hora} - {formattedEndTime}</span>
                                                   {!isCompact && (
-                                                    <span className={`text-[8px] sm:text-[9px] px-1.5 py-0.5 rounded-sm font-bold uppercase tracking-wide ${badgeBg}`}>
+                                                    <span className={`text-[7px] sm:text-[8px] px-1 py-0 rounded-sm font-bold uppercase tracking-wide ${badgeBg}`}>
                                                       {appt.status}
                                                     </span>
                                                   )}
@@ -2466,17 +2466,17 @@ export default function CRMPage() {
                                               </div>
 
                                               {/* Content Row: Flex-row if compact, Flex-col if tall */}
-                                              <div className={`flex ${isCompact ? 'flex-row items-center gap-3 mt-1' : 'flex-col gap-0.5 mt-0.5'}`}>
-                                                <div className="flex items-center gap-1 font-extrabold text-[12px] sm:text-[13px] truncate shrink-0">
-                                                  <span className="material-symbols-outlined text-[14px]">person</span>
+                                              <div className={`flex ${isCompact ? 'flex-row items-center gap-2' : 'flex-col gap-0 mt-0.5'}`}>
+                                                <div className="flex items-center gap-1 font-extrabold text-[10px] sm:text-[11px] truncate shrink-0">
+                                                  <span className="material-symbols-outlined text-[11px]">person</span>
                                                   <span className="truncate">{appt.clienteNome}</span>
                                                 </div>
-                                                <div className="flex items-center gap-1 font-medium text-[11px] sm:text-[12px] opacity-90 truncate">
-                                                  <span className="material-symbols-outlined text-[14px]">{styles.icon}</span>
+                                                <div className="flex items-center gap-1 font-medium text-[9px] sm:text-[10px] opacity-90 truncate">
+                                                  <span className="material-symbols-outlined text-[11px]">{styles.icon}</span>
                                                   <span className="truncate">{appt.procedimento}</span>
                                                 </div>
                                                 {isCompact && (
-                                                  <span className={`text-[8px] sm:text-[9px] px-1.5 py-0.5 rounded-sm font-bold uppercase tracking-wide ${badgeBg} ml-auto shrink-0`}>
+                                                  <span className={`text-[7px] sm:text-[8px] px-1 py-0 rounded-sm font-bold uppercase tracking-wide ${badgeBg} ml-auto shrink-0`}>
                                                     {appt.status}
                                                   </span>
                                                 )}
@@ -2628,6 +2628,12 @@ export default function CRMPage() {
 
                       {/* Calendar day keys */}
                       <div className="grid grid-cols-7 gap-2">
+                        {/* Empty offset for the first day of the month */}
+                        {Array.from({ length: new Date(agendaNavDate.getFullYear(), agendaNavDate.getMonth(), 1).getDay() }).map((_, index) => (
+                          <div key={`empty-${index}`} className="aspect-square"></div>
+                        ))}
+                        
+                        {/* Days of the month */}
                         {Array.from({ length: new Date(agendaNavDate.getFullYear(), agendaNavDate.getMonth() + 1, 0).getDate() }).map((_, index) => {
                           const dayNum = index + 1;
                           const isSelected = dayNum === selectedCalendarDay;
