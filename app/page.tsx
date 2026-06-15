@@ -77,6 +77,134 @@ const getProcedureStyles = (procName: string) => {
   };
 };
 
+const CustomSearchableSelect = ({ value, onChange, options, placeholder }: { value: string, onChange: (v: string) => void, options: {label: string, value: string}[], placeholder: string }) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const [search, setSearch] = useState('');
+  const wrapperRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: any) => {
+      if (wrapperRef.current && !wrapperRef.current.contains(event.target)) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const filtered = options.filter(o => o.label.toLowerCase().includes(search.toLowerCase()));
+
+  return (
+    <div className="relative w-full" ref={wrapperRef}>
+      <div 
+        className={`w-full p-2.5 bg-surface rounded-xl border ${isOpen ? 'border-primary ring-1 ring-primary/40' : 'border-outline-variant/60'} flex justify-between items-center cursor-text text-[13px] font-medium transition-all`}
+        onClick={() => setIsOpen(true)}
+      >
+        <input 
+          type="text"
+          className="w-full bg-transparent focus:outline-none placeholder:text-on-surface-variant/50"
+          placeholder={placeholder}
+          value={isOpen ? search : value}
+          onChange={(e) => {
+            setSearch(e.target.value);
+            onChange(e.target.value);
+            setIsOpen(true);
+          }}
+          onFocus={() => { setIsOpen(true); setSearch(''); }}
+        />
+        <button type="button" className="outline-none focus:outline-none" onClick={(e) => { e.stopPropagation(); setIsOpen(!isOpen); setSearch(''); }}>
+          <span className={`material-symbols-outlined text-on-surface-variant text-[20px] transition-transform ${isOpen ? 'rotate-180 text-primary' : ''}`}>arrow_drop_down</span>
+        </button>
+      </div>
+      {isOpen && (
+        <div className="absolute z-[70] top-full left-0 w-full mt-1.5 bg-white-pure border border-outline-variant shadow-xl rounded-xl max-h-56 overflow-y-auto custom-scrollbar animate-fade-in">
+          {filtered.length === 0 ? (
+            <div className="p-4 text-on-surface-variant text-[12px] italic text-center">Nenhum resultado...</div>
+          ) : (
+            filtered.map((o, i) => (
+              <div 
+                key={i} 
+                className="p-3 hover:bg-primary/10 cursor-pointer text-[13px] font-medium border-b border-outline-variant/30 last:border-0 text-on-surface transition-colors"
+                onClick={() => {
+                  onChange(o.value);
+                  setSearch('');
+                  setIsOpen(false);
+                }}
+              >
+                {o.label}
+              </div>
+            ))
+          )}
+        </div>
+      )}
+    </div>
+  );
+};
+
+const CustomSearchableSelect = ({ value, onChange, options, placeholder }: { value: string, onChange: (v: string) => void, options: {label: string, value: string}[], placeholder: string }) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const [search, setSearch] = useState('');
+  const wrapperRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: any) => {
+      if (wrapperRef.current && !wrapperRef.current.contains(event.target)) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const filtered = options.filter(o => o.label.toLowerCase().includes(search.toLowerCase()));
+
+  return (
+    <div className="relative w-full" ref={wrapperRef}>
+      <div 
+        className={`w-full p-2.5 bg-surface rounded-xl border ${isOpen ? 'border-primary ring-1 ring-primary/40' : 'border-outline-variant/60'} flex justify-between items-center cursor-text text-[13px] font-medium transition-all`}
+        onClick={() => setIsOpen(true)}
+      >
+        <input 
+          type="text"
+          className="w-full bg-transparent focus:outline-none placeholder:text-on-surface-variant/50"
+          placeholder={placeholder}
+          value={isOpen ? search : value}
+          onChange={(e) => {
+            setSearch(e.target.value);
+            onChange(e.target.value);
+            setIsOpen(true);
+          }}
+          onFocus={() => { setIsOpen(true); setSearch(''); }}
+        />
+        <button type="button" className="outline-none focus:outline-none" onClick={(e) => { e.stopPropagation(); setIsOpen(!isOpen); setSearch(''); }}>
+          <span className={`material-symbols-outlined text-on-surface-variant text-[20px] transition-transform ${isOpen ? 'rotate-180 text-primary' : ''}`}>arrow_drop_down</span>
+        </button>
+      </div>
+      {isOpen && (
+        <div className="absolute z-[70] top-full left-0 w-full mt-1.5 bg-white-pure border border-outline-variant shadow-xl rounded-xl max-h-56 overflow-y-auto custom-scrollbar animate-fade-in">
+          {filtered.length === 0 ? (
+            <div className="p-4 text-on-surface-variant text-[12px] italic text-center">Nenhum resultado...</div>
+          ) : (
+            filtered.map((o, i) => (
+              <div 
+                key={i} 
+                className="p-3 hover:bg-primary/10 cursor-pointer text-[13px] font-medium border-b border-outline-variant/30 last:border-0 text-on-surface transition-colors"
+                onClick={() => {
+                  onChange(o.value);
+                  setSearch('');
+                  setIsOpen(false);
+                }}
+              >
+                {o.label}
+              </div>
+            ))
+          )}
+        </div>
+      )}
+    </div>
+  );
+};
+
 export default function CRMPage() {
   // Global Modal State
   const [dialogState, setDialogState] = useState<{isOpen: boolean, type: 'alert' | 'confirm', message: string, onConfirm?: () => void}>({isOpen: false, type: 'alert', message: ''});
@@ -1339,13 +1467,10 @@ export default function CRMPage() {
               </button>
            </form>
            
-           <div className="text-center mt-12 mb-6 opacity-60 text-[11px] font-bold text-on-surface-variant flex flex-col items-center gap-1">
-              <span className="material-symbols-outlined text-[16px] mb-1">lock</span>
-              <span>Acesso seguro. Todos os dados são criptografados.</span>
-              <span>© 2026 Gabi Almeida Estética.</span>
-              <span>Desenvolvido: caduhelp-dev</span>
-              <span>Ver. 2.7</span>
-            </div>
+           <div className="absolute bottom-6 left-0 w-full px-6 flex items-center justify-between text-[11px] font-bold text-on-surface-variant/50">
+            <span>Studio Gabi Almeida</span>
+            <span>v2.8.0</span>
+          </div>
         </div>
       </div>
     );
@@ -2331,85 +2456,98 @@ export default function CRMPage() {
                                             ? 'bg-amber-500 text-white-pure' 
                                             : 'bg-slate-400 text-white-pure';
 
-                                      return (
-                                        <div 
-                                          key={appt.id} 
-                                          style={dynamicStyle}
-                                          className={cardColorClass}
-                                          onClick={(e) => {
-                                             e.stopPropagation();
-                                             const client = patients.find(p => p.nome.toLowerCase() === appt.clienteNome.toLowerCase() || p.id === appt.clienteId);
-                                             if (client) {
-                                               setInteractClient(client);
-                                               setInteractAppointmentId(appt.id);
-                                               setIsWhatsAppSubmenuOpen(false);
-                                               setIsClientInteractModalOpen(true);
-                                             }
-                                          }}
-                                        >
-                                          <div className="flex justify-between items-start">
-                                            <p className="font-manrope text-[13px] font-extrabold flex items-center gap-1.5">
-                                              <span className="material-symbols-outlined text-[14px]">schedule</span>
-                                              {appt.hora}
-                                            </p>
-                                            <span className={`text-[9px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wide ${badgeBg}`}>
-                                              {appt.status}
-                                            </span>
+                                        const startHour = parseInt(appt.hora.split(':')[0]);
+                                        const startMinute = parseInt(appt.hora.split(':')[1] || '0');
+                                        const totalEndMinutes = startHour * 60 + startMinute + durAppt;
+                                        const formattedEndTime = `${String(Math.floor(totalEndMinutes / 60)).padStart(2, '0')}:${String(totalEndMinutes % 60).padStart(2, '0')}`;
+                                        const isCompact = durAppt <= 45;
+
+                                        return (
+                                          <div 
+                                            key={appt.id} 
+                                            style={dynamicStyle}
+                                            className={cardColorClass}
+                                            onClick={(e) => {
+                                               e.stopPropagation();
+                                               const client = patients.find(p => p.nome.toLowerCase() === appt.clienteNome.toLowerCase() || p.id === appt.clienteId);
+                                               if (client) {
+                                                 setInteractClient(client);
+                                                 setInteractAppointmentId(appt.id);
+                                                 setIsWhatsAppSubmenuOpen(false);
+                                                 setIsClientInteractModalOpen(true);
+                                               }
+                                            }}
+                                          >
+                                            <div className="flex flex-col h-full w-full justify-start overflow-hidden relative group/card">
+                                              {/* Top Row: Time, Badges and Action Buttons */}
+                                              <div className="flex justify-between items-start mb-0.5 shrink-0">
+                                                <div className="flex gap-1.5 items-center">
+                                                  <span className="font-extrabold text-[11px] sm:text-[12px] opacity-90">{appt.hora} - {formattedEndTime}</span>
+                                                  {!isCompact && (
+                                                    <span className={`text-[8px] sm:text-[9px] px-1.5 py-0.5 rounded-sm font-bold uppercase tracking-wide ${badgeBg}`}>
+                                                      {appt.status}
+                                                    </span>
+                                                  )}
+                                                </div>
+                                                
+                                                <div className="flex gap-1 shrink-0 bg-white-pure/60 rounded-md px-1 py-0.5 ml-2 backdrop-blur-sm shadow-sm border border-black/5">
+                                                  <button 
+                                                    onClick={(e) => {
+                                                      e.stopPropagation();
+                                                      setEditingAppointment(appt);
+                                                      setNewApptPatient(appt.clienteNome);
+                                                      setNewApptProcedure(appt.procedimento);
+                                                      setNewApptProfessional(appt.profissional);
+                                                      setNewApptTime(appt.hora);
+                                                      setNewApptDate(appt.data);
+                                                      setNewApptCategory(appt.categoria);
+                                                      setNewApptStatus(appt.status);
+                                                      setIsNewAppointmentOpen(true);
+                                                    }}
+                                                    className="p-0.5 hover:text-primary transition-colors flex items-center justify-center" title="Editar"
+                                                  >
+                                                    <span className="material-symbols-outlined text-[13px]">edit</span>
+                                                  </button>
+                                                  <button 
+                                                    onClick={(e) => {
+                                                      e.stopPropagation();
+                                                      showConfirm(`Remover agendamento de ${appt.clienteNome}?`, async () => {
+                                                        try {
+                                                          const { error } = await supabase.from('agendamentos').delete().eq('id', appt.id);
+                                                          if (error) throw error;
+                                                          setAppointments(prev => prev.filter(a => a.id !== appt.id));
+                                                          showAlert('Agendamento removido.');
+                                                        } catch (err: any) {
+                                                          showAlert(`Erro ao excluir: ${err.message}`);
+                                                        }
+                                                      });
+                                                    }}
+                                                    className="p-0.5 hover:text-error transition-colors flex items-center justify-center" title="Excluir"
+                                                  >
+                                                    <span className="material-symbols-outlined text-[13px]">delete</span>
+                                                  </button>
+                                                </div>
+                                              </div>
+
+                                              {/* Content Row: Flex-row if compact, Flex-col if tall */}
+                                              <div className={`flex ${isCompact ? 'flex-row items-center gap-3 mt-1' : 'flex-col gap-0.5 mt-0.5'}`}>
+                                                <div className="flex items-center gap-1 font-extrabold text-[12px] sm:text-[13px] truncate shrink-0">
+                                                  <span className="material-symbols-outlined text-[14px]">person</span>
+                                                  <span className="truncate">{appt.clienteNome}</span>
+                                                </div>
+                                                <div className="flex items-center gap-1 font-medium text-[11px] sm:text-[12px] opacity-90 truncate">
+                                                  <span className="material-symbols-outlined text-[14px]">{styles.icon}</span>
+                                                  <span className="truncate">{appt.procedimento}</span>
+                                                </div>
+                                                {isCompact && (
+                                                  <span className={`text-[8px] sm:text-[9px] px-1.5 py-0.5 rounded-sm font-bold uppercase tracking-wide ${badgeBg} ml-auto shrink-0`}>
+                                                    {appt.status}
+                                                  </span>
+                                                )}
+                                              </div>
+                                            </div>
                                           </div>
-
-                                          <p className="text-[11px] sm:text-[13px] font-bold mt-0.5 sm:mt-1 flex items-start gap-1.5">
-                                            <span className="material-symbols-outlined text-[14px] sm:text-[16px]">person</span>
-                                            <span className="break-words max-w-full leading-tight">{appt.clienteNome}</span>
-                                          </p>
-
-                                          <p className="text-[10px] sm:text-[12px] font-medium flex items-start gap-1.5 opacity-90 leading-tight">
-                                            <span className="material-symbols-outlined text-[12px] sm:text-[15px] shrink-0 mt-0.5">
-                                              {styles.icon}
-                                            </span>
-                                            <span className="break-words max-w-full">{appt.procedimento}</span>
-                                          </p>
-
-                                          <div className="flex gap-2 justify-end mt-1 pt-2 border-t border-black/5 transition-opacity">
-                                            <button 
-                                              onClick={(e) => {
-                                                e.stopPropagation();
-                                                setEditingAppointment(appt);
-                                                setNewApptPatient(appt.clienteNome);
-                                                setNewApptProcedure(appt.procedimento);
-                                                setNewApptProfessional(appt.profissional);
-                                                setNewApptTime(appt.hora);
-                                                setNewApptDate(appt.data);
-                                                setNewApptCategory(appt.categoria);
-                                                setNewApptStatus(appt.status);
-                                                setIsNewAppointmentOpen(true);
-                                              }}
-                                              className="p-1 hover:text-primary transition-colors flex items-center gap-1 font-bold text-[10px]"
-                                            >
-                                              <span className="material-symbols-outlined text-[14px]">edit</span>
-                                              Editar
-                                            </button>
-                                            <button 
-                                              onClick={(e) => {
-                                                e.stopPropagation();
-                                                showConfirm(`Remover agendamento de ${appt.clienteNome}?`, async () => {
-                                                  try {
-                                                    const { error } = await supabase.from('agendamentos').delete().eq('id', appt.id);
-                                                    if (error) throw error;
-                                                    setAppointments(prev => prev.filter(a => a.id !== appt.id));
-                                                    showAlert('Agendamento removido.');
-                                                  } catch (err: any) {
-                                                    showAlert(`Erro ao excluir: ${err.message}`);
-                                                  }
-                                                });
-                                              }}
-                                              className="p-1 hover:text-error transition-colors flex items-center gap-1 font-bold text-[10px]"
-                                            >
-                                              <span className="material-symbols-outlined text-[14px]">delete</span>
-                                              Excluir
-                                            </button>
-                                          </div>
-                                        </div>
-                                      );
+                                        );
                                     })
                                   ) : (
                                     <div className="w-full h-full min-h-[40px] flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
@@ -5429,13 +5567,25 @@ export default function CRMPage() {
                   </div>
                   <div>
                     <h2 className="text-[18px] font-bold text-on-surface">Gabi Almeida Estética CRM</h2>
-                    <p className="text-[13px] text-on-surface-variant font-bold">Versão atual: 2.0.0</p>
+                    <p className="text-[13px] text-on-surface-variant font-bold">Versão atual: 2.8.0</p>
                   </div>
                 </div>
 
                 <div className="space-y-4">
                   <h3 className="text-[14px] font-bold text-primary border-b border-outline-variant/30 pb-2">Histórico de Versões (Changelog)</h3>
                   
+                  <div className="bg-surface-container-lowest rounded-2xl p-4 border border-outline-variant/50 mb-4">
+                    <div className="flex justify-between items-center mb-2">
+                      <span className="font-bold text-[14px] text-on-surface">Versão 2.8.0</span>
+                      <span className="text-[11px] font-bold text-on-surface-variant px-2 py-1 bg-surface-container rounded-lg">15 Junho 2026</span>
+                    </div>
+                    <ul className="list-disc pl-5 space-y-1.5 text-[13px] text-on-surface-variant mt-3">
+                      <li><strong className="text-on-surface">Layout Responsivo da Agenda:</strong> Agendamentos com menos de 45 minutos agora exibem os dados de forma horizontal para evitar corte de informações e comportam o tempo do início ao fim exato.</li>
+                      <li><strong className="text-on-surface">Dropdown de Clientes (Apple Fix):</strong> Substituído o campo nativo de seleção de clientes e procedimentos no "Novo Agendamento" por um componente interativo exclusivo de alta compatibilidade com Safari e iPads.</li>
+                      <li><strong className="text-on-surface">Modais Sobrepostos:</strong> O modal de clientes agora sobrepõe o de agenda corretamente ao invés de ficar em segundo plano.</li>
+                    </ul>
+                  </div>
+
                   <div className="bg-surface-container-lowest rounded-2xl p-4 border border-outline-variant/50 mb-4">
                     <div className="flex justify-between items-center mb-2">
                       <span className="font-bold text-[14px] text-on-surface">Versão 2.7.0</span>
@@ -6017,7 +6167,7 @@ export default function CRMPage() {
 
       {/* Dynamic Cliente Registration Modal */}
       {isPatientModalOpen && (
-        <div className="fixed inset-0 bg-[#31302fd0] backdrop-blur-md flex items-center justify-center z-[60] p-0 sm:p-4 animate-fade-in">
+        <div className="fixed inset-0 bg-[#31302fd0] backdrop-blur-md flex items-center justify-center z-[70] p-0 sm:p-4 animate-fade-in">
           <div className="bg-white-pure sm:rounded-3xl border border-outline-variant w-full max-w-xl p-5 sm:p-8 shadow-2xl relative h-full sm:h-auto sm:max-h-[90vh] overflow-y-auto select-none">
             
             <button 
@@ -6541,19 +6691,12 @@ export default function CRMPage() {
               <div className="space-y-1.5">
                 <label className="font-bold text-on-surface-variant">Cliente</label>
                 <div className="flex gap-2">
-                  <input 
-                    list="patients-datalist"
-                    placeholder="Busque ou selecione um cliente..."
+                  <CustomSearchableSelect 
                     value={newApptPatient}
-                    onChange={(e) => setNewApptPatient(e.target.value)}
-                    className="w-full p-2.5 bg-surface rounded-xl border border-outline-variant/60 focus:outline-none focus:ring-1 focus:ring-primary/40 font-medium flex-1 text-[13px]"
-                    required
+                    onChange={(v) => setNewApptPatient(v)}
+                    placeholder="Busque ou selecione um cliente..."
+                    options={patients.slice().sort((a, b) => a.nome.localeCompare(b.nome)).map(p => ({ label: p.nome, value: p.nome }))}
                   />
-                  <datalist id="patients-datalist">
-                    {patients.slice().sort((a, b) => a.nome.localeCompare(b.nome)).map(p => (
-                      <option key={p.id} value={p.nome}>{p.nome}</option>
-                    ))}
-                  </datalist>
                   <button type="button" onClick={() => {
                     setNewApptPatient("Cliente Importado");
                     showAlert("Sincronizando com WhatsApp... \n\nCliente encontrado e importado para o agendamento com sucesso!");
@@ -6582,27 +6725,20 @@ export default function CRMPage() {
                 </div>
                 {(newApptProcedure.split(' + ').length === 0 ? [''] : newApptProcedure.split(' + ')).map((proc, index, arr) => (
                   <div key={index} className="flex items-center gap-2 mt-2 first:mt-0">
-                    <input
-                      list={`procedures-datalist-${index}`}
-                      placeholder="Busque ou selecione um procedimento..."
+                    <CustomSearchableSelect
                       value={proc}
-                      onChange={(e) => {
+                      onChange={(v) => {
                          const newArr = [...arr];
-                         newArr[index] = e.target.value;
+                         newArr[index] = v;
                          setNewApptProcedure(newArr.join(' + '));
-                         const sel = services.find(s => s.nome === e.target.value);
+                         const sel = services.find(s => s.nome === v);
                          if(index === 0 && sel) {
                            setNewApptCategory(sel.categoria as any);
                          }
                       }}
-                      className="flex-1 p-2.5 bg-surface rounded-xl border border-outline-variant/60 focus:outline-none focus:ring-1 focus:ring-primary/40 text-[13px] font-medium"
-                      required
+                      placeholder="Busque ou selecione um procedimento..."
+                      options={services.slice().sort((a,b) => a.nome.localeCompare(b.nome)).map(s => ({ label: `${s.nome} (R$ ${s.preco})`, value: s.nome }))}
                     />
-                    <datalist id={`procedures-datalist-${index}`}>
-                      {services.slice().sort((a,b) => a.nome.localeCompare(b.nome)).map(s => (
-                        <option key={s.id} value={s.nome}>{s.nome} (R$ {s.preco})</option>
-                      ))}
-                    </datalist>
                     {arr.length > 1 && (
                       <button type="button" onClick={() => {
                         const newArr = [...arr];
