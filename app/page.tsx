@@ -356,6 +356,7 @@ export default function CRMPage() {
   });
 
   const totalRevenueThisMonth = receitaRecebida + aReceber;
+  const receitaEsperada = receitaRecebida + aReceber;
 
   // Finance: Despesas (desde 2026)
   const despesasDesde2026 = despesas
