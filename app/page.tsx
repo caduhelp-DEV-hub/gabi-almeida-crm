@@ -310,36 +310,60 @@ export default function CRMPage() {
   const [,, todayYear] = todayStr.split('/');
   const [, todayMonth] = todayStr.split('/');
 
-  const dailyFinancialRevenue = transactions
-    .filter(t => t.data === todayStr && t.valor > 0)
-    .reduce((acc, t) => acc + t.valor, 0);
-
-  const totalRevenueThisMonth = transactions
-    .filter(t => {
-      const parts = t.data.split('/');
-      if (parts.length === 3) {
-        const [, m, y] = parts;
-        return m === todayMonth && y === todayYear && t.valor > 0;
-      }
-      return false;
-    })
-    .reduce((acc, t) => acc + t.valor, 0);
-
-  // Mobile Financeiro metrics
-  const monthlyRevenueTransactions = transactions.filter(t => {
-    const parts = t.data.split('/');
-    if (parts.length === 3) {
-      const [, m, y] = parts;
-      return m === todayMonth && y === todayYear && t.valor > 0;
+  // Utility to parse dates like "YYYY-MM-DD" or "DD/MM/YYYY" to Date object
+  const parseAnyDate = (dateStr: string): Date => {
+    if (!dateStr) return new Date();
+    if (dateStr.includes('/')) {
+      const [d, m, y] = dateStr.split('/');
+      return new Date(Number(y), Number(m) - 1, Number(d));
     }
-    return false;
-  });
-  const receitaEsperada = monthlyRevenueTransactions.reduce((acc, t) => acc + t.valor, 0);
-  const receitaRecebida = monthlyRevenueTransactions
+    return new Date(dateStr);
+  };
+
+  const cutoffDate = new Date(2026, 0, 1); // 01/01/2026
+
+  // Finance: Receitas
+  // 1. Receitas de Cobrancas avulsas (desde 2026)
+  const validCobrancas = transactions.filter(t => parseAnyDate(t.data) >= cutoffDate && t.valor > 0);
+  
+  // 2. Receitas de Agendamentos Finalizados (desde 2026)
+  const validAgendamentosFin = appointments.filter(a => 
+    parseAnyDate(a.data) >= cutoffDate
+  );
+
+  // Combine both sources to calculate revenue
+  let receitaRecebida = validCobrancas
     .filter(t => t.status === 'Pago' || t.status === 'Confirmado')
     .reduce((acc, t) => acc + t.valor, 0);
-  const aReceber = monthlyRevenueTransactions
+  let aReceber = validCobrancas
     .filter(t => t.status === 'Pendente')
+    .reduce((acc, t) => acc + t.valor, 0);
+
+  // Add revenue from Appointments (calculating price from services)
+  validAgendamentosFin.forEach(a => {
+    const procs = a.procedimento.split(' + ');
+    let value = 0;
+    procs.forEach(pName => {
+      const s = services.find(srv => srv.nome === pName);
+      if (s) value += s.preco;
+    });
+
+    if (a.status === 'Finalizado' || a.status === 'Confirmado') {
+      receitaRecebida += value;
+    } else if (a.status === 'Pendente') {
+      aReceber += value;
+    }
+  });
+
+  const totalRevenueThisMonth = receitaRecebida + aReceber;
+
+  // Finance: Despesas (desde 2026)
+  const despesasDesde2026 = despesas
+    .filter(d => parseAnyDate(d.data) >= cutoffDate)
+    .reduce((acc, d) => acc + Number(d.valor), 0);
+
+  const dailyFinancialRevenue = transactions
+    .filter(t => t.data === todayStr && t.valor > 0)
     .reduce((acc, t) => acc + t.valor, 0);
 
   const appointmentsToConsider = appointments;
@@ -347,9 +371,12 @@ export default function CRMPage() {
   const totalAtendimentosDisplay = appointmentsToday;
   const totalDailyRevenueDisplay = dailyFinancialRevenue;
   const ticketMedio = totalAtendimentosDisplay > 0 ? (totalDailyRevenueDisplay / totalAtendimentosDisplay) : 0;
+  
+  // Performance Metrics
   const leadsAtivos = patients.length;
-  const conversoes = appointmentsToConsider.filter(a => a.status === 'Confirmado' && a.data === todayDateStr).length;
-  const taxaConversao = appointmentsToday > 0 ? Math.round((conversoes / appointmentsToday) * 100) : 0;
+  // Taxa de Conversao: Clientes unicos atendidos desde 2026 / Total Base
+  const uniqueClientsAttended = new Set(validAgendamentosFin.filter(a => a.status === 'Finalizado' || a.status === 'Confirmado').map(a => a.clienteId || a.clienteNome)).size;
+  const taxaConversao = leadsAtivos > 0 ? Math.round((uniqueClientsAttended / leadsAtivos) * 100) : 0;
 
   const getWeekDays = () => {
     const today = agendaNavDate;
@@ -372,6 +399,58 @@ export default function CRMPage() {
     }
     return days;
   };
+
+  // --- Chart Data Generation ---
+
+  // Performance Chart: Last 7 days
+  const last7DaysData = Array.from({ length: 7 }).map((_, i) => {
+    const d = new Date();
+    d.setDate(d.getDate() - (6 - i));
+    const ds = d.toISOString().split('T')[0];
+    const count = appointments.filter(a => a.data === ds && a.status !== 'Cancelado').length;
+    return {
+      label: d.toLocaleDateString('pt-BR', { weekday: 'short' }).replace('.', ''),
+      count
+    };
+  });
+  const maxPerformanceCount = Math.max(...last7DaysData.map(d => d.count), 1);
+
+  // Finance Chart: Last 6 months (Receitas vs Despesas)
+  const last6MonthsData = Array.from({ length: 6 }).map((_, i) => {
+    const d = new Date();
+    d.setMonth(d.getMonth() - (5 - i));
+    const m = d.getMonth() + 1;
+    const y = d.getFullYear();
+    const label = d.toLocaleDateString('pt-BR', { month: 'short' }).replace('.', '').toUpperCase();
+
+    // Sum Receitas for this month
+    let rev = 0;
+    validCobrancas.forEach(c => {
+      const cd = parseAnyDate(c.data);
+      if (cd.getMonth() + 1 === m && cd.getFullYear() === y && (c.status === 'Pago' || c.status === 'Confirmado')) rev += c.valor;
+    });
+    validAgendamentosFin.forEach(a => {
+      const ad = parseAnyDate(a.data);
+      if (ad.getMonth() + 1 === m && ad.getFullYear() === y && (a.status === 'Finalizado' || a.status === 'Confirmado')) {
+        const procs = a.procedimento.split(' + ');
+        procs.forEach(pName => {
+          const s = services.find(srv => srv.nome === pName);
+          if (s) rev += s.preco;
+        });
+      }
+    });
+
+    // Sum Despesas
+    let exp = 0;
+    despesas?.forEach(desp => {
+      const dd = parseAnyDate(desp.data);
+      if (dd.getMonth() + 1 === m && dd.getFullYear() === y) exp += Number(desp.valor);
+    });
+
+    return { label, rev, exp };
+  });
+  const maxFinanceValue = Math.max(...last6MonthsData.flatMap(d => [d.rev, d.exp]), 1);
+
   const weekDays = getWeekDays();
 
   // Dynamic calculation of commissions and revenue
@@ -4903,7 +4982,7 @@ export default function CRMPage() {
                 <p className="font-manrope font-bold text-[15px] mb-4">Metas e Conversões da Equipe</p>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   <div className="bg-surface-container rounded-2xl p-4 text-center">
-                    <p className="text-[11px] text-on-surface-variant font-bold">Taxa de Conversão Geral</p>
+                    <p className="text-[11px] text-on-surface-variant font-bold">Taxa de Conversão (Desde 2026)</p>
                     <p className="text-[28px] font-extrabold text-primary mt-1">{taxaConversao}%</p>
                   </div>
                   <div className="bg-surface-container rounded-2xl p-4 text-center">
@@ -4911,9 +4990,28 @@ export default function CRMPage() {
                     <p className="text-[28px] font-extrabold text-primary mt-1">{appointmentsToday}</p>
                   </div>
                   <div className="bg-surface-container rounded-2xl p-4 text-center">
-                    <p className="text-[11px] text-on-surface-variant font-bold">Clientes Ativos</p>
+                    <p className="text-[11px] text-on-surface-variant font-bold">Base Total de Clientes</p>
                     <p className="text-[28px] font-extrabold text-primary mt-1">{patients.length}</p>
                   </div>
+                </div>
+              </div>
+
+              <div className="bg-white-pure rounded-3xl p-6 border border-outline-variant">
+                <p className="font-manrope font-bold text-[15px] mb-6">Volume de Atendimentos (Últimos 7 dias)</p>
+                <div className="flex items-end gap-2 sm:gap-4 h-48 w-full">
+                  {last7DaysData.map((d, i) => {
+                    const heightPercent = maxPerformanceCount > 0 ? (d.count / maxPerformanceCount) * 100 : 0;
+                    return (
+                      <div key={i} className="flex-1 flex flex-col items-center justify-end gap-2 group">
+                        <div className="w-full bg-primary/20 rounded-t-lg relative transition-all duration-500 hover:bg-primary/40 flex items-end justify-center" style={{ height: `${Math.max(heightPercent, 2)}%` }}>
+                          <span className="absolute -top-6 text-[12px] font-bold text-primary opacity-0 group-hover:opacity-100 transition-opacity">
+                            {d.count}
+                          </span>
+                        </div>
+                        <span className="text-[10px] font-bold text-on-surface-variant">{d.label}</span>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             </div>
@@ -4925,17 +5023,60 @@ export default function CRMPage() {
             <div className="max-w-4xl mx-auto space-y-6">
               <h1 className="font-manrope text-[24px] font-bold text-primary">Resumo Financeiro</h1>
               <div className="bg-white-pure rounded-3xl p-6 border border-outline-variant space-y-4">
-                <div className="flex justify-between border-b pb-2">
-                  <span className="font-bold">Faturamento Total do Mês:</span>
-                  <span className="font-bold text-emerald-600">R$ {totalRevenueThisMonth.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
-                </div>
-                <div className="flex justify-between border-b pb-2">
-                  <span className="font-bold">Valores Confirmados/Recebidos:</span>
+                <div className="flex justify-between border-b border-outline-variant/50 pb-3">
+                  <span className="font-bold text-on-surface-variant text-[13px]">Faturamento Operacional (Desde 2026):</span>
                   <span className="font-bold text-emerald-600">R$ {receitaRecebida.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
                 </div>
-                <div className="flex justify-between border-b pb-2">
-                  <span className="font-bold">Contas a Receber (Pendente):</span>
-                  <span className="font-bold text-amber-600">R$ {aReceber.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                <div className="flex justify-between border-b border-outline-variant/50 pb-3">
+                  <span className="font-bold text-on-surface-variant text-[13px]">Contas a Receber / Pendentes:</span>
+                  <span className="font-bold text-amber-500">R$ {aReceber.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                </div>
+                <div className="flex justify-between border-b border-outline-variant/50 pb-3">
+                  <span className="font-bold text-on-surface-variant text-[13px]">Despesas / Custos Fixos:</span>
+                  <span className="font-bold text-red-500">- R$ {despesasDesde2026.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                </div>
+                <div className="flex justify-between pt-2">
+                  <span className="font-black text-[16px] text-primary">Lucro Líquido Estimado:</span>
+                  <span className="font-black text-[18px] text-primary">R$ {(receitaRecebida - despesasDesde2026).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                </div>
+              </div>
+
+              <div className="bg-white-pure rounded-3xl p-6 border border-outline-variant">
+                <p className="font-manrope font-bold text-[15px] mb-6">Receitas vs Despesas (Últimos 6 meses)</p>
+                <div className="flex items-end gap-2 sm:gap-6 h-56 w-full">
+                  {last6MonthsData.map((d, i) => {
+                    const revHeight = maxFinanceValue > 0 ? (d.rev / maxFinanceValue) * 100 : 0;
+                    const expHeight = maxFinanceValue > 0 ? (d.exp / maxFinanceValue) * 100 : 0;
+                    return (
+                      <div key={i} className="flex-1 flex flex-col items-center justify-end gap-2 group">
+                        <div className="w-full flex justify-center gap-1 items-end h-full relative">
+                          {/* Receita Bar */}
+                          <div className="w-1/2 bg-emerald-500/80 rounded-t-sm transition-all duration-500 hover:bg-emerald-500 relative flex justify-center" style={{ height: `${Math.max(revHeight, 2)}%` }}>
+                             <span className="absolute -top-5 text-[9px] font-bold text-emerald-700 opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
+                              {d.rev > 0 ? `R$ ${Math.round(d.rev/1000)}k` : ''}
+                             </span>
+                          </div>
+                          {/* Despesa Bar */}
+                          <div className="w-1/2 bg-red-400/80 rounded-t-sm transition-all duration-500 hover:bg-red-500 relative flex justify-center" style={{ height: `${Math.max(expHeight, 2)}%` }}>
+                             <span className="absolute -top-5 text-[9px] font-bold text-red-700 opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
+                              {d.exp > 0 ? `R$ ${Math.round(d.exp/1000)}k` : ''}
+                             </span>
+                          </div>
+                        </div>
+                        <span className="text-[10px] font-bold text-on-surface-variant">{d.label}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+                <div className="flex justify-center gap-6 mt-4">
+                  <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 rounded bg-emerald-500/80"></div>
+                    <span className="text-[11px] font-bold text-on-surface-variant">Receitas</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 rounded bg-red-400/80"></div>
+                    <span className="text-[11px] font-bold text-on-surface-variant">Despesas</span>
+                  </div>
                 </div>
               </div>
             </div>
@@ -6444,7 +6585,7 @@ export default function CRMPage() {
             </div>
 
             {/* Menu de Opções */}
-            <div className="grid grid-cols-4 gap-2 border-t border-outline-variant/50 mt-6 pt-4 text-center">
+            <div className="grid grid-cols-5 gap-2 border-t border-outline-variant/50 mt-6 pt-4 text-center">
               <a 
                 href={`tel:${interactClient.telefone || ''}`} 
                 onClick={() => setIsClientInteractModalOpen(false)}
@@ -6471,8 +6612,30 @@ export default function CRMPage() {
                 }}
                 className="flex flex-col items-center justify-center p-2 rounded-2xl hover:bg-surface transition-all cursor-pointer min-h-[70px]"
               >
-                <span className="material-symbols-outlined text-blue-600 text-2xl">edit</span>
-                <span className="text-[11px] font-bold text-on-surface mt-1">Editar</span>
+                <span className="material-symbols-outlined text-blue-600 text-2xl">person_edit</span>
+                <span className="text-[11px] font-bold text-on-surface mt-1">Perfil</span>
+              </button>
+
+              <button 
+                onClick={() => {
+                  setIsClientInteractModalOpen(false);
+                  if (interactAppointmentId) {
+                    const apptToEdit = appointments.find(a => a.id === interactAppointmentId);
+                    if (apptToEdit) {
+                      setEditingAppointment(apptToEdit);
+                      setNewApptPatient(apptToEdit.clienteNome);
+                      setNewApptProcedure(apptToEdit.procedimento);
+                      setNewApptTime(apptToEdit.hora);
+                      setIsNewAppointmentOpen(true);
+                    }
+                  } else {
+                    showAlert('Nenhum agendamento selecionado para editar.');
+                  }
+                }}
+                className="flex flex-col items-center justify-center p-2 rounded-2xl hover:bg-surface transition-all cursor-pointer min-h-[70px]"
+              >
+                <span className="material-symbols-outlined text-primary text-2xl">edit_calendar</span>
+                <span className="text-[11px] font-bold text-on-surface mt-1">Editar<br/>Agenda</span>
               </button>
 
               <button 
