@@ -2357,14 +2357,14 @@ export default function CRMPage() {
                       const dateStr = `${agendaNavDate.getFullYear()}-${formattedMonth}-${formattedDay}`;
                       const dayAppts = appointments.filter(appt => appt.data === dateStr);
 
-                      const HOUR_HEIGHT = 60; // px per hour
+                      const HOUR_HEIGHT = 120; // px per hour — 30min = 60px, enough for 2 lines
                       const START_HOUR = 7;
                       const END_HOUR = 22;
                       const TOTAL_HOURS = END_HOUR - START_HOUR;
                       const hours = Array.from({length: TOTAL_HOURS + 1}, (_, i) => i + START_HOUR);
 
                       return (
-                        <div className="relative mt-4 bg-white-pure rounded-2xl border border-outline-variant/50 shadow-sm overflow-hidden flex flex-col max-h-[60vh] overflow-y-auto custom-scrollbar">
+                        <div className="relative mt-4 bg-white-pure rounded-2xl border border-outline-variant/50 shadow-sm overflow-hidden flex flex-col max-h-[65vh] overflow-y-auto custom-scrollbar">
                           {/* Single continuous timeline container */}
                           <div className="relative" style={{ height: `${TOTAL_HOURS * HOUR_HEIGHT}px` }}>
                             
@@ -2378,6 +2378,8 @@ export default function CRMPage() {
                                     {formattedHour}
                                   </div>
                                   <div className="flex-1 border-t border-outline-variant/25 relative">
+                                    {/* Half-hour dashed line */}
+                                    <div className="absolute left-0 right-0 border-t border-dashed border-outline-variant/15" style={{ top: `${HOUR_HEIGHT / 2}px` }} />
                                     {/* Clickable area to add appointment */}
                                     <div
                                       className="absolute inset-0 cursor-pointer hover:bg-primary/[0.03] transition-colors"
@@ -2455,19 +2457,17 @@ export default function CRMPage() {
                                     </button>
                                   </div>
 
-                                  {/* Content: 2 lines exactly like the reference */}
+                                  {/* Card content — always 2 lines, fits in 60px (30min) minimum */}
                                   <div className="flex flex-col justify-start h-full overflow-hidden px-2 py-1">
-                                    {/* Line 1: Time range + Status badge */}
                                     <div className="flex items-center gap-1.5 shrink-0">
-                                      <span className="font-bold text-[11px] leading-tight">{appt.hora} - {formattedEndTime}</span>
-                                      <span className={`text-[7px] px-1.5 py-0.5 rounded-sm font-bold uppercase leading-none ${badgeBg}`}>{appt.status}</span>
+                                      <span className="font-bold text-[11px] leading-none">{appt.hora} - {formattedEndTime}</span>
+                                      <span className={`text-[7px] px-1 py-0.5 rounded-sm font-bold uppercase leading-none ${badgeBg}`}>{appt.status}</span>
                                     </div>
-                                    {/* Line 2: Person + Name · Service Icon + Service */}
-                                    <div className="flex items-center gap-1 mt-0.5 text-[11px] leading-tight">
-                                      <span className="material-symbols-outlined text-[13px] opacity-70">person</span>
+                                    <div className="flex items-center gap-1 mt-1 text-[11px] leading-none flex-wrap">
+                                      <span className="material-symbols-outlined text-[12px] opacity-70">person</span>
                                       <span className="font-bold">{appt.clienteNome}</span>
-                                      <span className="opacity-40 mx-0.5">·</span>
-                                      <span className="material-symbols-outlined text-[13px] opacity-70">{styles.icon}</span>
+                                      <span className="opacity-40">·</span>
+                                      <span className="material-symbols-outlined text-[12px] opacity-70">{styles.icon}</span>
                                       <span className="opacity-90">{appt.procedimento}</span>
                                     </div>
                                   </div>
