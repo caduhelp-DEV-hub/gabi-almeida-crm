@@ -317,6 +317,10 @@ export default function CRMPage() {
       const [d, m, y] = dateStr.split('/');
       return new Date(Number(y), Number(m) - 1, Number(d));
     }
+    if (dateStr.includes('-')) {
+      const [y, m, d] = dateStr.split('-');
+      return new Date(Number(y), Number(m) - 1, Number(d));
+    }
     return new Date(dateStr);
   };
 
@@ -5003,7 +5007,7 @@ export default function CRMPage() {
                   {last7DaysData.map((d, i) => {
                     const heightPercent = maxPerformanceCount > 0 ? (d.count / maxPerformanceCount) * 100 : 0;
                     return (
-                      <div key={i} className="flex-1 flex flex-col items-center justify-end gap-2 group">
+                      <div key={i} className="flex-1 flex flex-col items-center justify-end gap-2 group h-full">
                         <div className="w-full bg-primary/20 rounded-t-lg relative transition-all duration-500 hover:bg-primary/40 flex items-end justify-center" style={{ height: `${Math.max(heightPercent, 2)}%` }}>
                           <span className="absolute -top-6 text-[12px] font-bold text-primary opacity-0 group-hover:opacity-100 transition-opacity">
                             {d.count}
@@ -5049,7 +5053,7 @@ export default function CRMPage() {
                     const revHeight = maxFinanceValue > 0 ? (d.rev / maxFinanceValue) * 100 : 0;
                     const expHeight = maxFinanceValue > 0 ? (d.exp / maxFinanceValue) * 100 : 0;
                     return (
-                      <div key={i} className="flex-1 flex flex-col items-center justify-end gap-2 group">
+                      <div key={i} className="flex-1 flex flex-col items-center justify-end gap-2 group h-full">
                         <div className="w-full flex justify-center gap-1 items-end h-full relative">
                           {/* Receita Bar */}
                           <div className="w-1/2 bg-emerald-500/80 rounded-t-sm transition-all duration-500 hover:bg-emerald-500 relative flex justify-center" style={{ height: `${Math.max(revHeight, 2)}%` }}>
