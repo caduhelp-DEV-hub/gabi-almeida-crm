@@ -1328,7 +1328,7 @@ export default function CRMPage() {
               <span>Acesso seguro. Todos os dados são criptografados.</span>
               <span>© 2026 Gabi Almeida Estética.</span>
               <span>Desenvolvido: caduhelp-dev</span>
-              <span>Ver. 2.5</span>
+              <span>Ver. 2.6</span>
             </div>
         </div>
       </div>
@@ -2275,7 +2275,7 @@ export default function CRMPage() {
                                   onClick={() => {
                                     setEditingAppointment(null);
                                     setNewApptPatient('');
-                                    setNewApptProcedure(services[0]?.nome || '');
+                                    setNewApptProcedure('');
                                     setNewApptTime(formattedHour);
                                     setNewApptDate(dateStr);
                                     setIsNewAppointmentOpen(true);
@@ -2291,8 +2291,8 @@ export default function CRMPage() {
                                       const topPx = (startMinute / 60) * 90;
                                       const heightPx = (durAppt / 60) * 90;
                                       
-                                      let dynamicStyle: any = { top: `${topPx}px`, height: `${Math.max(heightPx, 45)}px`, left: '8px', right: '8px' };
-                                      let cardColorClass = 'z-20 border-l-4 shadow-sm hover:shadow-md transition-all cursor-pointer absolute p-1.5 sm:p-2 rounded-xl flex flex-col gap-0.5 overflow-hidden text-[10px] sm:text-[11px] leading-tight';
+                                      let dynamicStyle: any = { top: `${topPx}px`, minHeight: `${Math.max(heightPx, 45)}px`, left: '8px', right: '8px' };
+                                      let cardColorClass = 'z-20 border-l-4 shadow-sm hover:shadow-md transition-all cursor-pointer absolute p-1.5 sm:p-2 rounded-xl flex flex-col gap-0.5 text-[10px] sm:text-[11px] leading-tight';
                                       
                                       const apptIndex = appointments.findIndex(a => a.id === appt.id);
                                       const isConflicted = appointments.some((a, idx) => {
@@ -2497,9 +2497,31 @@ export default function CRMPage() {
                     {/* Left: Dynamic month calendar grid */}
                     <div className="flex-1 p-6 border-b md:border-b-0 md:border-r border-outline-variant overflow-y-auto">
                       <div className="flex justify-between items-center mb-6 select-none font-manrope">
-                        <h4 className="font-black text-primary text-[15px] uppercase tracking-wider">
-                          {agendaNavDate.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' }).toUpperCase()}
-                        </h4>
+                        <div className="flex items-center gap-4">
+                          <button
+                            onClick={() => {
+                              const newDate = new Date(agendaNavDate);
+                              newDate.setMonth(newDate.getMonth() - 1);
+                              setAgendaNavDate(newDate);
+                            }}
+                            className="text-on-surface-variant hover:text-primary transition-colors flex items-center justify-center p-1 min-h-[36px] min-w-[36px]"
+                          >
+                            <span className="material-symbols-outlined text-[18px]">chevron_left</span>
+                          </button>
+                          <h4 className="font-black text-primary text-[15px] uppercase tracking-wider">
+                            {agendaNavDate.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' }).toUpperCase()}
+                          </h4>
+                          <button
+                            onClick={() => {
+                              const newDate = new Date(agendaNavDate);
+                              newDate.setMonth(newDate.getMonth() + 1);
+                              setAgendaNavDate(newDate);
+                            }}
+                            className="text-on-surface-variant hover:text-primary transition-colors flex items-center justify-center p-1 min-h-[36px] min-w-[36px]"
+                          >
+                            <span className="material-symbols-outlined text-[18px]">chevron_right</span>
+                          </button>
+                        </div>
                         <span className="text-[12px] text-on-surface-variant font-bold">Studio Activa</span>
                       </div>
 
@@ -5237,6 +5259,19 @@ export default function CRMPage() {
                   
                   <div className="bg-surface-container-lowest rounded-2xl p-4 border border-outline-variant/50 mb-4">
                     <div className="flex justify-between items-center mb-2">
+                      <span className="font-bold text-[14px] text-on-surface">Versão 2.6.0</span>
+                      <span className="text-[11px] font-bold text-on-surface-variant px-2 py-1 bg-surface-container rounded-lg">Junho 2026</span>
+                    </div>
+                    <ul className="list-disc pl-5 space-y-1.5 text-[13px] text-on-surface-variant mt-3">
+                      <li><strong className="text-on-surface">Navegação no Mês:</strong> Adicionado botões de avançar e voltar meses na visualização mensal da agenda.</li>
+                      <li><strong className="text-on-surface">Agendamento Flexível:</strong> Cards da agenda diária e semanal não escondem mais os textos. A altura agora cresce dinamicamente se a descrição for longa.</li>
+                      <li><strong className="text-on-surface">Busca Rápida Inteligente:</strong> Os campos de Seleção de Cliente e Procedimento agora são abertos (ComboBox nativo), permitindo digitar para filtrar a lista.</li>
+                      <li><strong className="text-on-surface">Nova Agenda em Branco:</strong> Corrigido o preenchimento automático. Agora o modal de agendamento sempre abre em branco, forçando o usuário a escolher um procedimento.</li>
+                    </ul>
+                  </div>
+
+                  <div className="bg-surface-container-lowest rounded-2xl p-4 border border-outline-variant/50 mb-4">
+                    <div className="flex justify-between items-center mb-2">
                       <span className="font-bold text-[14px] text-on-surface">Versão 2.5.0</span>
                       <span className="text-[11px] font-bold text-on-surface-variant px-2 py-1 bg-surface-container rounded-lg">Junho 2026</span>
                     </div>
@@ -6315,17 +6350,19 @@ export default function CRMPage() {
               <div className="space-y-1.5">
                 <label className="font-bold text-on-surface-variant">Cliente</label>
                 <div className="flex gap-2">
-                  <select 
+                  <input 
+                    list="patients-datalist"
+                    placeholder="Busque ou selecione um cliente..."
                     value={newApptPatient}
                     onChange={(e) => setNewApptPatient(e.target.value)}
-                    className="w-full p-2.5 bg-surface rounded-xl border border-outline-variant/60 focus:outline-none focus:ring-1 focus:ring-primary/40 font-medium flex-1"
+                    className="w-full p-2.5 bg-surface rounded-xl border border-outline-variant/60 focus:outline-none focus:ring-1 focus:ring-primary/40 font-medium flex-1 text-[13px]"
                     required
-                  >
-                    <option value="" disabled>Selecione um cliente...</option>
+                  />
+                  <datalist id="patients-datalist">
                     {patients.slice().sort((a, b) => a.nome.localeCompare(b.nome)).map(p => (
                       <option key={p.id} value={p.nome}>{p.nome}</option>
                     ))}
-                  </select>
+                  </datalist>
                   <button type="button" onClick={() => {
                     setNewApptPatient("Cliente Importado");
                     showAlert("Sincronizando com WhatsApp... \n\nCliente encontrado e importado para o agendamento com sucesso!");
@@ -6354,7 +6391,9 @@ export default function CRMPage() {
                 </div>
                 {(newApptProcedure.split(' + ').length === 0 ? [''] : newApptProcedure.split(' + ')).map((proc, index, arr) => (
                   <div key={index} className="flex items-center gap-2 mt-2 first:mt-0">
-                    <select
+                    <input
+                      list={`procedures-datalist-${index}`}
+                      placeholder="Busque ou selecione um procedimento..."
                       value={proc}
                       onChange={(e) => {
                          const newArr = [...arr];
@@ -6365,14 +6404,14 @@ export default function CRMPage() {
                            setNewApptCategory(sel.categoria as any);
                          }
                       }}
-                      className="flex-1 p-2.5 bg-surface rounded-xl border border-outline-variant/60 focus:outline-none focus:ring-1 focus:ring-primary/40 text-[13px] font-medium custom-select-arrow"
+                      className="flex-1 p-2.5 bg-surface rounded-xl border border-outline-variant/60 focus:outline-none focus:ring-1 focus:ring-primary/40 text-[13px] font-medium"
                       required
-                    >
-                      <option value="" disabled>Selecione um procedimento...</option>
+                    />
+                    <datalist id={`procedures-datalist-${index}`}>
                       {services.slice().sort((a,b) => a.nome.localeCompare(b.nome)).map(s => (
                         <option key={s.id} value={s.nome}>{s.nome} (R$ {s.preco})</option>
                       ))}
-                    </select>
+                    </datalist>
                     {arr.length > 1 && (
                       <button type="button" onClick={() => {
                         const newArr = [...arr];
