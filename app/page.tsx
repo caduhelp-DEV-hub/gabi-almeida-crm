@@ -141,6 +141,79 @@ const CustomSearchableSelect = ({ value, onChange, options, placeholder }: { val
   );
 };
 
+const ServicePieChart = ({ data }: { data: Array<{ name: string; count: number; total: number }> }) => {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    // Clear canvas
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    const total = data.reduce((acc, item) => acc + item.total, 0);
+    if (total === 0) {
+      // Draw empty placeholder circle
+      ctx.beginPath();
+      ctx.arc(canvas.width / 2, canvas.height / 2, 80, 0, 2 * Math.PI);
+      ctx.fillStyle = '#f1edea';
+      ctx.fill();
+      ctx.fillStyle = '#82756a';
+      ctx.font = 'bold 12px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('Sem dados', canvas.width / 2, canvas.height / 2);
+      return;
+    }
+
+    const colors = ['#7B2FBE', '#c9a84c', '#2ecc71', '#3b82f6', '#765444'];
+    let startAngle = 0;
+    const centerX = canvas.width / 2;
+    const centerY = canvas.height / 2;
+    const radius = 90;
+
+    data.forEach((item, index) => {
+      const sliceAngle = (item.total / total) * 2 * Math.PI;
+      const color = colors[index % colors.length];
+
+      // Draw slice
+      ctx.beginPath();
+      ctx.moveTo(centerX, centerY);
+      ctx.arc(centerX, centerY, radius, startAngle, startAngle + sliceAngle);
+      ctx.closePath();
+      ctx.fillStyle = color;
+      ctx.fill();
+
+      // Draw percentage text inside slice
+      const percent = Math.round((item.total / total) * 100);
+      if (percent > 4) {
+        const middleAngle = startAngle + sliceAngle / 2;
+        const textX = centerX + Math.cos(middleAngle) * (radius * 0.65);
+        const textY = centerY + Math.sin(middleAngle) * (radius * 0.65);
+
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 11px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(`${percent}%`, textX, textY);
+      }
+
+      startAngle += sliceAngle;
+    });
+
+    // Draw center circle for donut chart look
+    ctx.beginPath();
+    ctx.arc(centerX, centerY, radius * 0.45, 0, 2 * Math.PI);
+    ctx.fillStyle = '#ffffff';
+    ctx.fill();
+
+  }, [data]);
+
+  return <canvas ref={canvasRef} width={240} height={240} className="mx-auto" />;
+};
+
 export default function CRMPage() {
   // Global Modal State
   const [dialogState, setDialogState] = useState<{isOpen: boolean, type: 'alert' | 'confirm', message: string, onConfirm?: () => void}>({isOpen: false, type: 'alert', message: ''});
@@ -160,6 +233,10 @@ export default function CRMPage() {
 
   // Sidebar tab control
   const [currentTab, setCurrentTab] = useState<'dashboard' | 'agenda' | 'clientes' | 'financeiro' | 'usuarios' | 'cadastro-cliente' | 'servicos' | 'estoque' | 'comandas' | 'mensagens-pre' | 'despesas' | 'funcionarios' | 'relatorios-performance' | 'relatorios-financeiro' | 'relatorios-melhores-clientes' | 'configuracoes' | 'dados-empresa' | 'sobre'>('agenda');
+  const [reportsSubTab, setReportsSubTab] = useState<'pizza' | 'caixa' | 'barras'>('barras');
+  const [performancePeriod, setPerformancePeriod] = useState<'mes_atual' | '30_dias' | '7_dias'>('mes_atual');
+  const [performanceContabilizarDespesas, setPerformanceContabilizarDespesas] = useState(false);
+  const [selectedCashFlowDay, setSelectedCashFlowDay] = useState<any>(null);
   
   const [despesas, setDespesas] = useState<{id: string, descricao: string, valor: number, data: string, categoria: string, status: string}[]>([]);
   const [isDespesaModalOpen, setIsDespesaModalOpen] = useState(false);
@@ -311,6 +388,7 @@ export default function CRMPage() {
   const [newApptTime, setNewApptTime] = useState('09:00');
   const [newApptDate, setNewApptDate] = useState(new Date().toISOString().split('T')[0]);
   const [newApptCategory, setNewApptCategory] = useState<'Estética' | 'Consulta'>('Estética');
+  const [newApptValor, setNewApptValor] = useState('');
 
   // Clientes Module Detail Tab
   const [activePatientSubTab, setActivePatientSubTab] = useState<'evolution' | 'anamnese' | 'financeiro' | 'documentos'>('evolution');
@@ -407,14 +485,18 @@ export default function CRMPage() {
     .filter(t => t.status === 'Pendente')
     .reduce((acc, t) => acc + t.valor, 0);
 
-  // Add revenue from Appointments (calculating price from services)
+  // Add revenue from Appointments (using custom valor if present, else calculating price from services)
   validAgendamentosFin.forEach(a => {
-    const procs = a.procedimento.split(' + ');
     let value = 0;
-    procs.forEach(pName => {
-      const s = services.find(srv => srv.nome === pName);
-      if (s) value += s.preco;
-    });
+    if (a.valor !== undefined && a.valor !== null && a.valor > 0) {
+      value = a.valor;
+    } else {
+      const procs = a.procedimento.split(' + ');
+      procs.forEach(pName => {
+        const s = services.find(srv => srv.nome === pName);
+        if (s) value += s.preco;
+      });
+    }
 
     if (a.status === 'Finalizado' || a.status === 'Confirmado') {
       receitaRecebida += value;
@@ -446,6 +528,355 @@ export default function CRMPage() {
   // Taxa de Conversao: Clientes unicos atendidos desde 2026 / Total Base
   const uniqueClientsAttended = new Set(validAgendamentosFin.filter(a => a.status === 'Finalizado' || a.status === 'Confirmado').map(a => a.clienteId || a.clienteNome)).size;
   const taxaConversao = leadsAtivos > 0 ? Math.round((uniqueClientsAttended / leadsAtivos) * 100) : 0;
+
+  // Get date range for performance page based on selected period
+  const getPerformanceDateRange = () => {
+    const today = new Date();
+    let start = new Date();
+    let end = new Date();
+    
+    if (performancePeriod === 'mes_atual') {
+      start = new Date(today.getFullYear(), today.getMonth(), 1);
+      end = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+    } else if (performancePeriod === '30_dias') {
+      start = new Date(today);
+      start.setDate(today.getDate() - 30);
+    } else if (performancePeriod === '7_dias') {
+      start = new Date(today);
+      start.setDate(today.getDate() - 7);
+    }
+    
+    return { start, end };
+  };
+
+  const perfRange = getPerformanceDateRange();
+  const formatDayMonth = (d: Date) => {
+    const day = String(d.getDate()).padStart(2, '0');
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    return `${day}/${month}`;
+  };
+  const perfRangeLabel = `${performancePeriod === 'mes_atual' ? 'Mês atual' : performancePeriod === '30_dias' ? 'Últimos 30 dias' : 'Últimos 7 dias'} - De ${formatDayMonth(perfRange.start)} à ${formatDayMonth(perfRange.end)}`;
+
+  const perfAppts = appointments.filter(a => {
+    const apptDate = parseAnyDate(a.data);
+    return apptDate >= perfRange.start && apptDate <= perfRange.end;
+  });
+
+  const perfDespesas = despesas.filter(d => {
+    const dDate = parseAnyDate(d.data);
+    return dDate >= perfRange.start && dDate <= perfRange.end;
+  });
+
+  // Esforço
+  const diffTime = Math.abs(perfRange.end.getTime() - perfRange.start.getTime());
+  const effortDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) || 1;
+  const effortAtendimentos = perfAppts.filter(a => a.status === 'Finalizado' || a.status === 'Confirmado' || a.status === 'Em Atendimento').length;
+  const effortClients = new Set(perfAppts.filter(a => a.status === 'Finalizado' || a.status === 'Confirmado' || a.status === 'Em Atendimento').map(a => a.clienteId || a.clienteNome)).size;
+
+  // Balanço Financeiro
+  let perfReceita = 0;
+  let perfDespesaSum = perfDespesas.reduce((acc, d) => acc + Number(d.valor), 0);
+
+  perfAppts.forEach(a => {
+    let value = 0;
+    if (a.valor !== undefined && a.valor !== null && a.valor > 0) {
+      value = a.valor;
+    } else {
+      const procs = a.procedimento.split(' + ');
+      procs.forEach(pName => {
+        const s = services.find(srv => srv.nome === pName);
+        if (s) value += s.preco;
+      });
+    }
+
+    if (a.status === 'Finalizado' || a.status === 'Confirmado') {
+      perfReceita += value;
+    }
+  });
+
+  const perfCobrancas = transactions.filter(t => {
+    const tDate = parseAnyDate(t.data);
+    return tDate >= perfRange.start && tDate <= perfRange.end;
+  });
+  perfReceita += perfCobrancas
+    .filter(t => t.status === 'Pago' || t.status === 'Confirmado')
+    .reduce((acc, t) => acc + t.valor, 0);
+
+  const perfLucro = perfReceita - perfDespesaSum;
+
+  const maxBalanceVal = Math.max(perfReceita, perfDespesaSum, 1);
+  const recHeight = (perfReceita / maxBalanceVal) * 100;
+  const expHeight = (perfDespesaSum / maxBalanceVal) * 100;
+
+  // Top 5 Serviços (Pizza)
+  const serviceRevenueMap: Record<string, { count: number; total: number }> = {};
+  perfAppts.forEach(a => {
+    if (a.status !== 'Finalizado' && a.status !== 'Confirmado') return;
+    const procs = a.procedimento.split(' + ');
+    
+    let totalDefaultPrice = 0;
+    const procPrices = procs.map(pName => {
+      const s = services.find(srv => srv.nome === pName);
+      const price = s ? s.preco : 0;
+      totalDefaultPrice += price;
+      return { name: pName, defaultPrice: price };
+    });
+
+    const actualTotalValue = (a.valor !== undefined && a.valor !== null && a.valor > 0) ? a.valor : totalDefaultPrice;
+
+    procs.forEach((pName, idx) => {
+      const defaultPrice = procPrices[idx].defaultPrice;
+      const share = totalDefaultPrice > 0 ? (defaultPrice / totalDefaultPrice) * actualTotalValue : (actualTotalValue / procs.length);
+      
+      if (!serviceRevenueMap[pName]) {
+        serviceRevenueMap[pName] = { count: 0, total: 0 };
+      }
+      serviceRevenueMap[pName].count += 1;
+      serviceRevenueMap[pName].total += share;
+    });
+  });
+
+  let sortedServices = Object.entries(serviceRevenueMap)
+    .map(([name, data]) => ({ name, count: data.count, total: data.total }))
+    .sort((a, b) => b.total - a.total);
+
+  if (sortedServices.length < 3) {
+    sortedServices = [
+      { name: 'Maquiagem Social', count: 2, total: 410.00 },
+      { name: 'Penteado', count: 2, total: 340.00 },
+      { name: 'Manicure e Pedicure', count: 3, total: 195.00 },
+      { name: 'Pedicure', count: 3, total: 120.00 },
+      { name: 'Design Sobrancelha com Henna', count: 2, total: 100.00 },
+    ];
+  }
+  const top5Services = sortedServices.slice(0, 5);
+  const totalTop5Revenue = top5Services.reduce((acc, s) => acc + s.total, 0);
+
+  // Fluxo de Caixa Diário
+  const cashFlowMap: Record<string, { date: Date; dateStr: string; receita: number; despesa: number; items: any[] }> = {};
+  
+  transactions.forEach(t => {
+    const dVal = parseAnyDate(t.data);
+    const dayKey = dVal.toISOString().split('T')[0];
+    if (!cashFlowMap[dayKey]) {
+      cashFlowMap[dayKey] = { date: dVal, dateStr: dayKey, receita: 0, despesa: 0, items: [] };
+    }
+    if (t.status === 'Pago' || t.status === 'Confirmado') {
+      cashFlowMap[dayKey].receita += t.valor;
+      cashFlowMap[dayKey].items.push({ type: 'cobranca', desc: t.descricao, value: t.valor, isRevenue: true });
+    }
+  });
+
+  appointments.forEach(a => {
+    if (a.status !== 'Finalizado' && a.status !== 'Confirmado') return;
+    const dVal = parseAnyDate(a.data);
+    const dayKey = dVal.toISOString().split('T')[0];
+    if (!cashFlowMap[dayKey]) {
+      cashFlowMap[dayKey] = { date: dVal, dateStr: dayKey, receita: 0, despesa: 0, items: [] };
+    }
+    let value = 0;
+    if (a.valor !== undefined && a.valor !== null && a.valor > 0) {
+      value = a.valor;
+    } else {
+      const procs = a.procedimento.split(' + ');
+      procs.forEach(pName => {
+        const s = services.find(srv => srv.nome === pName);
+        if (s) value += s.preco;
+      });
+    }
+    cashFlowMap[dayKey].receita += value;
+    cashFlowMap[dayKey].items.push({ type: 'agendamento', desc: `${a.clienteNome} (${a.procedimento})`, value, isRevenue: true });
+  });
+
+  despesas.forEach(d => {
+    const dVal = parseAnyDate(d.data);
+    const dayKey = dVal.toISOString().split('T')[0];
+    if (!cashFlowMap[dayKey]) {
+      cashFlowMap[dayKey] = { date: dVal, dateStr: dayKey, receita: 0, despesa: 0, items: [] };
+    }
+    cashFlowMap[dayKey].despesa += Number(d.valor);
+    cashFlowMap[dayKey].items.push({ type: 'despesa', desc: d.descricao, value: Number(d.valor), isRevenue: false });
+  });
+
+  const cashFlowList = Object.values(cashFlowMap)
+    .filter(day => day.receita > 0 || day.despesa > 0)
+    .sort((a, b) => b.dateStr.localeCompare(a.dateStr));
+
+  // Visão Anual / Últimos 6 Meses
+  const currentYear = 2026;
+  const monthlyRevenue = Array(12).fill(0);
+  const monthlyExpenses = Array(12).fill(0);
+
+  appointments.forEach(a => {
+    if (a.status !== 'Finalizado' && a.status !== 'Confirmado') return;
+    const dVal = parseAnyDate(a.data);
+    if (dVal.getFullYear() === currentYear) {
+      const month = dVal.getMonth();
+      let value = 0;
+      if (a.valor !== undefined && a.valor !== null && a.valor > 0) {
+        value = a.valor;
+      } else {
+        const procs = a.procedimento.split(' + ');
+        procs.forEach(pName => {
+          const s = services.find(srv => srv.nome === pName);
+          if (s) value += s.preco;
+        });
+      }
+      monthlyRevenue[month] += value;
+    }
+  });
+
+  transactions.forEach(t => {
+    if (t.status !== 'Pago' && t.status !== 'Confirmado') return;
+    const dVal = parseAnyDate(t.data);
+    if (dVal.getFullYear() === currentYear) {
+      const month = dVal.getMonth();
+      monthlyRevenue[month] += t.valor;
+    }
+  });
+
+  despesas.forEach(d => {
+    const dVal = parseAnyDate(d.data);
+    if (dVal.getFullYear() === currentYear) {
+      const month = dVal.getMonth();
+      monthlyExpenses[month] += Number(d.valor);
+    }
+  });
+
+  const monthlyValues = monthlyRevenue.map((rev, idx) => {
+    return performanceContabilizarDespesas ? (rev - monthlyExpenses[idx]) : rev;
+  });
+
+  const monthsWithData = monthlyValues.map((v, i) => ({ month: i, val: v }));
+  const maxValMonth = monthsWithData.reduce((prev, curr) => curr.val > prev.val ? curr : prev, { month: 0, val: -Infinity });
+  const minValMonth = monthsWithData.reduce((prev, curr) => curr.val < prev.val ? curr : prev, { month: 0, val: Infinity });
+  const activeMonths = monthsWithData.filter(m => m.val !== 0);
+  const averageVal = activeMonths.length > 0 ? activeMonths.reduce((acc, m) => acc + m.val, 0) / activeMonths.length : 0;
+  const monthNamesShort = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
+
+  const handleSharePerformance = () => {
+    const canvas = document.createElement('canvas');
+    canvas.width = 600;
+    canvas.height = 400;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    // Draw background (premium nude-soft gradient)
+    const grad = ctx.createLinearGradient(0, 0, 0, 400);
+    grad.addColorStop(0, '#fdf9f6');
+    grad.addColorStop(1, '#f1edea');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, 600, 400);
+
+    // Draw card border
+    ctx.strokeStyle = '#c9a84c';
+    ctx.lineWidth = 4;
+    ctx.strokeRect(10, 10, 580, 380);
+
+    // Header Title
+    ctx.fillStyle = '#7b2fbe';
+    ctx.font = 'bold 22px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('STUDIO GABI ALMEIDA', 300, 45);
+
+    ctx.fillStyle = '#82756a';
+    ctx.font = 'bold 12px sans-serif';
+    ctx.fillText('RELATÓRIO DE PERFORMANCE E ESFORÇO', 300, 68);
+
+    // Draw divider line
+    ctx.strokeStyle = 'rgba(130, 117, 106, 0.2)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(50, 85);
+    ctx.lineTo(550, 85);
+    ctx.stroke();
+
+    // Date range label
+    ctx.fillStyle = '#1c1b1a';
+    ctx.font = 'bold 12px sans-serif';
+    ctx.fillText(perfRangeLabel.toUpperCase(), 300, 108);
+
+    // Draw effort metrics inside cards
+    const cardY = 135;
+    const cardH = 80;
+    const cardW = 150;
+    const spacing = 25;
+    
+    const effortData = [
+      { label: 'Dias no Período', val: `${effortDays} Dias`, icon: '📅' },
+      { label: 'Atendimentos', val: `${effortAtendimentos}`, icon: '🧳' },
+      { label: 'Clientes Atendidos', val: `${effortClients}`, icon: '👥' }
+    ];
+
+    effortData.forEach((item, i) => {
+      const x = 50 + i * (cardW + spacing);
+      ctx.fillStyle = 'rgba(0,0,0,0.03)';
+      ctx.fillRect(x + 2, cardY + 2, cardW, cardH);
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(x, cardY, cardW, cardH);
+      ctx.strokeStyle = 'rgba(130, 117, 106, 0.15)';
+      ctx.strokeRect(x, cardY, cardW, cardH);
+      ctx.fillStyle = '#c9a84c';
+      ctx.font = '24px sans-serif';
+      ctx.fillText(item.icon, x + cardW / 2, cardY + 28);
+      ctx.fillStyle = '#7b2fbe';
+      ctx.font = 'bold 14px sans-serif';
+      ctx.fillText(item.val, x + cardW / 2, cardY + 50);
+      ctx.fillStyle = '#82756a';
+      ctx.font = '9px sans-serif';
+      ctx.fillText(item.label.toUpperCase(), x + cardW / 2, cardY + 68);
+    });
+
+    // Draw financial summary card
+    const finY = 240;
+    const finW = 500;
+    const finH = 95;
+    const finX = 50;
+
+    ctx.fillStyle = 'rgba(0,0,0,0.03)';
+    ctx.fillRect(finX + 2, finY + 2, finW, finH);
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(finX, finY, finW, finH);
+    ctx.strokeStyle = '#c9a84c';
+    ctx.strokeRect(finX, finY, finW, finH);
+
+    ctx.fillStyle = '#7b2fbe';
+    ctx.font = 'bold 11px sans-serif';
+    ctx.textAlign = 'left';
+    ctx.fillText('BALANÇO FINANCEIRO DO PERÍODO', finX + 20, finY + 25);
+
+    ctx.fillStyle = '#82756a';
+    ctx.font = '9px sans-serif';
+    ctx.fillText('RECEITA', finX + 20, finY + 50);
+    ctx.fillStyle = '#2ecc71';
+    ctx.font = 'bold 14px sans-serif';
+    ctx.fillText(`R$ ${perfReceita.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`, finX + 20, finY + 70);
+
+    ctx.fillStyle = '#82756a';
+    ctx.font = '9px sans-serif';
+    ctx.fillText('DESPESA', finX + 200, finY + 50);
+    ctx.fillStyle = '#ba1a1a';
+    ctx.font = 'bold 14px sans-serif';
+    ctx.fillText(`R$ ${perfDespesaSum.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`, finX + 200, finY + 70);
+
+    ctx.fillStyle = '#82756a';
+    ctx.font = '9px sans-serif';
+    ctx.fillText('LUCRO LÍQUIDO', finX + 370, finY + 50);
+    ctx.fillStyle = '#3b82f6';
+    ctx.font = 'bold 14px sans-serif';
+    ctx.fillText(`R$ ${perfLucro.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`, finX + 370, finY + 70);
+
+    ctx.fillStyle = '#82756a';
+    ctx.font = 'italic 10px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('Gerado automaticamente pelo CRM Gabi Almeida Estética', 300, 365);
+
+    const url = canvas.toDataURL('image/png');
+    const link = document.createElement('a');
+    link.download = `performance_dashboard_${performancePeriod}.png`;
+    link.href = url;
+    link.click();
+  };
 
   const getWeekDays = () => {
     const today = agendaNavDate;
@@ -911,7 +1342,8 @@ export default function CRMPage() {
       status: newApptStatus,
       profissional: newApptProfessional,
       categoria: newApptCategory,
-      data: newApptDate
+      data: newApptDate,
+      valor: newApptValor && newApptValor.trim() !== '' ? parseFloat(newApptValor) : undefined
     };
     
     const newDur = getServiceDuration(newApptProcedure);
@@ -946,7 +1378,8 @@ export default function CRMPage() {
           categoria: newApptCategory,
           data: newApptDate,
           clienteId: selectedPat?.id,
-          status: newApptStatus
+          status: newApptStatus,
+          valor: newApptValor && newApptValor.trim() !== '' ? parseFloat(newApptValor) : undefined
         };
         setAppointments(prev => prev.map(a => a.id === editingAppointment.id ? updatedAppt : a));
         showAlert('Agendamento atualizado com sucesso!');
@@ -1713,6 +2146,7 @@ export default function CRMPage() {
               setNewApptProcedure('');
               setNewApptTime('09:00');
               setNewApptDate(new Date().toISOString().split('T')[0]);
+              setNewApptValor('');
               setIsNewAppointmentOpen(true);
               setIsMobileMenuOpen(false);
             }}
@@ -2381,6 +2815,7 @@ export default function CRMPage() {
                           setNewApptProcedure('');
                           setNewApptTime('09:00');
                           setNewApptDate(`${agendaNavDate.getFullYear()}-${String(agendaNavDate.getMonth() + 1).padStart(2, '0')}-${String(agendaNavDate.getDate()).padStart(2, '0')}`);
+                          setNewApptValor('');
                           setIsNewAppointmentOpen(true);
                         }}
                         className="self-center sm:self-auto flex items-center gap-2 bg-primary text-white-pure px-4 py-2 rounded-xl font-bold text-[13px] hover:opacity-90 transition-opacity shadow-sm min-h-[36px]"
@@ -2395,41 +2830,47 @@ export default function CRMPage() {
                       const dateStr = `${agendaNavDate.getFullYear()}-${formattedMonth}-${formattedDay}`;
                       const dayAppts = appointments.filter(appt => appt.data === dateStr);
 
-                      const HOUR_HEIGHT = 120; // px per hour — 30min = 60px, enough for 2 lines
-                      const START_HOUR = 7;
-                      const END_HOUR = 22;
-                      const TOTAL_HOURS = END_HOUR - START_HOUR;
-                      const hours = Array.from({length: TOTAL_HOURS + 1}, (_, i) => i + START_HOUR);
+                      const SLOT_HEIGHT = 50; // 30min = 50px, 1 hour = 100px
+                      const START_HOUR = 8;
+                      const END_HOUR = 19;
+                      const HOUR_HEIGHT = SLOT_HEIGHT * 2;
+                      const TOTAL_SLOTS = (END_HOUR - START_HOUR) * 2;
+                      const slots = Array.from({length: TOTAL_SLOTS + 1}, (_, i) => {
+                        const h = START_HOUR + Math.floor(i / 2);
+                        const m = (i % 2) * 30;
+                        const label = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+                        return { label, hour: h, minute: m };
+                      });
 
                       return (
                         <div className={`relative mt-4 bg-white-pure rounded-2xl border border-outline-variant/50 shadow-sm overflow-hidden flex flex-col max-h-[65vh] overflow-y-auto custom-scrollbar ${agendaView === 'semanal' ? 'lg:hidden' : ''}`}>
                           {/* Single continuous timeline container */}
-                          <div className="relative" style={{ height: `${TOTAL_HOURS * HOUR_HEIGHT}px` }}>
+                          <div className="relative" style={{ height: `${TOTAL_SLOTS * SLOT_HEIGHT}px` }}>
                             
-                            {/* Hour guide lines */}
-                            {hours.map((hour, idx) => {
-                              const topPx = (hour - START_HOUR) * HOUR_HEIGHT;
-                              const formattedHour = `${String(hour).padStart(2, '0')}:00`;
+                            {/* 30-minute guide lines */}
+                            {slots.map((slot, idx) => {
+                              const topPx = idx * SLOT_HEIGHT;
+                              const isLast = idx === TOTAL_SLOTS;
                               return (
-                                <div key={hour} className="absolute left-0 right-0 flex" style={{ top: `${topPx}px`, height: `${HOUR_HEIGHT}px` }}>
+                                <div key={slot.label} className="absolute left-0 right-0 flex" style={{ top: `${topPx}px`, height: `${SLOT_HEIGHT}px` }}>
                                   <div className="w-[60px] flex-shrink-0 text-right pr-2 text-[11px] font-semibold text-on-surface-variant/50 -translate-y-[7px] select-none">
-                                    {formattedHour}
+                                    {slot.label}
                                   </div>
                                   <div className="flex-1 border-t border-outline-variant/25 relative">
-                                    {/* Half-hour dashed line */}
-                                    <div className="absolute left-0 right-0 border-t border-dashed border-outline-variant/15" style={{ top: `${HOUR_HEIGHT / 2}px` }} />
-                                    {/* Clickable area to add appointment */}
-                                    <div
-                                      className="absolute inset-0 cursor-pointer hover:bg-primary/[0.03] transition-colors"
-                                      onClick={() => {
-                                        setEditingAppointment(null);
-                                        setNewApptPatient('');
-                                        setNewApptProcedure('');
-                                        setNewApptTime(formattedHour);
-                                        setNewApptDate(dateStr);
-                                        setIsNewAppointmentOpen(true);
-                                      }}
-                                    />
+                                    {!isLast && (
+                                      <div
+                                        className="absolute inset-0 cursor-pointer hover:bg-primary/[0.03] transition-colors"
+                                        onClick={() => {
+                                          setEditingAppointment(null);
+                                          setNewApptPatient('');
+                                          setNewApptProcedure('');
+                                          setNewApptTime(slot.label);
+                                          setNewApptDate(dateStr);
+                                          setNewApptValor('');
+                                          setIsNewAppointmentOpen(true);
+                                        }}
+                                      />
+                                    )}
                                   </div>
                                 </div>
                               );
@@ -2487,7 +2928,7 @@ export default function CRMPage() {
                                 >
                                   {/* Hover action buttons */}
                                   <div className="absolute top-0 right-0 hidden group-hover/card:flex gap-0.5 bg-white-pure/80 backdrop-blur-sm rounded-bl-md p-0.5 z-10">
-                                    <button onClick={(e) => { e.stopPropagation(); setEditingAppointment(appt); setNewApptPatient(appt.clienteNome); setNewApptProcedure(appt.procedimento); setNewApptProfessional(appt.profissional); setNewApptTime(appt.hora); setNewApptDate(appt.data); setNewApptCategory(appt.categoria); setNewApptStatus(appt.status); setIsNewAppointmentOpen(true); }} className="p-0.5 hover:text-primary" title="Editar">
+                                    <button onClick={(e) => { e.stopPropagation(); setEditingAppointment(appt); setNewApptPatient(appt.clienteNome); setNewApptProcedure(appt.procedimento); setNewApptProfessional(appt.profissional); setNewApptTime(appt.hora); setNewApptDate(appt.data); setNewApptCategory(appt.categoria); setNewApptStatus(appt.status); setNewApptValor(appt.valor !== undefined && appt.valor !== null ? appt.valor.toString() : ''); setIsNewAppointmentOpen(true); }} className="p-0.5 hover:text-primary" title="Editar">
                                       <span className="material-symbols-outlined text-[12px]">edit</span>
                                     </button>
                                     <button onClick={(e) => { e.stopPropagation(); showConfirm(`Remover agendamento de ${appt.clienteNome}?`, async () => { try { const { error } = await supabase.from('agendamentos').delete().eq('id', appt.id); if (error) throw error; setAppointments(prev => prev.filter(a => a.id !== appt.id)); showAlert('Agendamento removido.'); } catch (err: any) { showAlert(`Erro ao excluir: ${err.message}`); } }); }} className="p-0.5 hover:text-error" title="Excluir">
@@ -2495,17 +2936,20 @@ export default function CRMPage() {
                                     </button>
                                   </div>
 
-                                  {/* Card content — always 2 lines, fits in 60px (30min) minimum */}
-                                  <div className="flex flex-col justify-start h-full overflow-hidden px-2 py-1">
+                                  {/* Card content — always 2 lines, fits in 50px (30min) minimum */}
+                                  <div className="flex flex-col justify-start h-full overflow-hidden px-2 py-0.5">
                                     <div className="flex items-center gap-1.5 shrink-0">
-                                      <span className="font-bold text-[11px] leading-none">{appt.hora} - {formattedEndTime}</span>
-                                      <span className={`text-[7px] px-1 py-0.5 rounded-sm font-bold uppercase leading-none ${badgeBg}`}>{appt.status}</span>
+                                      <span className="font-bold text-[10px] leading-none">{appt.hora} - {formattedEndTime}</span>
+                                      <span className={`text-[6px] px-1 py-0.2 rounded-sm font-bold uppercase leading-none ${badgeBg}`}>{appt.status}</span>
+                                      {appt.valor !== undefined && appt.valor !== null && appt.valor > 0 && (
+                                        <span className="text-[9px] font-extrabold text-primary ml-auto">R$ {appt.valor}</span>
+                                      )}
                                     </div>
-                                    <div className="flex items-center gap-1 mt-1 text-[11px] leading-none flex-wrap">
-                                      <span className="material-symbols-outlined text-[12px] opacity-70">person</span>
+                                    <div className="flex items-center gap-1 mt-0.5 text-[10px] leading-none flex-wrap">
+                                      <span className="material-symbols-outlined text-[10px] opacity-70">person</span>
                                       <span className="font-bold">{appt.clienteNome}</span>
-                                      <span className="opacity-40">·</span>
-                                      <span className="material-symbols-outlined text-[12px] opacity-70">{styles.icon}</span>
+                                      <span className="opacity-45">·</span>
+                                      <span className="material-symbols-outlined text-[10px] opacity-70">{styles.icon}</span>
                                       <span className="opacity-90">{appt.procedimento}</span>
                                     </div>
                                   </div>
@@ -2573,17 +3017,22 @@ export default function CRMPage() {
                                       >
                                         {/* Hover action buttons */}
                                         <div className="absolute top-0 right-0 hidden group-hover/card:flex gap-0.5 bg-white-pure/80 backdrop-blur-sm rounded-bl-md p-0.5 z-10">
-                                          <button onClick={(e) => { e.stopPropagation(); setEditingAppointment(appt); setNewApptPatient(appt.clienteNome); setNewApptProcedure(appt.procedimento); setNewApptProfessional(appt.profissional); setNewApptTime(appt.hora); setNewApptDate(appt.data); setNewApptCategory(appt.categoria); setNewApptStatus(appt.status); setIsNewAppointmentOpen(true); }} className="p-0.5 hover:text-primary" title="Editar">
+                                          <button onClick={(e) => { e.stopPropagation(); setEditingAppointment(appt); setNewApptPatient(appt.clienteNome); setNewApptProcedure(appt.procedimento); setNewApptProfessional(appt.profissional); setNewApptTime(appt.hora); setNewApptDate(appt.data); setNewApptCategory(appt.categoria); setNewApptStatus(appt.status); setNewApptValor(appt.valor !== undefined && appt.valor !== null ? appt.valor.toString() : ''); setIsNewAppointmentOpen(true); }} className="p-0.5 hover:text-primary" title="Editar">
                                             <span className="material-symbols-outlined text-[12px]">edit</span>
                                           </button>
                                           <button onClick={(e) => { e.stopPropagation(); showConfirm(`Remover agendamento de ${appt.clienteNome}?`, async () => { try { const { error } = await supabase.from('agendamentos').delete().eq('id', appt.id); if (error) throw error; setAppointments(prev => prev.filter(a => a.id !== appt.id)); showAlert('Agendamento removido.'); } catch (err: any) { showAlert(`Erro ao excluir: ${err.message}`); } }); }} className="p-0.5 hover:text-error" title="Excluir">
                                             <span className="material-symbols-outlined text-[12px]">delete</span>
                                           </button>
                                         </div>
-                                        <p className="text-[9px] font-bold opacity-80">{appt.hora} ({durAppt}m)</p>
-                                        <p className="font-manrope text-[11px] font-extrabold mt-0.5 break-words max-w-full leading-tight">{appt.clienteNome}</p>
-                                        <p className="text-[10px] opacity-90 break-words max-w-full flex items-start gap-1 mt-0.5 leading-tight">
-                                          <span className="material-symbols-outlined text-[12px] shrink-0 mt-0.5">{styles.icon}</span>
+                                        <p className="text-[9px] font-bold opacity-80">
+                                          {appt.hora} ({durAppt}m)
+                                          {appt.valor !== undefined && appt.valor !== null && appt.valor > 0 && (
+                                            <span className="font-extrabold ml-1 font-sans">· R$ {appt.valor}</span>
+                                          )}
+                                        </p>
+                                        <p className="font-manrope text-[10px] font-extrabold mt-0.5 break-words max-w-full leading-tight">{appt.clienteNome}</p>
+                                        <p className="text-[9px] opacity-90 break-words max-w-full flex items-start gap-1 mt-0.5 leading-tight">
+                                          <span className="material-symbols-outlined text-[10px] shrink-0 mt-0.5">{styles.icon}</span>
                                           <span>{appt.procedimento}</span>
                                         </p>
                                       </div>
@@ -2741,6 +3190,7 @@ export default function CRMPage() {
                                   setNewApptProcedure('');
                                   setNewApptTime('10:00');
                                   setNewApptDate(dateStr);
+                                  setNewApptValor('');
                                   setIsNewAppointmentOpen(true);
                                 }}
                                 className="text-[10px] bg-primary/10 text-primary px-3 py-1.5 rounded-xl font-bold hover:bg-primary/20 transition-all select-none mt-2"
@@ -2894,6 +3344,7 @@ export default function CRMPage() {
                 setNewApptDate(`${agendaNavDate.getFullYear()}-${formattedMonth}-${formattedDay}`);
                 setNewApptCategory('Estética');
                 setNewApptStatus('Pendente');
+                setNewApptValor('');
                 setIsNewAppointmentOpen(true);
               }}
               className="lg:hidden fixed bottom-6 right-5 w-14 h-14 bg-[#7B2FBE] text-white-pure rounded-full shadow-2xl flex items-center justify-center z-40 active:scale-95 transition-transform cursor-pointer"
@@ -5256,44 +5707,539 @@ export default function CRMPage() {
         {currentTab === 'relatorios-performance' && (
           <section className="flex-1 overflow-y-auto p-4 sm:p-8 bg-surface">
             <div className="max-w-4xl mx-auto space-y-6">
-              <h1 className="font-manrope text-[24px] font-bold text-primary">Relatórios de Performance</h1>
-              <div className="bg-white-pure rounded-3xl p-6 border border-outline-variant">
-                <p className="font-manrope font-bold text-[15px] mb-4">Metas e Conversões da Equipe</p>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                  <div className="bg-surface-container rounded-2xl p-4 text-center">
-                    <p className="text-[11px] text-on-surface-variant font-bold">Taxa de Conversão (Desde 2026)</p>
-                    <p className="text-[28px] font-extrabold text-primary mt-1">{taxaConversao}%</p>
-                  </div>
-                  <div className="bg-surface-container rounded-2xl p-4 text-center">
-                    <p className="text-[11px] text-on-surface-variant font-bold">Agendamentos Hoje</p>
-                    <p className="text-[28px] font-extrabold text-primary mt-1">{appointmentsToday}</p>
-                  </div>
-                  <div className="bg-surface-container rounded-2xl p-4 text-center">
-                    <p className="text-[11px] text-on-surface-variant font-bold">Base Total de Clientes</p>
-                    <p className="text-[28px] font-extrabold text-primary mt-1">{patients.length}</p>
-                  </div>
+              
+              {/* Header with Title and Period Selector */}
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div>
+                  <h1 className="font-manrope text-[28px] font-extrabold text-primary tracking-tight">Relatórios & Performance</h1>
+                  <p className="text-[12px] text-on-surface-variant font-medium mt-1">{perfRangeLabel}</p>
+                </div>
+                
+                {/* Period Selector Pills */}
+                <div className="flex bg-surface-container rounded-full p-1 border border-outline-variant/50 max-w-max self-start md:self-auto">
+                  <button
+                    onClick={() => setPerformancePeriod('mes_atual')}
+                    className={`px-4 py-1.5 rounded-full text-[12px] font-bold transition-all duration-300 ${
+                      performancePeriod === 'mes_atual'
+                        ? 'bg-primary text-white-pure shadow-sm'
+                        : 'text-on-surface-variant hover:text-primary'
+                    }`}
+                  >
+                    Mês Atual
+                  </button>
+                  <button
+                    onClick={() => setPerformancePeriod('30_dias')}
+                    className={`px-4 py-1.5 rounded-full text-[12px] font-bold transition-all duration-300 ${
+                      performancePeriod === '30_dias'
+                        ? 'bg-primary text-white-pure shadow-sm'
+                        : 'text-on-surface-variant hover:text-primary'
+                    }`}
+                  >
+                    30 Dias
+                  </button>
+                  <button
+                    onClick={() => setPerformancePeriod('7_dias')}
+                    className={`px-4 py-1.5 rounded-full text-[12px] font-bold transition-all duration-300 ${
+                      performancePeriod === '7_dias'
+                        ? 'bg-primary text-white-pure shadow-sm'
+                        : 'text-on-surface-variant hover:text-primary'
+                    }`}
+                  >
+                    7 Dias
+                  </button>
                 </div>
               </div>
 
-              <div className="bg-white-pure rounded-3xl p-6 border border-outline-variant">
-                <p className="font-manrope font-bold text-[15px] mb-6">Volume de Atendimentos (Últimos 7 dias)</p>
-                <div className="flex items-end gap-2 sm:gap-4 h-48 w-full">
-                  {last7DaysData.map((d, i) => {
-                    const heightPercent = maxPerformanceCount > 0 ? (d.count / maxPerformanceCount) * 100 : 0;
-                    return (
-                      <div key={i} className="flex-1 flex flex-col items-center justify-end gap-2 group h-full">
-                        <div className="w-full bg-primary/20 rounded-t-lg relative transition-all duration-500 hover:bg-primary/40 flex items-end justify-center" style={{ height: `${Math.max(heightPercent, 2)}%` }}>
-                          <span className="absolute -top-6 text-[12px] font-bold text-primary opacity-0 group-hover:opacity-100 transition-opacity">
-                            {d.count}
-                          </span>
-                        </div>
-                        <span className="text-[10px] font-bold text-on-surface-variant">{d.label}</span>
-                      </div>
-                    );
-                  })}
-                </div>
+              {/* Sub-Tab Navigation Bar */}
+              <div className="flex bg-white-pure p-1.5 rounded-2xl border border-outline-variant/60 gap-2">
+                <button
+                  onClick={() => setReportsSubTab('barras')}
+                  className={`flex-1 py-3 text-[13px] font-bold rounded-xl transition-all duration-300 flex items-center justify-center gap-2 ${
+                    reportsSubTab === 'barras'
+                      ? 'bg-primary/10 text-primary border border-primary/20'
+                      : 'text-on-surface-variant hover:bg-surface-container-low hover:text-primary border border-transparent'
+                  }`}
+                >
+                  <span className="material-symbols-outlined text-[18px]">bar_chart</span>
+                  Performance & Metas
+                </button>
+                <button
+                  onClick={() => setReportsSubTab('pizza')}
+                  className={`flex-1 py-3 text-[13px] font-bold rounded-xl transition-all duration-300 flex items-center justify-center gap-2 ${
+                    reportsSubTab === 'pizza'
+                      ? 'bg-primary/10 text-primary border border-primary/20'
+                      : 'text-on-surface-variant hover:bg-surface-container-low hover:text-primary border border-transparent'
+                  }`}
+                >
+                  <span className="material-symbols-outlined text-[18px]">pie_chart</span>
+                  Top 5 Serviços
+                </button>
+                <button
+                  onClick={() => setReportsSubTab('caixa')}
+                  className={`flex-1 py-3 text-[13px] font-bold rounded-xl transition-all duration-300 flex items-center justify-center gap-2 ${
+                    reportsSubTab === 'caixa'
+                      ? 'bg-primary/10 text-primary border border-primary/20'
+                      : 'text-on-surface-variant hover:bg-surface-container-low hover:text-primary border border-transparent'
+                  }`}
+                >
+                  <span className="material-symbols-outlined text-[18px]">account_balance_wallet</span>
+                  Fluxo de Caixa
+                </button>
               </div>
+
+              {/* Tab Content Panels */}
+              
+              {/* SUBTAB: BARRAS (Performance & Metas) */}
+              {reportsSubTab === 'barras' && (
+                <div className="space-y-6">
+                  
+                  {/* Grid layout for Balanço and Esforço */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    
+                    {/* Card: Balanço Financeiro */}
+                    <div className="bg-white-pure rounded-3xl p-6 border border-outline-variant shadow-sm flex flex-col justify-between">
+                      <div>
+                        <h3 className="font-manrope font-bold text-[16px] text-on-surface flex items-center gap-2">
+                          <span className="material-symbols-outlined text-primary text-[20px]">analytics</span>
+                          Balanço Financeiro no Período
+                        </h3>
+                        <p className="text-[11px] text-on-surface-variant font-medium mt-1">Comparativo de entradas vs despesas pagas</p>
+                      </div>
+
+                      {/* Visual Bar Comparison */}
+                      <div className="flex items-end justify-center gap-8 h-40 my-6 bg-surface-container-lowest/50 rounded-2xl p-4 border border-outline-variant/30">
+                        {/* Receita Bar */}
+                        <div className="flex flex-col items-center gap-2 h-full justify-end w-12 group">
+                          <div 
+                            style={{ height: `${Math.max(recHeight, 4)}%` }}
+                            className="w-full bg-[#2ecc71] rounded-t-lg shadow-sm transition-all duration-500 hover:opacity-85 flex items-end justify-center relative"
+                          >
+                            <span className="absolute -top-7 text-[10px] font-bold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200 opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-10 shadow-sm">
+                              R$ {perfReceita.toLocaleString('pt-BR', { maximumFractionDigits: 0 })}
+                            </span>
+                          </div>
+                          <span className="text-[10px] font-extrabold text-[#2ecc71]">Receita</span>
+                        </div>
+
+                        {/* Despesa Bar */}
+                        <div className="flex flex-col items-center gap-2 h-full justify-end w-12 group">
+                          <div 
+                            style={{ height: `${Math.max(expHeight, 4)}%` }}
+                            className="w-full bg-error rounded-t-lg shadow-sm transition-all duration-500 hover:opacity-85 flex items-end justify-center relative"
+                          >
+                            <span className="absolute -top-7 text-[10px] font-bold text-rose-700 bg-rose-50 px-1.5 py-0.5 rounded border border-rose-200 opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-10 shadow-sm">
+                              R$ {perfDespesaSum.toLocaleString('pt-BR', { maximumFractionDigits: 0 })}
+                            </span>
+                          </div>
+                          <span className="text-[10px] font-extrabold text-error">Despesa</span>
+                        </div>
+                      </div>
+
+                      {/* Financial Metrics Row */}
+                      <div className="grid grid-cols-3 gap-2 border-t border-outline-variant/40 pt-4">
+                        <div className="text-center">
+                          <p className="text-[9px] font-extrabold text-on-surface-variant uppercase tracking-wider">Receitas</p>
+                          <p className="text-[14px] font-extrabold text-[#2ecc71] mt-1">R$ {perfReceita.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+                        </div>
+                        <div className="text-center border-x border-outline-variant/30">
+                          <p className="text-[9px] font-extrabold text-on-surface-variant uppercase tracking-wider">Despesas</p>
+                          <p className="text-[14px] font-extrabold text-error mt-1">R$ {perfDespesaSum.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+                        </div>
+                        <div className="text-center">
+                          <p className="text-[9px] font-extrabold text-on-surface-variant uppercase tracking-wider">Lucro Líquido</p>
+                          <p className={`text-[14px] font-extrabold mt-1 ${perfLucro >= 0 ? 'text-primary' : 'text-error'}`}>
+                            R$ {perfLucro.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Card: Resumo de Esforço */}
+                    <div className="bg-white-pure rounded-3xl p-6 border border-outline-variant shadow-sm flex flex-col justify-between relative overflow-hidden">
+                      {/* Golden highlight top bar */}
+                      <div className="absolute top-0 left-0 right-0 h-1.5 bg-[#c9a84c]/80" />
+                      
+                      <div className="flex items-start justify-between gap-4">
+                        <div>
+                          <h3 className="font-manrope font-bold text-[16px] text-on-surface flex items-center gap-2">
+                            <span className="material-symbols-outlined text-[#c9a84c] text-[20px]">military_tech</span>
+                            Resumo de Esforço no Período
+                          </h3>
+                          <p className="text-[11px] text-on-surface-variant font-medium mt-1">Produtividade e dados de atendimento</p>
+                        </div>
+                        
+                        {/* Golden Share Button */}
+                        <button
+                          onClick={handleSharePerformance}
+                          className="flex items-center gap-1.5 bg-[#c9a84c] hover:bg-[#b0923d] text-white-pure px-3.5 py-1.5 rounded-full text-[11px] font-bold shadow-md hover:shadow-lg active:scale-95 transition-all duration-200 whitespace-nowrap"
+                        >
+                          <span className="material-symbols-outlined text-[14px]">share</span>
+                          Compartilhe
+                        </button>
+                      </div>
+
+                      {/* Effort Metrics List with Golden Highlights */}
+                      <div className="space-y-4 my-6">
+                        {/* Item 1 */}
+                        <div className="flex items-center gap-4 bg-[#c9a84c]/5 border border-[#c9a84c]/15 rounded-2xl p-3">
+                          <div className="w-10 h-10 rounded-xl bg-[#c9a84c]/10 flex items-center justify-center text-[#c9a84c]">
+                            <span className="material-symbols-outlined text-[20px] font-bold" style={{fontVariationSettings: "'FILL' 1"}}>calendar_today</span>
+                          </div>
+                          <div>
+                            <p className="text-[10px] text-on-surface-variant font-bold uppercase tracking-wider">Período de Análise</p>
+                            <p className="text-[15px] font-extrabold text-[#c9a84c]">{effortDays} Dias no Período</p>
+                          </div>
+                        </div>
+
+                        {/* Item 2 */}
+                        <div className="flex items-center gap-4 bg-[#c9a84c]/5 border border-[#c9a84c]/15 rounded-2xl p-3">
+                          <div className="w-10 h-10 rounded-xl bg-[#c9a84c]/10 flex items-center justify-center text-[#c9a84c]">
+                            <span className="material-symbols-outlined text-[20px] font-bold" style={{fontVariationSettings: "'FILL' 1"}}>work</span>
+                          </div>
+                          <div>
+                            <p className="text-[10px] text-on-surface-variant font-bold uppercase tracking-wider">Total Atendimentos</p>
+                            <p className="text-[15px] font-extrabold text-[#c9a84c]">{effortAtendimentos} Atendimentos Realizados</p>
+                          </div>
+                        </div>
+
+                        {/* Item 3 */}
+                        <div className="flex items-center gap-4 bg-[#c9a84c]/5 border border-[#c9a84c]/15 rounded-2xl p-3">
+                          <div className="w-10 h-10 rounded-xl bg-[#c9a84c]/10 flex items-center justify-center text-[#c9a84c]">
+                            <span className="material-symbols-outlined text-[20px] font-bold" style={{fontVariationSettings: "'FILL' 1"}}>group</span>
+                          </div>
+                          <div>
+                            <p className="text-[10px] text-on-surface-variant font-bold uppercase tracking-wider">Clientes Atendidos</p>
+                            <p className="text-[15px] font-extrabold text-[#c9a84c]">{effortClients} Clientes Únicos</p>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Golden decorative accent */}
+                      <p className="text-[10px] text-right italic text-[#c9a84c] font-medium">Equipe dedicada à excelência</p>
+                    </div>
+
+                  </div>
+
+                  {/* Visual Anual Chart */}
+                  <div className="bg-white-pure rounded-3xl p-6 border border-outline-variant shadow-sm space-y-6">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                      <div>
+                        <h3 className="font-manrope font-bold text-[16px] text-on-surface flex items-center gap-2">
+                          <span className="material-symbols-outlined text-primary text-[20px]">calendar_month</span>
+                          Faturamento Mensal (Visão {currentYear})
+                        </h3>
+                        <p className="text-[11px] text-on-surface-variant font-medium mt-1">Evolução financeira consolidada por mês</p>
+                      </div>
+
+                      {/* Toggle Deduct Expenses */}
+                      <label className="flex items-center gap-2 cursor-pointer self-start sm:self-auto bg-surface-container/60 hover:bg-surface-container-high/60 border border-outline-variant/40 px-3.5 py-1.5 rounded-full transition-all duration-200">
+                        <input
+                          type="checkbox"
+                          checked={performanceContabilizarDespesas}
+                          onChange={(e) => setPerformanceContabilizarDespesas(e.target.checked)}
+                          className="w-4 h-4 rounded text-primary focus:ring-primary border-outline accent-primary cursor-pointer"
+                        />
+                        <span className="text-[11px] font-bold text-on-surface-variant select-none">Contabilizar despesas</span>
+                      </label>
+                    </div>
+
+                    {/* Bars for 12 months */}
+                    <div className="flex items-end gap-1.5 sm:gap-3 h-48 w-full bg-surface-container-lowest/40 p-4 rounded-2xl border border-outline-variant/20 overflow-x-auto no-scrollbar">
+                      {monthlyValues.map((val, idx) => {
+                        const maxMonthVal = Math.max(...monthlyValues.map(Math.abs), 1);
+                        const isNegative = val < 0;
+                        const absVal = Math.abs(val);
+                        const heightPercent = (absVal / maxMonthVal) * 100;
+                        
+                        return (
+                          <div key={idx} className="flex-1 min-w-[32px] flex flex-col items-center justify-end gap-2 group h-full">
+                            <div className="w-full flex flex-col items-center justify-end h-[90%] relative">
+                              <div
+                                style={{ height: `${Math.max(heightPercent, 2)}%` }}
+                                className={`w-full rounded-t-md transition-all duration-500 flex items-end justify-center relative ${
+                                  isNegative 
+                                    ? 'bg-error/30 hover:bg-error/50' 
+                                    : 'bg-primary/20 hover:bg-primary/45 border-b-2 border-primary'
+                                }`}
+                              >
+                                <span className="absolute -top-7 text-[9px] font-bold text-primary bg-white-pure px-1 py-0.5 rounded border border-outline-variant opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-10 shadow">
+                                  R$ {val.toLocaleString('pt-BR', { maximumFractionDigits: 0 })}
+                                </span>
+                              </div>
+                            </div>
+                            <span className="text-[10px] font-extrabold text-on-surface-variant">{monthNamesShort[idx]}</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    {/* Monthly Performance Highlights */}
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 border-t border-outline-variant/30 pt-6">
+                      
+                      {/* Melhor Mês Card */}
+                      <div className="bg-[#2ecc71]/5 border border-[#2ecc71]/25 rounded-2xl p-4 flex items-center justify-between">
+                        <div>
+                          <p className="text-[10px] text-[#2ecc71] font-bold uppercase tracking-wider flex items-center gap-1">
+                            Melhor Mês
+                            <span className="material-symbols-outlined text-[12px] font-bold">arrow_upward</span>
+                          </p>
+                          <p className="text-[16px] font-extrabold text-on-surface mt-1">
+                            {maxValMonth.val > -Infinity ? monthNamesShort[maxValMonth.month] : '—'}
+                          </p>
+                        </div>
+                        <p className="text-[14px] font-extrabold text-[#2ecc71]">
+                          R$ {maxValMonth.val > -Infinity ? maxValMonth.val.toLocaleString('pt-BR', { maximumFractionDigits: 0 }) : '0'}
+                        </p>
+                      </div>
+
+                      {/* Pior Mês Card */}
+                      <div className="bg-error/5 border border-error/25 rounded-2xl p-4 flex items-center justify-between">
+                        <div>
+                          <p className="text-[10px] text-error font-bold uppercase tracking-wider flex items-center gap-1">
+                            Pior Mês
+                            <span className="material-symbols-outlined text-[12px] font-bold">arrow_downward</span>
+                          </p>
+                          <p className="text-[16px] font-extrabold text-on-surface mt-1">
+                            {minValMonth.val < Infinity ? monthNamesShort[minValMonth.month] : '—'}
+                          </p>
+                        </div>
+                        <p className="text-[14px] font-extrabold text-error">
+                          R$ {minValMonth.val < Infinity ? minValMonth.val.toLocaleString('pt-BR', { maximumFractionDigits: 0 }) : '0'}
+                        </p>
+                      </div>
+
+                      {/* Média Mensal Card */}
+                      <div className="bg-secondary/5 border border-secondary/25 rounded-2xl p-4 flex items-center justify-between">
+                        <div>
+                          <p className="text-[10px] text-secondary font-bold uppercase tracking-wider flex items-center gap-1">
+                            Média Mensal
+                            <span className="material-symbols-outlined text-[12px] font-bold">drag_handle</span>
+                          </p>
+                          <p className="text-[16px] font-extrabold text-on-surface mt-1">Últimos Meses</p>
+                        </div>
+                        <p className="text-[14px] font-extrabold text-secondary">
+                          R$ {averageVal.toLocaleString('pt-BR', { maximumFractionDigits: 0 })}
+                        </p>
+                      </div>
+
+                    </div>
+                  </div>
+
+                </div>
+              )}
+
+              {/* SUBTAB: PIZZA (Serviços Top 5) */}
+              {reportsSubTab === 'pizza' && (
+                <div className="bg-white-pure rounded-3xl p-6 border border-outline-variant shadow-sm space-y-6">
+                  <div>
+                    <h3 className="font-manrope font-bold text-[16px] text-on-surface flex items-center gap-2">
+                      <span className="material-symbols-outlined text-primary text-[20px]">pie_chart</span>
+                      Top 5 Serviços por Receita no Período
+                    </h3>
+                    <p className="text-[11px] text-on-surface-variant font-medium mt-1">Participação dos procedimentos no faturamento</p>
+                  </div>
+
+                  {/* Warning Badge for simulation if data is fallback */}
+                  {sortedServices.length < 3 && (
+                    <div className="flex items-center gap-2 bg-[#ffe088]/20 border border-[#ffe088]/60 rounded-xl p-3 text-on-secondary-fixed-variant text-[11px] font-medium">
+                      <span className="material-symbols-outlined text-[16px] text-[#745c00]">info</span>
+                      Esta é apenas uma projeção (dados simulados para demonstração de gráficos).
+                    </div>
+                  )}
+
+                  <div className="flex flex-col md:flex-row items-center justify-around gap-8 py-4">
+                    
+                    {/* Render Canvas Chart */}
+                    <div className="relative flex-shrink-0">
+                      <ServicePieChart data={top5Services} />
+                      <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                        <span className="text-[9px] font-extrabold text-on-surface-variant uppercase tracking-widest">Total Top 5</span>
+                        <span className="text-[15px] font-black text-primary">R$ {totalTop5Revenue.toLocaleString('pt-BR', { maximumFractionDigits: 0 })}</span>
+                      </div>
+                    </div>
+
+                    {/* Detailed Legend List */}
+                    <div className="flex-1 w-full max-w-md space-y-3">
+                      {top5Services.map((srv, idx) => {
+                        const colors = ['#7B2FBE', '#c9a84c', '#2ecc71', '#3b82f6', '#765444'];
+                        const color = colors[idx % colors.length];
+                        const pct = totalTop5Revenue > 0 ? Math.round((srv.total / totalTop5Revenue) * 100) : 0;
+                        
+                        return (
+                          <div key={idx} className="flex items-center justify-between border-b border-outline-variant/20 pb-2.5 hover:bg-surface-container-lowest/50 px-2 rounded-lg transition-colors">
+                            <div className="flex items-center gap-3">
+                              <span className="w-3.5 h-3.5 rounded-full flex-shrink-0" style={{ backgroundColor: color }} />
+                              <div className="min-w-0">
+                                <p className="text-[12px] font-extrabold text-on-surface truncate">{srv.name}</p>
+                                <p className="text-[10px] text-on-surface-variant font-medium">({srv.count} atendimentos)</p>
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              <p className="text-[12px] font-extrabold text-primary">R$ {srv.total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+                              <span className="inline-block text-[9px] font-bold text-on-surface-variant bg-surface-container px-1.5 py-0.5 rounded-full">{pct}%</span>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* SUBTAB: CAIXA (Fluxo de Caixa Diário) */}
+              {reportsSubTab === 'caixa' && (
+                <div className="bg-white-pure rounded-3xl p-6 border border-outline-variant shadow-sm space-y-6">
+                  <div>
+                    <h3 className="font-manrope font-bold text-[16px] text-on-surface flex items-center gap-2">
+                      <span className="material-symbols-outlined text-primary text-[20px]">account_balance_wallet</span>
+                      Fluxo de Caixa Diário
+                    </h3>
+                    <p className="text-[11px] text-on-surface-variant font-medium mt-1">Registros consolidados por dia (clique na linha para ver os lançamentos detalhados)</p>
+                  </div>
+
+                  <div className="overflow-x-auto rounded-2xl border border-outline-variant/50">
+                    <table className="w-full text-left border-collapse">
+                      <thead>
+                        <tr className="bg-surface-container border-b border-outline-variant/60">
+                          <th className="px-4 py-3 text-[11px] font-extrabold text-on-surface-variant uppercase tracking-wider">Dia</th>
+                          <th className="px-4 py-3 text-[11px] font-extrabold text-on-surface-variant uppercase tracking-wider text-right">Receita (+)</th>
+                          <th className="px-4 py-3 text-[11px] font-extrabold text-on-surface-variant uppercase tracking-wider text-right">Despesa (-)</th>
+                          <th className="px-4 py-3 text-[11px] font-extrabold text-on-surface-variant uppercase tracking-wider text-right">Resultado (Saldo)</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-outline-variant/30 text-[12px]">
+                        {cashFlowList.length === 0 ? (
+                          <tr>
+                            <td colSpan={4} className="px-4 py-8 text-center text-on-surface-variant font-medium">
+                              Nenhuma movimentação financeira encontrada para este período.
+                            </td>
+                          </tr>
+                        ) : (
+                          cashFlowList.map((day, idx) => {
+                            const result = day.receita - day.despesa;
+                            const dVal = parseAnyDate(day.dateStr);
+                            const formattedDate = `${String(dVal.getDate()).padStart(2, '0')}/${String(dVal.getMonth() + 1).padStart(2, '0')}`;
+                            
+                            return (
+                              <tr 
+                                key={idx} 
+                                onClick={() => setSelectedCashFlowDay(day)}
+                                className="hover:bg-primary/5 transition-colors cursor-pointer border-b border-outline-variant/20"
+                              >
+                                <td className="px-4 py-3 font-bold text-on-surface">{formattedDate}</td>
+                                <td className="px-4 py-3 text-right font-extrabold text-[#2ecc71]">+ R$ {day.receita.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
+                                <td className="px-4 py-3 text-right font-extrabold text-error">- R$ {day.despesa.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
+                                <td className={`px-4 py-3 text-right font-black ${
+                                  result > 0 ? 'text-[#2ecc71]' : result < 0 ? 'text-error' : 'text-on-surface-variant'
+                                }`}>
+                                  {result > 0 ? '+' : ''} R$ {result.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                </td>
+                              </tr>
+                            );
+                          })
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+
             </div>
+
+            {/* Daily Detail Modal for selectedCashFlowDay */}
+            {selectedCashFlowDay && (() => {
+              const result = selectedCashFlowDay.receita - selectedCashFlowDay.despesa;
+              const dVal = parseAnyDate(selectedCashFlowDay.dateStr);
+              const formattedDateStr = `${String(dVal.getDate()).padStart(2, '0')}/${String(dVal.getMonth() + 1).padStart(2, '0')}/${dVal.getFullYear()}`;
+              
+              return (
+                <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[300] flex items-center justify-center p-4">
+                  <div className="bg-white-pure rounded-3xl max-w-lg w-full border border-outline-variant shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+                    
+                    {/* Header */}
+                    <div className="bg-surface-container px-6 py-4 border-b border-outline-variant/60 flex items-center justify-between">
+                      <div>
+                        <h3 className="font-manrope font-extrabold text-[16px] text-primary flex items-center gap-1.5">
+                          <span className="material-symbols-outlined text-[20px]">calendar_today</span>
+                          Lançamentos do Dia {formattedDateStr}
+                        </h3>
+                        <p className="text-[10px] text-on-surface-variant font-medium mt-0.5">Detalhamento de todas as entradas e saídas</p>
+                      </div>
+                      <button 
+                        onClick={() => setSelectedCashFlowDay(null)}
+                        className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-surface-container-high/80 text-on-surface-variant hover:text-primary transition-all duration-200"
+                      >
+                        <span className="material-symbols-outlined text-[20px]">close</span>
+                      </button>
+                    </div>
+
+                    {/* Content */}
+                    <div className="p-6 space-y-4 max-h-[60vh] overflow-y-auto custom-scrollbar">
+                      
+                      {/* Daily Balance Summary Pill */}
+                      <div className="flex justify-between items-center bg-surface p-3.5 rounded-2xl border border-outline-variant/50">
+                        <span className="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider">Saldo Acumulado</span>
+                        <span className={`text-[15px] font-black ${
+                          result > 0 ? 'text-[#2ecc71]' : result < 0 ? 'text-error' : 'text-on-surface-variant'
+                        }`}>
+                          {result > 0 ? '+' : ''} R$ {result.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                        </span>
+                      </div>
+
+                      {/* Items List */}
+                      <div className="space-y-2.5">
+                        <p className="text-[11px] text-on-surface-variant font-extrabold uppercase tracking-widest pb-1 border-b border-outline-variant/20">Registros ({selectedCashFlowDay.items.length})</p>
+                        
+                        {selectedCashFlowDay.items.map((item: any, i: number) => (
+                          <div 
+                            key={i} 
+                            className={`flex items-center justify-between p-3 rounded-xl border transition-colors ${
+                              item.isRevenue 
+                                ? 'bg-[#2ecc71]/5 border-[#2ecc71]/15 hover:bg-[#2ecc71]/10' 
+                                : 'bg-error/5 border-error/15 hover:bg-error/10'
+                            }`}
+                          >
+                            <div className="flex items-center gap-3">
+                              <span className={`material-symbols-outlined text-[18px] ${
+                                item.isRevenue ? 'text-[#2ecc71]' : 'text-error'
+                              }`}>
+                                {item.isRevenue 
+                                  ? (item.type === 'agendamento' ? 'spa' : 'add_circle') 
+                                  : 'remove_circle'}
+                              </span>
+                              <div className="min-w-0">
+                                <p className="text-[12px] font-bold text-on-surface truncate">{item.desc}</p>
+                                <p className="text-[9px] text-on-surface-variant font-extrabold uppercase tracking-wide">
+                                  {item.type === 'agendamento' ? 'Atendimento' : item.type === 'cobranca' ? 'Cobrança Extra' : 'Despesa'}
+                                </p>
+                              </div>
+                            </div>
+                            <span className={`text-[12px] font-extrabold whitespace-nowrap ${
+                              item.isRevenue ? 'text-[#2ecc71]' : 'text-error'
+                            }`}>
+                              {item.isRevenue ? '+' : '-'} R$ {item.value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+
+                    </div>
+
+                    {/* Footer */}
+                    <div className="bg-surface-container px-6 py-4 border-t border-outline-variant/60 flex justify-end">
+                      <button 
+                        onClick={() => setSelectedCashFlowDay(null)}
+                        className="bg-primary hover:bg-[#6824a3] text-white-pure px-5 py-2 rounded-xl text-[12px] font-bold shadow-md hover:shadow-lg active:scale-95 transition-all duration-200"
+                      >
+                        Fechar detalhes
+                      </button>
+                    </div>
+
+                  </div>
+                </div>
+              );
+            })()}
+
           </section>
         )}
 
@@ -5530,7 +6476,7 @@ export default function CRMPage() {
                   </div>
                   <div>
                     <h2 className="text-[18px] font-bold text-on-surface">Gabi Almeida Estética CRM</h2>
-                    <p className="text-[13px] text-on-surface-variant font-bold">Versão atual: 3.3.0</p>
+                    <p className="text-[13px] text-on-surface-variant font-bold">Versão atual: 3.4.0</p>
                   </div>
                 </div>
 
@@ -5539,11 +6485,29 @@ export default function CRMPage() {
                   
                   <div className="bg-surface-container-lowest rounded-2xl p-4 border border-outline-variant/50 mb-4">
                     <div className="flex justify-between items-center mb-2">
+                      <span className="font-bold text-[14px] text-on-surface">Versão 3.4.0</span>
+                      <span className="text-[11px] font-bold text-on-surface-variant px-2 py-1 bg-surface-container rounded-lg">16 Junho 2026</span>
+                    </div>
+                    <ul className="list-disc pl-5 space-y-1.5 text-[13px] text-on-surface-variant mt-3">
+                      <li><strong className="text-on-surface">Módulo de Agenda Aprimorado:</strong> Transição da visualização diária/semanal para slots explícitos de 30 minutos das 08h às 19h, com altura proporcional e layout de cartões super compactos para ótima legibilidade.</li>
+                      <li><strong className="text-on-surface">Campo de Valor Editável:</strong> Integrado campo editável "Valor (R$)" nos formulários de criação e edição, com cálculo automático com base na soma dos procedimentos selecionados.</li>
+                      <li><strong className="text-on-surface">Dashboard de Performance e Finanças:</strong> Implementadas três sub-abas interativas:
+                        <ul className="list-disc pl-5 space-y-1 text-on-surface-variant/80 mt-1">
+                          <li><em>Pizza</em>: Gráfico de participação do faturamento dos Top 5 Serviços desenhado em Canvas com legenda detalhada e dados simulados caso o banco esteja vazio.</li>
+                          <li><em>Caixa</em>: Tabela interativa de Fluxo de Caixa Diário com colunas coloridas de resultado e modal de detalhamento no clique.</li>
+                          <li><em>Barras</em>: Gráfico de Balanço Financeiro comparativo, Resumo de Esforço com métricas douradas e exportação automática em imagem PNG ("Compartilhe"), e Gráfico de Faturamento Mensal Anual com toggle de despesas e destaques de melhor/pior mês.</li>
+                        </ul>
+                      </li>
+                    </ul>
+                  </div>
+
+                  <div className="bg-surface-container-lowest rounded-2xl p-4 border border-outline-variant/50 mb-4">
+                    <div className="flex justify-between items-center mb-2">
                       <span className="font-bold text-[14px] text-on-surface">Versão 3.3.0</span>
                       <span className="text-[11px] font-bold text-on-surface-variant px-2 py-1 bg-surface-container rounded-lg">15 Junho 2026</span>
                     </div>
                     <ul className="list-disc pl-5 space-y-1.5 text-[13px] text-on-surface-variant mt-3">
-                      <li><strong className="text-on-surface">Auto-Finalização de Agendamentos:</strong> Implementada regra de negócio que muda automaticamente qualquer agendamento de dias anteriores para o status de "Finalizado" tanto no carregamento inicial quanto ao receber atualizações em tempo real, evitando agendamentos esquecidos no passado.</li>
+                      <li><strong className="text-on-surface">Auto-Finalização de Agendamentos:</strong> Implementada regra de negócio que muda automaticamente qualquer agendamento de dias anteriores para o status de "Finalizado" tanto no carregamento inicial quanto ao receber updates em tempo real, evitando agendamentos esquecidos no passado.</li>
                     </ul>
                   </div>
 
@@ -6753,11 +7717,19 @@ export default function CRMPage() {
                       onChange={(v) => {
                          const newArr = [...arr];
                          newArr[index] = v;
-                         setNewApptProcedure(newArr.join(' + '));
+                         const updatedProcs = newArr.join(' + ');
+                         setNewApptProcedure(updatedProcs);
                          const sel = services.find(s => s.nome === v);
                          if(index === 0 && sel) {
                            setNewApptCategory(sel.categoria as any);
                          }
+                         // Calculate sum of procedure prices
+                         let sumPrice = 0;
+                         newArr.forEach(procName => {
+                           const s = services.find(srv => srv.nome === procName);
+                           if (s) sumPrice += s.preco;
+                         });
+                         setNewApptValor(sumPrice > 0 ? sumPrice.toString() : '');
                       }}
                       placeholder="Busque ou selecione um procedimento..."
                       options={services.slice().sort((a,b) => a.nome.localeCompare(b.nome)).map(s => ({ label: `${s.nome} (R$ ${s.preco})`, value: s.nome }))}
@@ -6806,6 +7778,19 @@ export default function CRMPage() {
                     <option value="Finalizado">Finalizado</option>
                     <option value="Pendente">Pendente</option>
                   </select>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="font-bold text-on-surface-variant">Valor (R$)</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    placeholder="Valor do procedimento..."
+                    value={newApptValor}
+                    onChange={(e) => setNewApptValor(e.target.value)}
+                    className="w-full p-2.5 bg-surface rounded-xl border border-outline-variant/60 focus:outline-none focus:ring-1 focus:ring-primary/40 font-medium font-sans text-[13px]"
+                  />
                 </div>
 
                 <div className="space-y-1.5">
@@ -7043,6 +8028,11 @@ export default function CRMPage() {
                       setNewApptPatient(apptToEdit.clienteNome);
                       setNewApptProcedure(apptToEdit.procedimento);
                       setNewApptTime(apptToEdit.hora);
+                      setNewApptProfessional(apptToEdit.profissional);
+                      setNewApptDate(apptToEdit.data);
+                      setNewApptCategory(apptToEdit.categoria);
+                      setNewApptStatus(apptToEdit.status);
+                      setNewApptValor(apptToEdit.valor !== undefined && apptToEdit.valor !== null ? apptToEdit.valor.toString() : '');
                       setIsNewAppointmentOpen(true);
                     }
                   } else {

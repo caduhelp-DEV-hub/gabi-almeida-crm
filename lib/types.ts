@@ -56,6 +56,7 @@ export interface Agendamento {
   categoria: AgendamentoCategoria;
   notas?: string;
   data: string;
+  valor?: number;
 }
 
 export interface Servico {

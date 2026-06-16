@@ -88,6 +88,7 @@ CREATE TABLE IF NOT EXISTS public.appointments (
     professional TEXT NOT NULL,
     category TEXT NOT NULL CHECK (category IN ('Estética', 'Injetáveis', 'Consulta')),
     notes TEXT,
+    valor NUMERIC,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
