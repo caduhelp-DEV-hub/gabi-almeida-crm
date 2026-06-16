@@ -1879,7 +1879,7 @@ export default function CRMPage() {
               <span>Acesso seguro. Todos os dados são criptografados.</span>
             </div>
             <span>© 2026 Gabi Almeida Estética.</span>
-            <span>Desenvolvido: caduhelp-dev | Ver. 3.3</span>
+            <span>Desenvolvido: caduhelp-dev | Ver. 3.4</span>
           </div>
         </div>
       </div>
