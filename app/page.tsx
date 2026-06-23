@@ -1879,7 +1879,7 @@ export default function CRMPage() {
               <span>Acesso seguro. Todos os dados são criptografados.</span>
             </div>
             <span>© 2026 Gabi Almeida Estética.</span>
-            <span>Desenvolvido: caduhelp-dev | Ver. 3.4</span>
+            <span>Desenvolvido: caduhelp-dev | Ver. 3.5.0</span>
           </div>
         </div>
       </div>
@@ -6476,13 +6476,24 @@ export default function CRMPage() {
                   </div>
                   <div>
                     <h2 className="text-[18px] font-bold text-on-surface">Gabi Almeida Estética CRM</h2>
-                    <p className="text-[13px] text-on-surface-variant font-bold">Versão atual: 3.4.0</p>
+                    <p className="text-[13px] text-on-surface-variant font-bold">Versão atual: 3.5.0</p>
                   </div>
                 </div>
 
                 <div className="space-y-4">
                   <h3 className="text-[14px] font-bold text-primary border-b border-outline-variant/30 pb-2">Histórico de Versões (Changelog)</h3>
                   
+                  <div className="bg-surface-container-lowest rounded-2xl p-4 border border-outline-variant/50 mb-4">
+                    <div className="flex justify-between items-center mb-2">
+                      <span className="font-bold text-[14px] text-on-surface">Versão 3.5.0</span>
+                      <span className="text-[11px] font-bold text-on-surface-variant px-2 py-1 bg-surface-container rounded-lg">22 Junho 2026</span>
+                    </div>
+                    <ul className="list-disc pl-5 space-y-1.5 text-[13px] text-on-surface-variant mt-3">
+                      <li><strong className="text-on-surface">Migração de Repositório:</strong> Atualização da URL do repositório remoto para a nova organização no GitHub.</li>
+                      <li><strong className="text-on-surface">Versionamento:</strong> Atualização da exibição das versões nas telas de Login e Sobre do sistema.</li>
+                    </ul>
+                  </div>
+
                   <div className="bg-surface-container-lowest rounded-2xl p-4 border border-outline-variant/50 mb-4">
                     <div className="flex justify-between items-center mb-2">
                       <span className="font-bold text-[14px] text-on-surface">Versão 3.4.0</span>
