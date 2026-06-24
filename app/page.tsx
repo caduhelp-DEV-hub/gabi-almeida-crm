@@ -1077,6 +1077,67 @@ export default function SystemPage() {
     }
   };
 
+  
+  const handleScheduleReturn = async (daysToAdd: number) => {
+    if (!currentUser) return;
+    const date = new Date();
+    date.setDate(date.getDate() + daysToAdd);
+    
+    // Weekend rule
+    if (date.getDay() === 6) { // Saturday
+      date.setDate(date.getDate() + 2);
+    } else if (date.getDay() === 0) { // Sunday
+      date.setDate(date.getDate() + 1);
+    }
+    
+    const formattedDate = date.toISOString().split('T')[0];
+    
+    const patientName = patients.find(p => p.id === selectedPatientId)?.nome || 'Paciente';
+    const patientAvatar = patients.find(p => p.id === selectedPatientId)?.avatar || '';
+
+    const newAppt = {
+      cliente_id: selectedPatientId,
+      data: formattedDate,
+      hora: retornoTime,
+      paciente: patientName,
+      paciente_avatar: patientAvatar,
+      procedimento: 'Retorno',
+      status: 'Confirmado',
+      profissional: currentUser.name || 'Sistema',
+      categoria: 'Consulta',
+      valor: 0
+    };
+
+    const mapAgendamentoToBackend = (a: any) => ({
+      patient_id: a.cliente_id,
+      date: a.data,
+      time: a.hora,
+      patient_name: a.paciente,
+      patient_avatar: a.paciente_avatar,
+      procedure: a.procedimento,
+      status: a.status,
+      professional: a.profissional,
+      category: a.categoria,
+      valor: a.valor
+    });
+
+    const { data, error } = await supabase
+      .from('appointments')
+      .insert([mapAgendamentoToBackend(newAppt)])
+      .select();
+
+    if (error) {
+      alert('Erro ao agendar retorno: ' + error.message);
+    } else {
+      alert('Retorno agendado com sucesso para ' + formattedDate.split('-').reverse().join('/') + ' às ' + retornoTime);
+      const { data: fetchAppts } = await supabase.from('appointments').select('*');
+      if (fetchAppts) {
+        // Assume realtime updates UI or mapAgendamentoToFrontend is available if we do:
+        // setAppointments(fetchAppts.map(mapAgendamentoToFrontend));
+      }
+    }
+  };
+
   const saveTimelineItem = async (patientId: string, itemId: string) => {
     try {
       const patient = patients.find(p => p.id === patientId);

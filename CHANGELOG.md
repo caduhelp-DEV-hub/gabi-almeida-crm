@@ -2,6 +2,13 @@
 
 Todas as mudanças notáveis neste projeto serão documentadas neste arquivo.
 
+## [3.6.0] - 2026-06-23
+### Adicionado
+- Aba de Retorno: Nova aba no prontuário do paciente com atalhos para agendamento automático de retorno (10, 15, 21, 25, 30 e 90 dias) e lógica de dias úteis (pulo de fim de semana).
+
+### Alterado
+- Nomenclatura: Remoção completa do termo 'CRM' de toda a aplicação (UI, cookies e schema de permissões do banco), alterado para 'Sistema'.
+
 ## [3.5.0] - 2026-06-22
 ### Adicionado
 - Migração de Repositório: Atualização da URL do repositório remoto e infraestrutura de controle de versão para nova organização no GitHub (`caduhelp-DEV-hub/gabi-almeida-crm`).
