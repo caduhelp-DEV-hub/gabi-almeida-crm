@@ -1096,33 +1096,20 @@ export default function SystemPage() {
     const patientAvatar = patients.find(p => p.id === selectedPatientId)?.avatar || '';
 
     const newAppt = {
-      cliente_id: selectedPatientId,
+      clienteId: selectedPatientId,
       data: formattedDate,
       hora: retornoTime,
-      paciente: patientName,
-      paciente_avatar: patientAvatar,
+      clienteNome: patientName,
+      clienteAvatar: patientAvatar,
       procedimento: 'Retorno',
-      status: 'Confirmado',
+      status: 'Confirmado' as any,
       profissional: currentUser.name || 'Sistema',
-      categoria: 'Consulta',
+      categoria: 'Consulta' as any,
       valor: 0
     };
 
-    const mapAgendamentoToBackend = (a: any) => ({
-      patient_id: a.cliente_id,
-      date: a.data,
-      time: a.hora,
-      patient_name: a.paciente,
-      patient_avatar: a.paciente_avatar,
-      procedure: a.procedimento,
-      status: a.status,
-      professional: a.profissional,
-      category: a.categoria,
-      valor: a.valor
-    });
-
     const { data, error } = await supabase
-      .from('appointments')
+      .from('agendamentos')
       .insert([mapAgendamentoToBackend(newAppt)])
       .select();
 
@@ -1130,7 +1117,7 @@ export default function SystemPage() {
       alert('Erro ao agendar retorno: ' + error.message);
     } else {
       alert('Retorno agendado com sucesso para ' + formattedDate.split('-').reverse().join('/') + ' às ' + retornoTime);
-      const { data: fetchAppts } = await supabase.from('appointments').select('*');
+      const { data: fetchAppts } = await supabase.from('agendamentos').select('*');
       if (fetchAppts) {
         // Assume realtime updates UI or mapAgendamentoToFrontend is available if we do:
         // setAppointments(fetchAppts.map(mapAgendamentoToFrontend));
