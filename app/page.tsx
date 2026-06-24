@@ -1111,16 +1111,18 @@ export default function SystemPage() {
     const { data, error } = await supabase
       .from('agendamentos')
       .insert([mapAgendamentoToBackend(newAppt)])
-      .select();
+      .select('*, clientes(id, nome, avatar)');
 
     if (error) {
       alert('Erro ao agendar retorno: ' + error.message);
     } else {
       alert('Retorno agendado com sucesso para ' + formattedDate.split('-').reverse().join('/') + ' às ' + retornoTime);
-      const { data: fetchAppts } = await supabase.from('agendamentos').select('*');
-      if (fetchAppts) {
-        // Assume realtime updates UI or mapAgendamentoToFrontend is available if we do:
-        // setAppointments(fetchAppts.map(mapAgendamentoToFrontend));
+      if (data && data[0]) {
+        const mapped = mapAgendamentoToFrontend(data[0]);
+        setAppointments(prev => {
+          const exists = prev.find(a => a.id === mapped.id);
+          return exists ? prev.map(a => a.id === mapped.id ? mapped : a) : [...prev, mapped];
+        });
       }
     }
   };
@@ -1315,7 +1317,7 @@ export default function SystemPage() {
           setAppointments(prev => prev.filter(a => a.id !== payload.old.id));
         } else if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
           const { data } = await supabase.from('agendamentos').select('*, clientes(id, nome, avatar)').eq('id', payload.new.id).single();
-          if (data && data.cliente_id && data.clientes) {
+          if (data) {
             const mapped = mapAgendamentoToFrontend(data);
             const todayStr = new Date().toLocaleDateString('en-CA');
             if (mapped.data && mapped.data < todayStr && mapped.status !== 'Finalizado') {
