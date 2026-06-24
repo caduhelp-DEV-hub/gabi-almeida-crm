@@ -1932,7 +1932,7 @@ export default function SystemPage() {
               <span>Acesso seguro. Todos os dados são criptografados.</span>
             </div>
             <span>© 2026 Gabi Almeida Estética.</span>
-            <span>Desenvolvido: caduhelp-dev | Ver. 3.5.0</span>
+            <span>Desenvolvido: caduhelp-dev | Ver. 3.7.0</span>
           </div>
         </div>
       </div>
@@ -6686,7 +6686,7 @@ export default function SystemPage() {
                   </div>
                   <div>
                     <h2 className="text-[18px] font-bold text-on-surface">Gabi Almeida Estética Sistema</h2>
-                    <p className="text-[13px] text-on-surface-variant font-bold">Versão atual: 3.5.0</p>
+                    <p className="text-[13px] text-on-surface-variant font-bold">Versão atual: 3.7.0</p>
                   </div>
                 </div>
 

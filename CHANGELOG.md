@@ -2,6 +2,13 @@
 
 Todas as mudanças notáveis neste projeto serão documentadas neste arquivo.
 
+## [3.7.0] - 2026-06-23
+### Adicionado
+- Ficha de Anamnese: Novo formulário específico para procedimentos de Microagulhamento com seções dinâmicas para Avaliação Capilar e de Barba/Sobrancelhas.
+
+### Corrigido
+- Agenda Realtime: Destravamento da atualização remota e injeção assíncrona local dos retornos para eliminar latência na tela principal.
+
 ## [3.6.0] - 2026-06-23
 ### Adicionado
 - Aba de Retorno: Nova aba no prontuário do paciente com atalhos para agendamento automático de retorno (10, 15, 21, 25, 30 e 90 dias) e lógica de dias úteis (pulo de fim de semana).
