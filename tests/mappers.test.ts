@@ -23,7 +23,7 @@ describe('mapUserToFrontend', () => {
       phone: '1199999',
       avatar: 'url',
       commission_rate: 10,
-      permissions: { accessCRM: true }
+      permissions: { accessSystem: true }
     });
     expect(result).toEqual({
       id: '1',
@@ -35,7 +35,7 @@ describe('mapUserToFrontend', () => {
       phone: '1199999',
       avatar: 'url',
       commissionRate: 10,
-      permissions: { accessCRM: true }
+      permissions: { accessSystem: true }
     });
   });
 });

@@ -1,4 +1,4 @@
--- Script de inicialização do banco de dados do CRM Gabi Almeida no Supabase (PostgreSQL)
+-- Script de inicialização do banco de dados do Sistema Gabi Almeida no Supabase (PostgreSQL)
 -- Autenticação gerenciada pela API do Next.js (sem Supabase Auth)
 --
 -- IMPORTANTE: As políticas abaixo concedem acesso amplo (role `public`).
@@ -9,7 +9,7 @@
 -- de supabase.from(...) direto, permitindo restringir policies a `TO authenticated`.
 -- Por enquanto, o client usa a anon key diretamente, então precisamos de `TO public`.
 
--- 1. Tabela de Usuários do CRM (autenticação própria)
+-- 1. Tabela de Usuários do Sistema (autenticação própria)
 CREATE TABLE IF NOT EXISTS public.users (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name TEXT NOT NULL,

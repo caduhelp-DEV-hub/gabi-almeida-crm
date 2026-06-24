@@ -2,8 +2,8 @@ import type {Metadata, Viewport} from 'next';
 import './globals.css'; // Global styles
 
 export const metadata: Metadata = {
-  title: 'Gabi Almeida - CRM de Estética Premium',
-  description: 'Sistema CRM elegante para clínica de estética com módulos de Dashboard, Agenda, Pacientes e Financeiro.',
+  title: 'Gabi Almeida - Sistema de Estética Premium',
+  description: 'Sistema elegante para clínica de estética com módulos de Dashboard, Agenda, Pacientes e Financeiro.',
 };
 
 export const viewport: Viewport = {

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import jwt from 'jsonwebtoken';
 import { supabaseAdmin } from './supabase';
 
-export const COOKIE_NAME = 'crm_session';
+export const COOKIE_NAME = 'app_session';
 const TOKEN_EXPIRY = '7d';
 
 export function getJwtSecret(): string {

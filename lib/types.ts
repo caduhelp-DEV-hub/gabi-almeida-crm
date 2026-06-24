@@ -104,7 +104,7 @@ export type UserRole = 'admin' | 'staff' | 'prestador';
 export type UserStatus = 'active' | 'inactive';
 
 export interface UserPermissions {
-  accessCRM: boolean;
+  accessSystem: boolean;
   accessAgenda: boolean;
   accessFinanceiro: boolean;
   canSchedule: boolean;

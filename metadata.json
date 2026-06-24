@@ -1,6 +1,6 @@
 {
-  "name": "Gabi Almeida CRM",
-  "description": "Sistema de CRM elegante para clínica de estética com módulos de Dashboard, Agenda, Pacientes e Financeiro.",
+  "name": "Gabi Almeida Sistema",
+  "description": "Sistema elegante para clínica de estética com módulos de Dashboard, Agenda, Pacientes e Financeiro.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

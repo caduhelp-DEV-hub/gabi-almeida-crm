@@ -16,10 +16,14 @@ if (fs.existsSync('.env')) {
 const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
 
 async function check() {
-  const tables = ['services', 'servicos', 'clientes', 'patients'];
+  const tables = ['clientes', 'agendamentos', 'servicos', 'cobrancas', 'despesas'];
   for (const table of tables) {
     const { data, error } = await supabase.from(table).select('*').limit(1);
-    console.log(`Table ${table}:`, data ? `Exists, columns: ${Object.keys(data[0] || {})}` : `Error: ${error?.message}`);
+    if (error) {
+      console.log(`Table ${table} Error: ${error.message}`);
+    } else {
+      console.log(`Table ${table}: Exists, columns: ${Object.keys(data[0] || {})}`);
+    }
   }
 }
 

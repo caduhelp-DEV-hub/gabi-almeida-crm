@@ -38,7 +38,7 @@ export async function POST() {
         avatar: 'https://api.dicebear.com/7.x/notionists/svg?seed=GabiAlmeida',
         commission_rate: 40,
         permissions: {
-          accessCRM: true,
+          accessSystem: true,
           accessAgenda: true,
           accessFinanceiro: true,
           canSchedule: true,

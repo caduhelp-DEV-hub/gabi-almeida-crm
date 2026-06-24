@@ -214,7 +214,7 @@ const ServicePieChart = ({ data }: { data: Array<{ name: string; count: number; 
   return <canvas ref={canvasRef} width={240} height={240} className="mx-auto" />;
 };
 
-export default function CRMPage() {
+export default function SystemPage() {
   // Global Modal State
   const [dialogState, setDialogState] = useState<{isOpen: boolean, type: 'alert' | 'confirm', message: string, onConfirm?: () => void}>({isOpen: false, type: 'alert', message: ''});
   const showAlert = (message: string) => setDialogState({isOpen: true, type: 'alert', message});
@@ -391,7 +391,8 @@ export default function CRMPage() {
   const [newApptValor, setNewApptValor] = useState('');
 
   // Clientes Module Detail Tab
-  const [activePatientSubTab, setActivePatientSubTab] = useState<'evolution' | 'anamnese' | 'financeiro' | 'documentos'>('evolution');
+  const [activePatientSubTab, setActivePatientSubTab] = useState<'evolution' | 'anamnese' | 'financeiro' | 'documentos' | 'retorno'>('evolution');
+  const [retornoTime, setRetornoTime] = useState('09:00');
   const [activeLightboxImage, setActiveLightboxImage] = useState<string>('');
   const [isComparing, setIsComparing] = useState<boolean>(false);
   const [compareSelectedIds, setCompareSelectedIds] = useState<string[]>([]);
@@ -869,7 +870,7 @@ export default function CRMPage() {
     ctx.fillStyle = '#82756a';
     ctx.font = 'italic 10px sans-serif';
     ctx.textAlign = 'center';
-    ctx.fillText('Gerado automaticamente pelo CRM Gabi Almeida Estética', 300, 365);
+    ctx.fillText('Gerado automaticamente pelo Sistema Gabi Almeida Estética', 300, 365);
 
     const url = canvas.toDataURL('image/png');
     const link = document.createElement('a');
@@ -1810,7 +1811,7 @@ export default function CRMPage() {
       <div className="bg-surface-container-lowest h-[100dvh] w-full flex flex-col items-center justify-center relative select-none">
         <div className="flex flex-col items-center animate-fade-in">
           <span className="material-symbols-outlined text-primary text-[60px] mb-6 animate-spin" style={{ animationDuration: '3s' }}>schedule</span>
-          <h2 className="font-manrope text-2xl font-black text-on-surface uppercase tracking-tight">Carregando CRM</h2>
+          <h2 className="font-manrope text-2xl font-black text-on-surface uppercase tracking-tight">Carregando Sistema</h2>
           <p className="font-manrope text-[11px] tracking-[0.2em] font-bold text-on-surface-variant uppercase mt-2">Sincronizando Banco de Dados...</p>
         </div>
       </div>
@@ -2038,7 +2039,7 @@ export default function CRMPage() {
             className={`flex items-center gap-4 px-4 py-2.5 rounded-xl transition-all duration-300 text-left ${currentTab === 'clientes' ? 'text-primary font-bold border-r-4 border-primary bg-primary/10 scale-95' : 'text-on-surface-variant hover:text-primary hover:bg-surface-container'}`}
           >
             <span className="material-symbols-outlined text-primary" style={{fontVariationSettings: currentTab === 'clientes' ? "'FILL' 1" : "'FILL' 0"}}>group</span>
-            <span className="font-manrope text-[14px] leading-none text-primary">Prontuário (CRM)</span>
+            <span className="font-manrope text-[14px] leading-none text-primary">Prontuário (Sistema)</span>
           </button>
 
           <button 
@@ -2284,7 +2285,7 @@ export default function CRMPage() {
                   setSelectedPatientId('p1');
                 }} 
                 className="hidden sm:block p-2 hover:text-primary transition-colors cursor-pointer" 
-                title="Mensagens do CRM"
+                title="Mensagens do Sistema"
               >
                 <span className="material-symbols-outlined">chat_bubble</span>
               </button>
@@ -3355,7 +3356,7 @@ export default function CRMPage() {
           </section>
         )}
 
-        {/* 5. Clientes CRM Details Tab (Image 2) */}
+        {/* 5. Clientes Sistema Details Tab (Image 2) */}
         {currentTab === 'clientes' && (
           <section className="flex-1 overflow-hidden flex flex-col lg:flex-row bg-[#f7f3f0]">
             
@@ -3629,6 +3630,14 @@ export default function CRMPage() {
                   >
                     Documentos
                   </button>
+
+                  <button 
+                    onClick={() => setActivePatientSubTab('retorno')}
+                    className={`pb-3 font-manrope text-[13px] font-bold relative ${activePatientSubTab === 'retorno' ? 'text-primary tab-active' : 'text-on-surface-variant hover:text-primary transition-colors'}`}
+                  >
+                    Retorno
+                  </button>
+
                 </div>
 
                 {/* Cliente Tabs content */}
@@ -4394,7 +4403,61 @@ export default function CRMPage() {
                 )}
 
                 {/* Interactive Studiol Document Manager Sub-Tab */}
-                {activePatientSubTab === 'documentos' && (
+                
+                  {activePatientSubTab === 'retorno' && (
+                    <div className="p-6">
+                      <div className="flex justify-between items-center mb-6">
+                        <div>
+                          <h3 className="text-[16px] font-bold text-on-surface">Agendamento de Retorno</h3>
+                          <p className="text-[13px] text-on-surface-variant">Selecione o prazo para agendar automaticamente o retorno do paciente.</p>
+                        </div>
+                        <div className="flex flex-col gap-1">
+                          <label className="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider">Horário do Retorno</label>
+                          <input 
+                            type="time" 
+                            value={retornoTime}
+                            onChange={(e) => setRetornoTime(e.target.value)}
+                            className="h-[36px] bg-surface-container rounded-lg border border-outline-variant px-3 text-[14px] text-on-surface outline-none focus:border-primary transition-colors w-[120px]"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                        {[10, 15, 21, 25, 30, 90].map(days => {
+                          const d = new Date();
+                          d.setDate(d.getDate() + days);
+                          if (d.getDay() === 6) d.setDate(d.getDate() + 2);
+                          else if (d.getDay() === 0) d.setDate(d.getDate() + 1);
+                          const formatted = d.toLocaleDateString('pt-BR');
+                          
+                          return (
+                            <div key={days} className="bg-surface border border-outline-variant rounded-xl p-4 flex flex-col gap-3 hover:border-primary/30 transition-colors">
+                              <div className="flex justify-between items-start">
+                                <div className="flex flex-col">
+                                  <span className="text-[20px] font-black text-on-surface leading-none">{days}</span>
+                                  <span className="text-[12px] font-medium text-on-surface-variant mt-1">Dias</span>
+                                </div>
+                                <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
+                                  <span className="material-symbols-outlined text-[16px] text-primary">calendar_month</span>
+                                </div>
+                              </div>
+                              <div className="pt-3 border-t border-outline-variant/50 flex flex-col gap-2">
+                                <span className="text-[11px] font-medium text-on-surface-variant">Data Estimada: <strong className="text-on-surface">{formatted}</strong></span>
+                                <button 
+                                  onClick={() => handleScheduleReturn(days)}
+                                  className="w-full h-[32px] bg-primary text-on-primary rounded-lg text-[12px] font-bold hover:bg-primary/90 transition-colors cursor-pointer"
+                                >
+                                  Agendar
+                                </button>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  {activePatientSubTab === 'documentos' && (
                   <div className="space-y-6 animate-fade-in">
                     <div className="bg-white-pure p-6 rounded-3xl border border-outline-variant/70 shadow-sm">
                       <div className="flex justify-between items-center mb-6 flex-wrap gap-3">
@@ -5259,7 +5322,7 @@ export default function CRMPage() {
                                   setCurrentTab('clientes');
                                 }}
                                 className="p-1.5 text-primary hover:bg-primary/10 transition-colors text-[16px] material-symbols-outlined rounded-md"
-                                title="Acessar Prontuário de Atendimento CRM"
+                                title="Acessar Prontuário de Atendimento Sistema"
                               >
                                 open_in_new
                               </button>
@@ -5315,7 +5378,7 @@ export default function CRMPage() {
               {/* Header metrics panel */}
               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4 border-b border-outline-variant/60 pb-6">
                 <div>
-                  <h1 className="font-manrope text-headline-lg font-black tracking-tight text-on-surface">Gestão de Usuários &amp; CRM</h1>
+                  <h1 className="font-manrope text-headline-lg font-black tracking-tight text-on-surface">Gestão de Usuários &amp; Sistema</h1>
                   <p className="text-on-surface-variant font-medium mt-1">
                     Centralize toda equipe (Recepção, Especialistas, Médicos e Prestadores). Atribua permissões e comissões.
                   </p>
@@ -5357,7 +5420,7 @@ export default function CRMPage() {
                 </div>
               </div>
 
-              {/* CRM Users Grid / Table */}
+              {/* Sistema Users Grid / Table */}
               <div className="bg-white-pure rounded-3xl border border-outline-variant/60 shadow-sm overflow-hidden">
                 <div className="p-5 border-b border-outline-variant/60 bg-surface-container-lowest flex justify-between items-center">
                   <h3 className="font-manrope text-[14px] font-bold text-on-surface">Integrantes do Estabelecimento</h3>
@@ -5371,7 +5434,7 @@ export default function CRMPage() {
                         <th className="px-6 py-4">Usuário / Cadastro</th>
                         <th className="px-6 py-4">Telefone / Cargo</th>
                         <th className="px-6 py-4">Comissão (%)</th>
-                        <th className="px-6 py-4">Capacidades de CRM</th>
+                        <th className="px-6 py-4">Capacidades de Sistema</th>
                         <th className="px-6 py-4 text-center">Status</th>
                         <th className="px-6 py-4 text-right">Ações</th>
                       </tr>
@@ -5403,8 +5466,8 @@ export default function CRMPage() {
                           </td>
                           <td className="px-6 py-4">
                             <div className="flex flex-wrap gap-1 max-w-sm">
-                              {u.permissions?.accessCRM && (
-                                <span className="px-2 py-0.5 rounded-md text-[9px] font-bold bg-[#ecf7ed] text-emerald-800 border border-emerald-100">CRM</span>
+                              {u.permissions?.accessSystem && (
+                                <span className="px-2 py-0.5 rounded-md text-[9px] font-bold bg-[#ecf7ed] text-emerald-800 border border-emerald-100">Sistema</span>
                               )}
                               {u.permissions?.accessAgenda && (
                                 <span className="px-2 py-0.5 rounded-md text-[9px] font-bold bg-[#ebf3fe] text-blue-800 border border-blue-100">Agenda</span>
@@ -6475,7 +6538,7 @@ export default function CRMPage() {
                     <span className="material-symbols-outlined text-primary text-[24px]">verified</span>
                   </div>
                   <div>
-                    <h2 className="text-[18px] font-bold text-on-surface">Gabi Almeida Estética CRM</h2>
+                    <h2 className="text-[18px] font-bold text-on-surface">Gabi Almeida Estética Sistema</h2>
                     <p className="text-[13px] text-on-surface-variant font-bold">Versão atual: 3.5.0</p>
                   </div>
                 </div>
@@ -6911,7 +6974,7 @@ export default function CRMPage() {
                 <h3 className="font-manrope text-[18px] font-bold text-primary">
                   {editingUser ? 'Editar Integrante da Equipe' : 'Novo Integrante da Equipe'}
                 </h3>
-                <p className="text-[12px] text-on-surface-variant">Configure os dados cadastrais e o nível de acesso ao CRM</p>
+                <p className="text-[12px] text-on-surface-variant">Configure os dados cadastrais e o nível de acesso ao Sistema</p>
               </div>
             </div>
 
@@ -6925,7 +6988,7 @@ export default function CRMPage() {
               const commissionRate = parseInt((document.getElementById('new_user_comm') as HTMLInputElement).value) || 0;
               const password = (document.getElementById('new_user_pass') as HTMLInputElement).value;
 
-              const canAccessCRM = (document.getElementById('perm_crm') as HTMLInputElement).checked;
+              const canAccessSystem = (document.getElementById('perm_system') as HTMLInputElement).checked;
               const canAccessAgenda = (document.getElementById('perm_agenda') as HTMLInputElement).checked;
               const canAccessFinanceiro = (document.getElementById('perm_fin') as HTMLInputElement).checked;
               const canSchedule = (document.getElementById('perm_sched') as HTMLInputElement).checked;
@@ -6953,7 +7016,7 @@ export default function CRMPage() {
                       password,
                       avatar: newUserAvatarUrl,
                       permissions: {
-                        accessCRM: canAccessCRM,
+                        accessSystem: canAccessSystem,
                         accessAgenda: canAccessAgenda,
                         accessFinanceiro: canAccessFinanceiro,
                         canSchedule,
@@ -6986,7 +7049,7 @@ export default function CRMPage() {
                       password,
                       avatar: newUserAvatarUrl,
                       permissions: {
-                        accessCRM: canAccessCRM,
+                        accessSystem: canAccessSystem,
                         accessAgenda: canAccessAgenda,
                         accessFinanceiro: canAccessFinanceiro,
                         canSchedule,
@@ -7111,13 +7174,13 @@ export default function CRMPage() {
                 <input type="password" id="new_user_pass" placeholder="Definir nova senha de acesso" className="w-full bg-surface border border-outline-variant rounded-xl p-2.5 focus:outline-none focus:border-primary font-medium" />
               </div>
 
-              {/* Usability & CRM Access Rules checkboxes */}
+              {/* Usability & Sistema Access Rules checkboxes */}
               <div className="bg-[#fcfaf7] border border-outline-variant/60 rounded-2xl p-4 space-y-3">
-                <p className="font-manrope text-[12px] font-black text-on-surface mb-2">Usabilidade &amp; Níveis de Acesso do CRM</p>
+                <p className="font-manrope text-[12px] font-black text-on-surface mb-2">Usabilidade &amp; Níveis de Acesso do Sistema</p>
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                   <label className="flex items-center gap-2 cursor-pointer font-medium text-[11px]">
-                    <input type="checkbox" id="perm_crm" defaultChecked={editingUser ? !!editingUser.permissions?.accessCRM : true} className="rounded border-outline-variant text-primary" />
-                    Módulo CRM
+                    <input type="checkbox" id="perm_system" defaultChecked={editingUser ? !!editingUser.permissions?.accessSystem : true} className="rounded border-outline-variant text-primary" />
+                    Módulo Sistema
                   </label>
                   <label className="flex items-center gap-2 cursor-pointer font-medium text-[11px]">
                     <input type="checkbox" id="perm_agenda" defaultChecked={editingUser ? !!editingUser.permissions?.accessAgenda : true} className="rounded border-outline-variant text-primary" />
