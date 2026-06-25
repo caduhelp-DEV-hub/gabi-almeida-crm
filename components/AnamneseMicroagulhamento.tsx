@@ -1,6 +1,6 @@
 import React, { useRef, useState, useEffect, useCallback } from 'react';
 
-interface AnamneseLimpezaProps {
+interface AnamneseMicroagulhamentoProps {
   patientName: string;
   patientPhone?: string;
   onCancel: () => void;
@@ -19,7 +19,7 @@ interface AnamneseLimpezaProps {
   }) => void;
 }
 
-export default function AnamneseLimpeza({ patientName, patientPhone = '(11) 97434-5511', onCancel, onSave }: AnamneseLimpezaProps) {
+export default function AnamneseMicroagulhamento({ patientName, patientPhone = '(11) 97434-5511', onCancel, onSave }: AnamneseMicroagulhamentoProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const canvasContainerRef = useRef<HTMLDivElement>(null);
   const [isDrawing, setIsDrawing] = useState(false);
@@ -41,23 +41,23 @@ export default function AnamneseLimpeza({ patientName, patientPhone = '(11) 9743
   const toggleHealth = (key: string) => setHealthToggles(prev => ({ ...prev, [key]: !prev[key] }));
 
   const questions = [
-    "Utiliza lentes de contato?", "Tem epilepsia / convulsões?",
-    "Funcionamento intestinal regular?", "Tratamento facial anterior?",
-    "Ingere água com frequência?", "Ingere bebida alcoólica?",
-    "Exposição ao sol?", "Está no período menstrual?",
-    "Boa qualidade do sono?", "Possui prótese corporal/facial?",
-    "Tabagismo?", "Alterações cardíacas?",
-    "Portador de marca-passo?", "Grávida?",
-    "Utiliza cremes ou loções facial?", "Pratica atividade física?",
-    "Utiliza anticoncepcional?", "Possui algum tipo de alergia?",
-    "Possui uma boa alimentação?", "Problemas de pele?"
+    "Utiliza isotretinoína (Roacutan) ou derivados de vitamina A?", "Possui histórico de quelóides ou cicatrização hipertrófica?",
+    "Possui herpes ativa ou histórico recorrente?", "Utiliza anticoagulantes ou AAS?",
+    "Realizou procedimento estético nos últimos 15 dias?", "Possui diabetes descompensada?",
+    "Possui algum tipo de alergia (anestésicos, metais, ativos)?", "Está grávida ou em período de amamentação?",
+    "Tem epilepsia / convulsões?", "Possui doença autoimune ativa?",
+    "Exposição ao sol intensa recente (últimos 7 dias)?", "Alterações cardíacas?",
+    "Portador de marca-passo?", "Possui prótese metálica na região?",
+    "Utiliza cremes ou ácidos tópicos?", "Tabagismo?",
+    "Utiliza anticoncepcional?", "Tratamento dermatológico em andamento?",
+    "Possui infecção de pele ativa na região?", "Tem tendência a manchas pós-inflamatórias?"
   ];
 
   const skinProblems = [
-    "Millium", "Comedão", "Pápula", "Pústula", "Cistos", "Rugas", "Acromia", "Hipercromia",
-    "Foliculite", "Queratose", "Cicatriz", "Atrofia", "Xantelasma", "Quelóide", "Tumor",
-    "Nevo Rubi", "Nevo melanocítico", "Verruga", "Papiloma", "Efélides", "Bolhas", "Abscesso",
-    "Hirsutismo", "Nódulos", "Telangiectasias", "Hipocromia", "Marcas", "Outra"
+    "Cicatriz de Acne", "Cicatriz Atrófica", "Estrias", "Rugas Finas", "Poros Dilatados",
+    "Hipercromia", "Melasma", "Flacidez", "Linhas de Expressão", "Alopécia",
+    "Foliculite", "Queratose Pilar", "Quelóide", "Cicatriz Hipertrófica",
+    "Manchas Solares", "Olheiras", "Celulite", "Fibrose", "Marcas de Acne", "Outra"
   ];
 
   // ========== Canvas resize: sync buffer size with CSS display size ==========
@@ -224,9 +224,9 @@ export default function AnamneseLimpeza({ patientName, patientPhone = '(11) 9743
       <div className="bg-white-pure p-6 border-b border-outline-variant/50 flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <div className="inline-flex items-center gap-2 px-3 py-1 bg-primary/10 text-primary font-bold text-[10px] uppercase tracking-widest rounded-full mb-3">
-            Ficha Limpeza de Pele • Modelo Ágil
+            Ficha Microagulhamento • Modelo Ágil
           </div>
-          <h2 className="text-2xl font-extrabold text-on-surface tracking-tight mb-1">Ficha de Anamnese: Limpeza de Pele</h2>
+          <h2 className="text-2xl font-extrabold text-on-surface tracking-tight mb-1">Ficha de Anamnese: Microagulhamento</h2>
           <p className="text-on-surface-variant text-[13px] font-medium">
             Cliente: <strong className="text-on-surface">{patientName}</strong> • Telefone: {patientPhone}
           </p>
@@ -414,7 +414,7 @@ export default function AnamneseLimpeza({ patientName, patientPhone = '(11) 9743
                     onChange={(e) => setGeneralObs(e.target.value)}
                     className="w-full bg-surface border border-outline-variant/50 rounded-xl p-3 text-[13px] outline-none focus:border-primary focus:ring-1 focus:ring-primary resize-none placeholder:text-on-surface-variant/50"
                     rows={4}
-                    placeholder="Insira detalhes adicionais sobre a sessão de limpeza de pele..."
+                    placeholder="Insira detalhes adicionais sobre a sessão de microagulhamento..."
                   ></textarea>
                 </div>
               </div>
@@ -424,7 +424,7 @@ export default function AnamneseLimpeza({ patientName, patientPhone = '(11) 9743
         {/* Lesoes */}
         <div className="bg-white-pure rounded-2xl border border-outline-variant/60 shadow-sm overflow-hidden">
            <div className="p-5 border-b border-outline-variant/40 bg-surface/30">
-            <h3 className="font-bold text-[14px] text-primary tracking-wider uppercase">Problemas de Pele Identificados / Lesões Studios na Sessão</h3>
+            <h3 className="font-bold text-[14px] text-primary tracking-wider uppercase">Indicações Clínicas / Condições Identificadas na Sessão</h3>
           </div>
           <div className="p-6">
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
@@ -452,15 +452,15 @@ export default function AnamneseLimpeza({ patientName, patientPhone = '(11) 9743
 
         {/* Autenticacao */}
         <div className="space-y-4">
-          <h3 className="font-bold text-[14px] text-primary tracking-wider uppercase ml-1">Autenticação de Consentimento de Limpeza de Pele</h3>
+          <h3 className="font-bold text-[14px] text-primary tracking-wider uppercase ml-1">Autenticação de Consentimento de Microagulhamento</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8">
             <div className="bg-white-pure rounded-2xl border border-outline-variant/60 shadow-sm p-4 sm:p-6 flex flex-col justify-between">
                <div>
                   <div className="inline-block bg-surface px-3 py-1.5 rounded text-[10px] font-bold uppercase tracking-wider text-on-surface mb-4">
-                    Termo de Tratamento de Limpeza de Pele
+                    Termo de Tratamento de Microagulhamento
                   </div>
                   <p className="text-[12px] sm:text-[13px] text-on-surface-variant leading-relaxed text-justify">
-                    Declaro que fui informado(a) minuciosamente dos benefícios, riscos e do protocolo previsto para o procedimento de Limpeza de Pele Estética. Autorizo o profissional esteta qualificado a realizar os procedimentos de extração mecânica de comedões, aplicação de loções de higienização, esfoliação e drenagem facial indicada. Relatei fielmente meu histórico de saúde e hábitos diários, aceitando as devidas responsabilidades pelo pós-procedimento.
+                    Declaro que fui informado(a) minuciosamente dos benefícios, riscos e do protocolo previsto para o procedimento de Microagulhamento (Indução Percutânea de Colágeno). Autorizo o profissional qualificado a realizar a aplicação de microagulhas na(s) região(ões) indicada(s), com a profundidade adequada ao meu tipo de pele e condição clínica. Estou ciente de que podem ocorrer vermelhidão, inchaço, sensibilidade e descamação temporários na região tratada. Relatei fielmente meu histórico de saúde, medicações em uso e hábitos diários, aceitando as devidas responsabilidades pelo pós-procedimento.
                   </p>
                </div>
                
@@ -472,7 +472,7 @@ export default function AnamneseLimpeza({ patientName, patientPhone = '(11) 9743
                     className="w-6 h-6 sm:w-5 sm:h-5 rounded text-primary border-primary focus:ring-primary accent-primary mt-0.5 shrink-0" 
                   />
                   <span className="text-[12px] sm:text-[13px] font-bold text-primary leading-snug">
-                    Confirmo o termo de limpeza de pele e autorizo o procedimento.
+                    Confirmo o termo de microagulhamento e autorizo o procedimento.
                   </span>
                </label>
             </div>
@@ -530,7 +530,7 @@ export default function AnamneseLimpeza({ patientName, patientPhone = '(11) 9743
         <div className="flex justify-center sm:justify-end pt-4 pb-12">
             <button onClick={handleSave} className="w-full sm:w-auto px-8 py-4 sm:py-3.5 bg-[#a322d8] hover:bg-[#861cae] text-white-pure font-bold rounded-2xl text-[15px] shadow-lg hover:shadow-xl hover:-translate-y-0.5 transition-all flex items-center justify-center gap-2 cursor-pointer">
                <span className="material-symbols-outlined text-[18px]">check</span>
-               Salvar Ficha de Limpeza de Pele
+               Salvar Ficha de Microagulhamento
             </button>
         </div>
 

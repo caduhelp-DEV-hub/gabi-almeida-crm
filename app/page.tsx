@@ -3413,7 +3413,7 @@ export default function SystemPage() {
           <section className="flex-1 overflow-hidden flex flex-col lg:flex-row bg-[#f7f3f0]">
             
             {/* Master Cliente List Column */}
-            <div className={`w-full lg:w-80 lg:flex-shrink-0 border-b lg:border-b-0 lg:border-r border-outline-variant bg-white-pure flex-col overflow-hidden z-10 transition-all print-hidden ${selectedPatientId ? 'hidden lg:flex flex-1 lg:h-auto' : 'flex flex-1 lg:h-auto'}`}>
+            <div className={`w-full xl:w-80 xl:flex-shrink-0 border-b xl:border-b-0 xl:border-r border-outline-variant bg-white-pure flex-col overflow-hidden z-10 transition-all print-hidden ${selectedPatientId ? 'hidden xl:flex flex-1 xl:h-auto' : 'flex flex-1 xl:h-auto'}`}>
               <div className="p-4 lg:p-6 flex flex-col gap-3 border-b border-outline-variant/60">
                 <div className="flex justify-between items-center">
                   <h2 className="font-manrope text-headline-md text-primary font-bold text-[18px]" id="patients-module-title">Clientes</h2>
@@ -3487,14 +3487,14 @@ export default function SystemPage() {
             </div>
 
             {/* Selected Cliente details column (Image 2 layout) */}
-            <div className={`flex-1 overflow-y-auto custom-scrollbar ${!selectedPatientId ? 'hidden lg:block' : 'block'}`}>
+            <div className={`flex-1 overflow-y-auto custom-scrollbar ${!selectedPatientId ? 'hidden xl:block' : 'block'}`}>
               {selectedPatient ? (
                 <div className="max-w-6xl mx-auto p-4 sm:p-6 xl:p-8 space-y-4 xl:space-y-6">
                   
                   {/* Mobile Back Button */}
                 <button 
                   onClick={() => setSelectedPatientId('')}
-                  className="lg:hidden flex items-center gap-2 text-primary font-bold text-[13px] mb-2 px-2"
+                  className="xl:hidden flex items-center gap-2 text-primary font-bold text-[13px] mb-2 px-2"
                 >
                   <span className="material-symbols-outlined text-[16px]">arrow_back_ios_new</span>
                   Voltar para lista
@@ -4281,13 +4281,25 @@ export default function SystemPage() {
                             }
 
                             let allergiesStr = selectedPatient.alergias || 'Nenhuma';
-                            if (data.historicoSaude.alergia === 'Sim') allergiesStr = `Sim: ${data.historicoSaude.qualAlergia}`;
+                            if (data.healthToggles['Possui algum tipo de alergia (anestésicos, metais, ativos)?']) {
+                              allergiesStr = data.healthDetails['Possui algum tipo de alergia (anestésicos, metais, ativos)?'] || 'Sim (verificar anamnese)';
+                            }
+                            if (data.otherHealth) allergiesStr += ` - Outros relatos: ${data.otherHealth}`;
 
                             let medicationsStr = selectedPatient.medicacoes || 'Nenhum';
-                            if (data.historicoSaude.medicamento === 'Sim') medicationsStr = `Sim: ${data.historicoSaude.qualMedicamento}`;
+                            if (data.healthToggles['Utiliza isotretinoína (Roacutan) ou derivados de vitamina A?'] || data.healthToggles['Utiliza anticoagulantes ou AAS?'] || data.healthToggles['Utiliza cremes ou ácidos tópicos?']) {
+                              const meds = [];
+                              if (data.healthToggles['Utiliza isotretinoína (Roacutan) ou derivados de vitamina A?']) meds.push('Isotretinoína/Derivados Vit. A');
+                              if (data.healthToggles['Utiliza anticoagulantes ou AAS?']) meds.push('Anticoagulantes/AAS');
+                              if (data.healthToggles['Utiliza cremes ou ácidos tópicos?']) meds.push('Cremes/Ácidos Tópicos');
+                              if (data.healthToggles['Utiliza anticoncepcional?']) meds.push('Anticoncepcional');
+                              medicationsStr = meds.join(', ');
+                            }
 
                             let prevProceduresStr = selectedPatient.procedimentosAnteriores || 'Nenhum';
-                            if (data.procedimentosAnteriores.length > 0) prevProceduresStr = data.procedimentosAnteriores.join(', ');
+                            if (data.healthToggles['Realizou procedimento estético nos últimos 15 dias?']) prevProceduresStr = data.healthDetails['Realizou procedimento estético nos últimos 15 dias?'] || 'Sim (verificar anamnese)';
+                            if (data.healthToggles['Tratamento dermatológico em andamento?']) prevProceduresStr += ` | Tratamento em andamento: ${data.healthDetails['Tratamento dermatológico em andamento?'] || 'Sim'}`;
+
 
                             const newDoc: PatientDocument = {
                               id: 'doc_anamnese_' + crypto.randomUUID(),
