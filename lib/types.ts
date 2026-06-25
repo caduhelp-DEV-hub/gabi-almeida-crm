@@ -98,6 +98,9 @@ export interface InventoryItem {
   quantity: number;
   minQuantity: number;
   unit: string;
+  type?: string;
+  salePrice?: number;
+  costPrice?: number;
 }
 
 export type UserRole = 'admin' | 'staff' | 'prestador';

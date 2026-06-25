@@ -117,7 +117,10 @@ export const mapInventoryToFrontend = (i: any): InventoryItem => ({
   name: i.name,
   quantity: Number(i.quantity || 0),
   minQuantity: Number(i.min_quantity || 0),
-  unit: i.unit
+  unit: i.unit,
+  type: i.tipo_produto,
+  salePrice: i.preco_venda ? Number(i.preco_venda) : undefined,
+  costPrice: i.preco_custo ? Number(i.preco_custo) : undefined
 });
 
 export const mapInventoryToBackend = (i: Partial<InventoryItem>): Record<string, unknown> => {
@@ -127,6 +130,9 @@ export const mapInventoryToBackend = (i: Partial<InventoryItem>): Record<string,
   if (i.quantity !== undefined) res.quantity = i.quantity;
   if (i.minQuantity !== undefined) res.min_quantity = i.minQuantity;
   if (i.unit !== undefined) res.unit = i.unit;
+  if (i.type !== undefined) res.tipo_produto = i.type;
+  if (i.salePrice !== undefined) res.preco_venda = i.salePrice;
+  if (i.costPrice !== undefined) res.preco_custo = i.costPrice;
   return res;
 };
 

@@ -4,6 +4,7 @@ import React, {useState, useEffect, useRef, useCallback} from 'react';
 import Image from 'next/image';
 import AnamneseLimpezaDePele from '../components/AnamneseLimpezaDePele';
 import AnamneseMicroagulhamento from '../components/AnamneseMicroagulhamento';
+import VendaSkincareModule from '../components/VendaSkincareModule';
 import DocumentViewerModal from '../components/DocumentViewerModal';
 import ChangePasswordModal from '../components/modals/ChangePasswordModal';
 import { supabase } from '../lib/supabase';
@@ -233,7 +234,7 @@ export default function SystemPage() {
   const [loginError, setLoginError] = useState('');
 
   // Sidebar tab control
-  const [currentTab, setCurrentTab] = useState<'dashboard' | 'agenda' | 'clientes' | 'financeiro' | 'usuarios' | 'cadastro-cliente' | 'servicos' | 'estoque' | 'comandas' | 'mensagens-pre' | 'despesas' | 'funcionarios' | 'relatorios-performance' | 'relatorios-financeiro' | 'relatorios-melhores-clientes' | 'configuracoes' | 'dados-empresa' | 'sobre'>('agenda');
+  const [currentTab, setCurrentTab] = useState<'dashboard' | 'agenda' | 'clientes' | 'financeiro' | 'usuarios' | 'cadastro-cliente' | 'servicos' | 'estoque' | 'venda-skincare' | 'comandas' | 'mensagens-pre' | 'despesas' | 'funcionarios' | 'relatorios-performance' | 'relatorios-financeiro' | 'relatorios-melhores-clientes' | 'configuracoes' | 'dados-empresa' | 'sobre'>('agenda');
   const [reportsSubTab, setReportsSubTab] = useState<'pizza' | 'caixa' | 'barras'>('barras');
   const [performancePeriod, setPerformancePeriod] = useState<'mes_atual' | '30_dias' | '7_dias'>('mes_atual');
   const [performanceContabilizarDespesas, setPerformanceContabilizarDespesas] = useState(false);
@@ -2113,6 +2114,15 @@ export default function SystemPage() {
           </button>
 
           <button 
+            id="nav-venda-skincare"
+            onClick={() => { setCurrentTab('venda-skincare'); setSearchQuery(''); setIsMobileMenuOpen(false); }}
+            className={`flex items-center gap-4 px-4 py-2.5 rounded-xl transition-all duration-300 text-left ${currentTab === 'venda-skincare' ? 'text-primary font-bold border-r-4 border-primary bg-primary/10 scale-95' : 'text-on-surface-variant hover:text-primary hover:bg-surface-container'}`}
+          >
+            <span className="material-symbols-outlined text-primary" style={{fontVariationSettings: currentTab === 'venda-skincare' ? "'FILL' 1" : "'FILL' 0"}}>local_mall</span>
+            <span className="font-manrope text-[14px] leading-none text-primary">Venda Skincare</span>
+          </button>
+
+          <button 
             id="nav-despesas"
             onClick={() => { setCurrentTab('despesas'); setSearchQuery(''); setIsMobileMenuOpen(false); }}
             className={`flex items-center gap-4 px-4 py-2.5 rounded-xl transition-all duration-300 text-left ${currentTab === 'despesas' ? 'text-primary font-bold border-r-4 border-primary bg-primary/10 scale-95' : 'text-on-surface-variant hover:text-primary hover:bg-surface-container'}`}
@@ -3609,6 +3619,15 @@ export default function SystemPage() {
                         </div>
                         <button 
                           onClick={() => {
+                            setCurrentTab('venda-skincare');
+                          }}
+                          className="w-full sm:w-auto px-4 py-2 border border-tertiary text-tertiary rounded-xl font-manrope text-[12px] font-extrabold hover:bg-tertiary hover:text-white-pure transition-all cursor-pointer flex items-center justify-center gap-1"
+                        >
+                          <span className="material-symbols-outlined text-[16px]">local_mall</span>
+                          Venda Skincare
+                        </button>
+                        <button 
+                          onClick={() => {
                             // Simple print invocation to generate PDF via browser
                             window.print();
                           }}
@@ -4694,6 +4713,33 @@ export default function SystemPage() {
 
                             <div className="pt-3 border-t border-outline-variant/50 flex gap-2 justify-end">
                               <button 
+                                onClick={async () => {
+                                  if (window.confirm(`Tem certeza que deseja apagar o documento "${doc.name}"? Esta ação não pode ser desfeita.`)) {
+                                    const updatedDocs = (patientDocuments[selectedPatient.id] || []).filter(item => item.id !== doc.id);
+                                    try {
+                                      const { error } = await supabase
+                                        .from('clientes')
+                                        .update({ documents: updatedDocs })
+                                        .eq('id', selectedPatient.id);
+                                      if (error) throw error;
+                                      setPatientDocuments(prev => ({
+                                        ...prev,
+                                        [selectedPatient.id]: updatedDocs
+                                      }));
+                                      showAlert('Documento removido com sucesso!');
+                                    } catch (err: any) {
+                                      console.error('Error deleting document:', err);
+                                      showAlert(`Erro ao remover documento: ${err.message}`);
+                                    }
+                                  }
+                                }}
+                                title="Apagar Documento"
+                                className="px-2.5 py-1.5 text-[12px] bg-white-pure hover:bg-error/10 border border-outline/30 text-error rounded-lg font-black material-symbols-outlined transition-colors"
+                              >
+                                delete
+                              </button>
+                              
+                              <button 
                                 onClick={() => {
                                   setViewingDocument(doc);
                                 }}
@@ -5328,9 +5374,11 @@ export default function SystemPage() {
                   <table className="w-full text-left font-sans text-[13px]">
                     <thead>
                       <tr className="border-b border-outline-variant/60">
-                        <th className="pb-3 px-4 font-bold text-on-surface-variant font-manrope">Nome do Material/Insumo</th>
-                        <th className="pb-3 px-4 text-center font-bold text-on-surface-variant font-manrope">Quantidade Atual</th>
-                        <th className="pb-3 px-4 text-center font-bold text-on-surface-variant font-manrope">Estoque Mínimo</th>
+                        <th className="pb-3 px-4 font-bold text-on-surface-variant font-manrope">Nome do Produto/Insumo</th>
+                        <th className="pb-3 px-4 text-center font-bold text-on-surface-variant font-manrope">Tipo</th>
+                        <th className="pb-3 px-4 text-center font-bold text-on-surface-variant font-manrope">Preço Venda</th>
+                        <th className="pb-3 px-4 text-center font-bold text-on-surface-variant font-manrope">Lucro</th>
+                        <th className="pb-3 px-4 text-center font-bold text-on-surface-variant font-manrope">Qtde Atual</th>
                         <th className="pb-3 px-4 text-center font-bold text-on-surface-variant font-manrope">Status</th>
                         <th className="pb-3 px-4 text-center font-bold text-on-surface-variant font-manrope">Ações</th>
                       </tr>
@@ -5344,8 +5392,16 @@ export default function SystemPage() {
                         return (
                           <tr key={i.id} className={`border-b border-outline-variant/30 hover:bg-[#fcfaf7] ${isLow ? 'bg-error/5' : ''}`}>
                             <td className="px-4 py-4 font-bold text-on-surface">{i.name}</td>
+                            <td className="px-4 py-4 text-center text-on-surface-variant text-[12px]">{i.type || 'Industrializado'}</td>
+                            <td className="px-4 py-4 text-center font-bold text-primary">{i.salePrice ? `R$ ${i.salePrice.toFixed(2)}` : '-'}</td>
+                            <td className="px-4 py-4 text-center text-[12px]">
+                              {i.salePrice && i.costPrice ? (
+                                <span className="text-emerald-600 font-bold">
+                                  R$ {(i.salePrice - i.costPrice).toFixed(2)} <span className="text-[10px] opacity-70">({Math.round(((i.salePrice - i.costPrice)/i.salePrice)*100)}%)</span>
+                                </span>
+                              ) : '-'}
+                            </td>
                             <td className="px-4 py-4 text-center"><span className="font-bold text-[14px]">{i.quantity}</span> <span className="text-on-surface-variant text-[11px]">{i.unit}</span></td>
-                            <td className="px-4 py-4 text-center text-on-surface-variant">{i.minQuantity} <span className="text-[11px]">{i.unit}</span></td>
                             <td className="px-4 py-4 text-center">
                               {isLow ? (
                                 <span className="bg-error/10 text-error px-2.5 py-1 rounded-md text-[10px] font-bold">Crítico</span>
@@ -7676,12 +7732,15 @@ export default function SystemPage() {
               const unit = formData.get('unit') as string;
               const quantity = parseInt(formData.get('quantity') as string, 10);
               const minQuantity = parseInt(formData.get('minQuantity') as string, 10);
+              const type = formData.get('type') as string;
+              const salePrice = parseFloat(formData.get('salePrice') as string) || 0;
+              const costPrice = parseFloat(formData.get('costPrice') as string) || 0;
               
               try {
                 if(editingInventory) {
                   const { data, error } = await supabase
                     .from('inventory')
-                    .update(mapInventoryToBackend({ name, unit, quantity, minQuantity }))
+                    .update(mapInventoryToBackend({ name, unit, quantity, minQuantity, type, salePrice, costPrice }))
                     .eq('id', editingInventory.id)
                     .select();
                   if (error) throw error;
@@ -7691,7 +7750,7 @@ export default function SystemPage() {
                 } else {
                   const { data, error } = await supabase
                     .from('inventory')
-                    .insert([mapInventoryToBackend({ name, unit, quantity, minQuantity })])
+                    .insert([mapInventoryToBackend({ name, unit, quantity, minQuantity, type, salePrice, costPrice })])
                     .select();
                   if (error) throw error;
                   if (data && data[0]) {
@@ -7704,23 +7763,43 @@ export default function SystemPage() {
                 showAlert(`Erro ao salvar estoque: ${err.message || err}`);
               }
             }} className="space-y-4 font-sans text-[13px]">
-              <div>
-                <label className="block text-[11px] font-bold text-on-surface-variant uppercase tracking-wider mb-2">Nome do Insumo</label>
-                <input required name="name" defaultValue={editingInventory?.name || ''} type="text" className="w-full bg-surface-container px-4 py-3 rounded-xl border border-outline-variant focus:outline-primary placeholder:text-on-surface-variant/50" placeholder="ex: Ácido Hialurônico 1ml" />
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-[11px] font-bold text-on-surface-variant uppercase tracking-wider mb-2">Nome do Produto/Insumo</label>
+                  <input required name="name" defaultValue={editingInventory?.name || ''} type="text" className="w-full bg-surface-container px-4 py-3 rounded-xl border border-outline-variant focus:outline-primary placeholder:text-on-surface-variant/50" placeholder="ex: Sérum Vitamina C" />
+                </div>
+                <div>
+                  <label className="block text-[11px] font-bold text-on-surface-variant uppercase tracking-wider mb-2">Tipo</label>
+                  <select name="type" defaultValue={editingInventory?.type || 'Industrializado'} className="w-full bg-surface-container px-4 py-3 rounded-xl border border-outline-variant focus:outline-primary">
+                    <option value="Industrializado">Industrializado</option>
+                    <option value="Manipulado">Manipulado</option>
+                    <option value="Insumo Uso Interno">Insumo Uso Interno</option>
+                  </select>
+                </div>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                 <div>
+                   <label className="block text-[11px] font-bold text-on-surface-variant uppercase tracking-wider mb-2">Unidade</label>
+                   <input required name="unit" defaultValue={editingInventory?.unit || ''} type="text" className="w-full bg-surface-container px-4 py-3 rounded-xl border border-outline-variant focus:outline-primary placeholder:text-on-surface-variant/50" placeholder="ex: un, frasco" />
+                 </div>
+                 <div>
+                   <label className="block text-[11px] font-bold text-on-surface-variant uppercase tracking-wider mb-2">Qtde Atual</label>
+                   <input required name="quantity" defaultValue={editingInventory?.quantity || ''} type="number" min="0" className="w-full bg-surface-container px-4 py-3 rounded-xl border border-outline-variant focus:outline-primary placeholder:text-on-surface-variant/50" />
+                 </div>
+                 <div>
+                   <label className="block text-[11px] font-bold text-on-surface-variant uppercase tracking-wider mb-2">Estoque Mín</label>
+                   <input required name="minQuantity" defaultValue={editingInventory?.minQuantity || ''} type="number" min="0" className="w-full bg-surface-container px-4 py-3 rounded-xl border border-outline-variant focus:outline-primary placeholder:text-on-surface-variant/50" />
+                 </div>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                  <div>
-                   <label className="block text-[11px] font-bold text-on-surface-variant uppercase tracking-wider mb-2">Unidade</label>
-                   <input required name="unit" defaultValue={editingInventory?.unit || ''} type="text" className="w-full bg-surface-container px-4 py-3 rounded-xl border border-outline-variant focus:outline-primary placeholder:text-on-surface-variant/50" placeholder="ex: seringas, frascos" />
+                   <label className="block text-[11px] font-bold text-on-surface-variant uppercase tracking-wider mb-2">Preço Pago (Custo) R$</label>
+                   <input name="costPrice" defaultValue={editingInventory?.costPrice || ''} type="number" step="0.01" min="0" className="w-full bg-surface-container px-4 py-3 rounded-xl border border-outline-variant focus:outline-primary placeholder:text-on-surface-variant/50" placeholder="0.00" />
                  </div>
                  <div>
-                   <label className="block text-[11px] font-bold text-on-surface-variant uppercase tracking-wider mb-2">Quantidade Atual</label>
-                   <input required name="quantity" defaultValue={editingInventory?.quantity || ''} type="number" min="0" className="w-full bg-surface-container px-4 py-3 rounded-xl border border-outline-variant focus:outline-primary placeholder:text-on-surface-variant/50" />
+                   <label className="block text-[11px] font-bold text-on-surface-variant uppercase tracking-wider mb-2">Preço de Venda R$</label>
+                   <input name="salePrice" defaultValue={editingInventory?.salePrice || ''} type="number" step="0.01" min="0" className="w-full bg-surface-container px-4 py-3 rounded-xl border border-outline-variant focus:outline-primary placeholder:text-on-surface-variant/50" placeholder="0.00" />
                  </div>
-              </div>
-              <div>
-                <label className="block text-[11px] font-bold text-on-surface-variant uppercase tracking-wider mb-2">Estoque Mínimo (Alerta)</label>
-                <input required name="minQuantity" defaultValue={editingInventory?.minQuantity || ''} type="number" min="0" className="w-full bg-surface-container px-4 py-3 rounded-xl border border-outline-variant focus:outline-primary placeholder:text-on-surface-variant/50" />
               </div>
               <div className="pt-4 pb-2 flex gap-4">
                   <button type="button" onClick={() => setIsInventoryModalOpen(false)} className="flex-1 py-3 text-[12px] font-bold text-on-surface border border-outline-variant rounded-xl hover:bg-surface transition-all">Cancelar</button>
