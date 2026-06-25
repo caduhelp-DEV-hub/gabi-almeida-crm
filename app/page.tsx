@@ -5434,6 +5434,18 @@ export default function SystemPage() {
         )}
 
         {/* 6. Cadastro e Gestão de Clientes (CRUD) */}
+                {currentTab === 'venda-skincare' && (
+          <VendaSkincareModule 
+            patients={patients}
+            inventory={inventory}
+            setInventory={setInventory}
+            setPatients={setPatients}
+            selectedPatientId={selectedPatient?.id || null}
+            showAlert={showAlert}
+            setTransactions={setTransactions}
+          />
+        )}
+
         {currentTab === 'cadastro-cliente' && (
           <section className="flex-1 overflow-y-auto custom-scrollbar bg-[#f7f3f0] p-6 md:p-8 relative animate-fade-in">
             <div className="max-w-7xl mx-auto space-y-8">
