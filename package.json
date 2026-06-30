@@ -13,6 +13,7 @@
     "test:e2e": "playwright test",
     "storage:create-bucket": "node --env-file=.env scripts/create-bucket.js",
     "db:apply-schema": "node --env-file=.env scripts/apply-schema.js",
+    "db:apply-migration": "node --env-file=.env scripts/apply-migration.js",
     "clean": "next clean"
   },
   "dependencies": {
