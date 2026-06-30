@@ -4,6 +4,7 @@ import React, {useState, useEffect, useRef, useCallback} from 'react';
 import Image from 'next/image';
 import AnamneseLimpezaDePele from '../components/AnamneseLimpezaDePele';
 import AnamneseMicroagulhamento from '../components/AnamneseMicroagulhamento';
+import AnamneseMicroagulhamentoCompleto from '../components/AnamneseMicroagulhamentoCompleto';
 import VendaSkincareModule from '../components/VendaSkincareModule';
 import DocumentViewerModal from '../components/DocumentViewerModal';
 import ChangePasswordModal from '../components/modals/ChangePasswordModal';
@@ -394,7 +395,7 @@ export default function SystemPage() {
 
   // Clientes Module Detail Tab
   const [activePatientSubTab, setActivePatientSubTab] = useState<'evolution' | 'anamnese' | 'financeiro' | 'documentos' | 'retorno'>('evolution');
-  const [selectedAnamneseType, setSelectedAnamneseType] = useState<'padrao' | 'microagulhamento'>('padrao');
+  const [selectedAnamneseType, setSelectedAnamneseType] = useState<'padrao' | 'microagulhamento' | 'microagulhamento-completo'>('padrao');
   const [retornoTime, setRetornoTime] = useState('09:00');
   const [activeLightboxImage, setActiveLightboxImage] = useState<string>('');
   const [isComparing, setIsComparing] = useState<boolean>(false);
@@ -1933,7 +1934,7 @@ export default function SystemPage() {
               <span>Acesso seguro. Todos os dados são criptografados.</span>
             </div>
             <span>© 2026 Gabi Almeida Estética.</span>
-            <span>Desenvolvido: caduhelp-dev | Ver. 3.7.0</span>
+            <span>Desenvolvido: caduhelp-dev | Ver. 3.8.0</span>
           </div>
         </div>
       </div>
@@ -4173,6 +4174,12 @@ export default function SystemPage() {
                         >
                           Microagulhamento
                         </button>
+                        <button
+                          onClick={() => setSelectedAnamneseType('microagulhamento-completo')}
+                          className={`px-6 py-2 rounded-full text-[13px] font-bold transition-all ${selectedAnamneseType === 'microagulhamento-completo' ? 'bg-primary text-white-pure shadow-md' : 'text-on-surface-variant hover:text-primary'}`}
+                        >
+                          Microagulhamento Completo
+                        </button>
                       </div>
                     </div>
 
@@ -4272,7 +4279,7 @@ export default function SystemPage() {
                           }
                         }} 
                       />
-                    ) : (
+                    ) : selectedAnamneseType === 'microagulhamento' ? (
                       <AnamneseMicroagulhamento
                         patientName={selectedPatient.nome}
                         patientPhone={selectedPatient.telefone || ''}
@@ -4338,6 +4345,108 @@ export default function SystemPage() {
                               title: 'Anamnese Preenchida',
                               date: new Date().toLocaleDateString('pt-BR'),
                               description: 'Ficha de Anamnese: Microagulhamento salva e assinada digitalmente.',
+                              category: 'Procedimento',
+                              status: 'Concluído'
+                            };
+
+                            const updatedTimeline = [newTimelineItem, ...(selectedPatient.historico || [])];
+
+                            const { error } = await supabase.from('clientes').update({
+                              alergias: allergiesStr,
+                              medicacoes: medicationsStr,
+                              procedimentos_anteriores: prevProceduresStr,
+                              documents: updatedDocs,
+                              historico: updatedTimeline
+                            }).eq('id', selectedPatient.id);
+
+                            if (error) throw error;
+
+                            setPatients(prev => prev.map(p => {
+                              if (p.id === selectedPatient.id) {
+                                return {
+                                  ...p,
+                                  alergias: allergiesStr,
+                                  medicacoes: medicationsStr,
+                                  procedimentosAnteriores: prevProceduresStr,
+                                  historico: updatedTimeline
+                                };
+                              }
+                              return p;
+                            }));
+
+                            setPatientDocuments(prev => ({ ...prev, [selectedPatient.id]: updatedDocs }));
+                            showAlert('Ficha de anamnese salva com sucesso!');
+                            setActivePatientSubTab('evolution');
+                          } catch (err: any) {
+                            showAlert(`Erro ao salvar ficha: ${err.message || err}`);
+                          }
+                        }}
+                      />
+                    ) : (
+                      <AnamneseMicroagulhamentoCompleto
+                        patientName={selectedPatient.nome}
+                        patientPhone={selectedPatient.telefone || ''}
+                        patientEmail={(selectedPatient as any).email || ''}
+                        onCancel={() => setActivePatientSubTab('evolution')}
+                        onSave={async (data: any) => {
+                          try {
+                            let signatureUrl = data.signatureBase64;
+                            try {
+                              const uploadRes = await fetch('/api/storage/upload', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({
+                                  bucket: 'signatures',
+                                  path: `anamnese/${selectedPatient.id}/${crypto.randomUUID()}.png`,
+                                  base64: data.signatureBase64,
+                                  contentType: 'image/png'
+                                })
+                              });
+                              if (uploadRes.ok) {
+                                const uploadData = await uploadRes.json();
+                                signatureUrl = uploadData.url;
+                              }
+                            } catch (uploadErr) {
+                              console.warn('Falha no upload da assinatura:', uploadErr);
+                            }
+
+                            let allergiesStr = selectedPatient.alergias || 'Nenhuma';
+                            if (data.saude?.alergias === true) {
+                              allergiesStr = data.saudeDetalhes?.alergias || 'Sim (verificar anamnese)';
+                            }
+
+                            let medicationsStr = selectedPatient.medicacoes || 'Nenhum';
+                            if (data.saude?.medicamentos === true) {
+                              medicationsStr = data.saudeDetalhes?.medicamentos || 'Sim (verificar anamnese)';
+                            }
+                            if (data.isotretinoina === true) {
+                              medicationsStr += (medicationsStr !== 'Nenhum' ? ', ' : '') + 'Isotretinoína (últimos 6 meses)';
+                            }
+
+                            let prevProceduresStr = selectedPatient.procedimentosAnteriores || 'Nenhum';
+                            if (data.procedAnteriores?.length > 0) {
+                              prevProceduresStr = [...data.procedAnteriores, data.procedOutro].filter(Boolean).join(', ');
+                            }
+
+                            const newDoc: PatientDocument = {
+                              id: 'doc_anamnese_' + crypto.randomUUID(),
+                              name: `Ficha Anamnese - Microagulhamento Completo - ${new Date().toLocaleDateString('pt-BR')}`,
+                              type: 'Anamnese',
+                              date: new Date().toLocaleDateString('pt-BR'),
+                              size: '0.1 MB',
+                              signed: true,
+                              signatureBase64: signatureUrl,
+                              content: data
+                            };
+
+                            const updatedDocs = [...(patientDocuments[selectedPatient.id] || []), newDoc];
+
+                            const areas = (data.areasTratadas || []).join(', ');
+                            const newTimelineItem = {
+                              id: 'tl_anamnese_' + crypto.randomUUID(),
+                              title: 'Anamnese Preenchida',
+                              date: new Date().toLocaleDateString('pt-BR'),
+                              description: `Ficha de Anamnese: Microagulhamento Completo salva e assinada digitalmente.${areas ? ` Áreas: ${areas}.` : ''}`,
                               category: 'Procedimento',
                               status: 'Concluído'
                             };
@@ -6766,13 +6875,25 @@ export default function SystemPage() {
                   </div>
                   <div>
                     <h2 className="text-[18px] font-bold text-on-surface">Gabi Almeida Estética Sistema</h2>
-                    <p className="text-[13px] text-on-surface-variant font-bold">Versão atual: 3.7.0</p>
+                    <p className="text-[13px] text-on-surface-variant font-bold">Versão atual: 3.8.0</p>
                   </div>
                 </div>
 
                 <div className="space-y-4">
                   <h3 className="text-[14px] font-bold text-primary border-b border-outline-variant/30 pb-2">Histórico de Versões (Changelog)</h3>
-                  
+
+                  <div className="bg-surface-container-lowest rounded-2xl p-4 border border-outline-variant/50 mb-4">
+                    <div className="flex justify-between items-center mb-2">
+                      <span className="font-bold text-[14px] text-on-surface">Versão 3.8.0</span>
+                      <span className="text-[11px] font-bold text-on-surface-variant px-2 py-1 bg-surface-container rounded-lg">30 Junho 2026</span>
+                    </div>
+                    <ul className="list-disc pl-5 space-y-1.5 text-[13px] text-on-surface-variant mt-3">
+                      <li><strong className="text-on-surface">Nova Ficha de Anamnese:</strong> Adicionada a Ficha de Anamnese para Microagulhamento Completo, com seções específicas para Facial, Barba, Couro Cabeludo e Sobrancelhas.</li>
+                      <li><strong className="text-on-surface">Lógica Condicional:</strong> Seções de Avaliação Capilar e de Barba/Sobrancelhas aparecem automaticamente conforme a área selecionada na ficha.</li>
+                      <li><strong className="text-on-surface">Alerta Clínico:</strong> Aviso visual de contraindicação ao uso de Isotretinoína nos últimos 6 meses.</li>
+                    </ul>
+                  </div>
+
                   <div className="bg-surface-container-lowest rounded-2xl p-4 border border-outline-variant/50 mb-4">
                     <div className="flex justify-between items-center mb-2">
                       <span className="font-bold text-[14px] text-on-surface">Versão 3.5.0</span>
