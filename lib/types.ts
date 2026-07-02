@@ -136,3 +136,50 @@ export interface CommissionLeader {
   commission: number;
 }
 
+export type StatusPlanoTratamento =
+  | 'Rascunho'
+  | 'Aguardando aprovacao'
+  | 'Aprovado'
+  | 'Em tratamento'
+  | 'Concluido'
+  | 'Cancelado';
+
+export type StatusItemPlanoTratamento =
+  | 'Pendente'
+  | 'Agendado'
+  | 'Em andamento'
+  | 'Concluido'
+  | 'Cancelado';
+
+export interface PlanoTratamentoItem {
+  id: string;
+  planoId: string;
+  servicoId?: string;
+  servicoNome: string;
+  precoUnitario: number;
+  quantidade: number;
+  desconto: number;
+  subtotal: number;
+  status: StatusItemPlanoTratamento;
+  ordem: number;
+  concluidoEm?: string;
+}
+
+export interface PlanoTratamento {
+  id: string;
+  clienteId: string;
+  clienteNome?: string;
+  titulo?: string;
+  status: StatusPlanoTratamento;
+  valorTotal: number;
+  descontoTotal: number;
+  validadeOrcamento?: string;
+  observacoes?: string;
+  aprovadoEm?: string;
+  iniciadoEm?: string;
+  concluidoEm?: string;
+  canceladoEm?: string;
+  criadoEm?: string;
+  itens: PlanoTratamentoItem[];
+}
+

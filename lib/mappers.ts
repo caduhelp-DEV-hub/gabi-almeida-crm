@@ -1,4 +1,4 @@
-import type { AppUser, Cliente, Agendamento, InventoryItem, Servico, Cobranca, Despesa } from './types';
+import type { AppUser, Cliente, Agendamento, InventoryItem, Servico, Cobranca, Despesa, PlanoTratamento, PlanoTratamentoItem } from './types';
 
 export const mapUserToFrontend = (u: any): AppUser => ({
   id: u.id,
@@ -171,6 +171,71 @@ export const mapServicoToBackend = (s: Partial<Servico>): Record<string, unknown
   if (s.preco !== undefined) res.preco = s.preco;
   if (s.duracao !== undefined) res.duracao = s.duracao;
   if (s.categoria !== undefined) res.categoria = s.categoria;
+  return res;
+};
+
+export const mapPlanoTratamentoToFrontend = (p: any): PlanoTratamento => ({
+  id: p.id,
+  clienteId: p.cliente_id,
+  clienteNome: p.clientes?.nome,
+  titulo: p.titulo,
+  status: p.status,
+  valorTotal: Number(p.valor_total || 0),
+  descontoTotal: Number(p.desconto_total || 0),
+  validadeOrcamento: p.validade_orcamento,
+  observacoes: p.observacoes,
+  aprovadoEm: p.aprovado_em,
+  iniciadoEm: p.iniciado_em,
+  concluidoEm: p.concluido_em,
+  canceladoEm: p.cancelado_em,
+  criadoEm: p.criado_em,
+  itens: (p.planos_tratamento_itens || []).map(mapPlanoTratamentoItemToFrontend)
+});
+
+export const mapPlanoTratamentoToBackend = (p: Partial<PlanoTratamento>): Record<string, unknown> => {
+  const res: Record<string, unknown> = {};
+  if (p.id !== undefined) res.id = p.id;
+  if (p.clienteId !== undefined) res.cliente_id = p.clienteId;
+  if (p.titulo !== undefined) res.titulo = p.titulo;
+  if (p.status !== undefined) res.status = p.status;
+  if (p.valorTotal !== undefined) res.valor_total = p.valorTotal;
+  if (p.descontoTotal !== undefined) res.desconto_total = p.descontoTotal;
+  if (p.validadeOrcamento !== undefined) res.validade_orcamento = p.validadeOrcamento;
+  if (p.observacoes !== undefined) res.observacoes = p.observacoes;
+  if (p.aprovadoEm !== undefined) res.aprovado_em = p.aprovadoEm;
+  if (p.iniciadoEm !== undefined) res.iniciado_em = p.iniciadoEm;
+  if (p.concluidoEm !== undefined) res.concluido_em = p.concluidoEm;
+  if (p.canceladoEm !== undefined) res.cancelado_em = p.canceladoEm;
+  return res;
+};
+
+export const mapPlanoTratamentoItemToFrontend = (i: any): PlanoTratamentoItem => ({
+  id: i.id,
+  planoId: i.plano_id,
+  servicoId: i.servico_id,
+  servicoNome: i.servico_nome,
+  precoUnitario: Number(i.preco_unitario || 0),
+  quantidade: Number(i.quantidade || 0),
+  desconto: Number(i.desconto || 0),
+  subtotal: Number(i.subtotal || 0),
+  status: i.status,
+  ordem: Number(i.ordem || 0),
+  concluidoEm: i.concluido_em
+});
+
+export const mapPlanoTratamentoItemToBackend = (i: Partial<PlanoTratamentoItem>): Record<string, unknown> => {
+  const res: Record<string, unknown> = {};
+  if (i.id !== undefined) res.id = i.id;
+  if (i.planoId !== undefined) res.plano_id = i.planoId;
+  if (i.servicoId !== undefined) res.servico_id = i.servicoId;
+  if (i.servicoNome !== undefined) res.servico_nome = i.servicoNome;
+  if (i.precoUnitario !== undefined) res.preco_unitario = i.precoUnitario;
+  if (i.quantidade !== undefined) res.quantidade = i.quantidade;
+  if (i.desconto !== undefined) res.desconto = i.desconto;
+  if (i.subtotal !== undefined) res.subtotal = i.subtotal;
+  if (i.status !== undefined) res.status = i.status;
+  if (i.ordem !== undefined) res.ordem = i.ordem;
+  if (i.concluidoEm !== undefined) res.concluido_em = i.concluidoEm;
   return res;
 };
 

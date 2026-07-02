@@ -6,6 +6,7 @@ import AnamneseLimpezaDePele from '../components/AnamneseLimpezaDePele';
 import AnamneseMicroagulhamento from '../components/AnamneseMicroagulhamento';
 import AnamneseMicroagulhamentoCompleto from '../components/AnamneseMicroagulhamentoCompleto';
 import VendaSkincareModule from '../components/VendaSkincareModule';
+import PlanoTratamentoModule from '../components/PlanoTratamentoModule';
 import DocumentViewerModal from '../components/DocumentViewerModal';
 import ChangePasswordModal from '../components/modals/ChangePasswordModal';
 import { supabase } from '../lib/supabase';
@@ -235,7 +236,7 @@ export default function SystemPage() {
   const [loginError, setLoginError] = useState('');
 
   // Sidebar tab control
-  const [currentTab, setCurrentTab] = useState<'dashboard' | 'agenda' | 'clientes' | 'financeiro' | 'usuarios' | 'cadastro-cliente' | 'servicos' | 'estoque' | 'venda-skincare' | 'comandas' | 'mensagens-pre' | 'despesas' | 'funcionarios' | 'relatorios-performance' | 'relatorios-financeiro' | 'relatorios-melhores-clientes' | 'configuracoes' | 'dados-empresa' | 'sobre'>('agenda');
+  const [currentTab, setCurrentTab] = useState<'dashboard' | 'agenda' | 'clientes' | 'financeiro' | 'usuarios' | 'cadastro-cliente' | 'servicos' | 'planos-tratamento' | 'estoque' | 'venda-skincare' | 'comandas' | 'mensagens-pre' | 'despesas' | 'funcionarios' | 'relatorios-performance' | 'relatorios-financeiro' | 'relatorios-melhores-clientes' | 'configuracoes' | 'dados-empresa' | 'sobre'>('agenda');
   const [reportsSubTab, setReportsSubTab] = useState<'pizza' | 'caixa' | 'barras'>('barras');
   const [performancePeriod, setPerformancePeriod] = useState<'mes_atual' | '30_dias' | '7_dias'>('mes_atual');
   const [performanceContabilizarDespesas, setPerformanceContabilizarDespesas] = useState(false);
@@ -394,7 +395,7 @@ export default function SystemPage() {
   const [newApptValor, setNewApptValor] = useState('');
 
   // Clientes Module Detail Tab
-  const [activePatientSubTab, setActivePatientSubTab] = useState<'evolution' | 'anamnese' | 'financeiro' | 'documentos' | 'retorno'>('evolution');
+  const [activePatientSubTab, setActivePatientSubTab] = useState<'evolution' | 'anamnese' | 'financeiro' | 'documentos' | 'retorno' | 'planos'>('evolution');
   const [selectedAnamneseType, setSelectedAnamneseType] = useState<'padrao' | 'microagulhamento' | 'microagulhamento-completo'>('padrao');
   const [retornoTime, setRetornoTime] = useState('09:00');
   const [activeLightboxImage, setActiveLightboxImage] = useState<string>('');
@@ -1934,7 +1935,7 @@ export default function SystemPage() {
               <span>Acesso seguro. Todos os dados são criptografados.</span>
             </div>
             <span>© 2026 Gabi Almeida Estética.</span>
-            <span>Desenvolvido: caduhelp-dev | Ver. 3.8.0</span>
+            <span>Desenvolvido: caduhelp-dev | Ver. 3.9.0</span>
           </div>
         </div>
       </div>
@@ -2105,7 +2106,16 @@ export default function SystemPage() {
             <span className="font-manrope text-[14px] leading-none text-primary">Serviços & Pacotes</span>
           </button>
 
-          <button 
+          <button
+            id="nav-planos-tratamento"
+            onClick={() => { setCurrentTab('planos-tratamento'); setSearchQuery(''); setIsMobileMenuOpen(false); }}
+            className={`flex items-center gap-4 px-4 py-2.5 rounded-xl transition-all duration-300 text-left ${currentTab === 'planos-tratamento' ? 'text-primary font-bold border-r-4 border-primary bg-primary/10 scale-95' : 'text-on-surface-variant hover:text-primary hover:bg-surface-container'}`}
+          >
+            <span className="material-symbols-outlined text-primary" style={{fontVariationSettings: currentTab === 'planos-tratamento' ? "'FILL' 1" : "'FILL' 0"}}>checklist</span>
+            <span className="font-manrope text-[14px] leading-none text-primary">Planos de Tratamento</span>
+          </button>
+
+          <button
             id="nav-estoque"
             onClick={() => { setCurrentTab('estoque'); setSearchQuery(''); setIsMobileMenuOpen(false); }}
             className={`flex items-center gap-4 px-4 py-2.5 rounded-xl transition-all duration-300 text-left ${currentTab === 'estoque' ? 'text-primary font-bold border-r-4 border-primary bg-primary/10 scale-95' : 'text-on-surface-variant hover:text-primary hover:bg-surface-container'}`}
@@ -3703,11 +3713,18 @@ export default function SystemPage() {
                     Documentos
                   </button>
 
-                  <button 
+                  <button
                     onClick={() => setActivePatientSubTab('retorno')}
                     className={`pb-3 font-manrope text-[13px] font-bold relative ${activePatientSubTab === 'retorno' ? 'text-primary tab-active' : 'text-on-surface-variant hover:text-primary transition-colors'}`}
                   >
                     Retorno
+                  </button>
+
+                  <button
+                    onClick={() => setActivePatientSubTab('planos')}
+                    className={`pb-3 font-manrope text-[13px] font-bold relative ${activePatientSubTab === 'planos' ? 'text-primary tab-active' : 'text-on-surface-variant hover:text-primary transition-colors'}`}
+                  >
+                    Planos de Tratamento
                   </button>
 
                 </div>
@@ -4898,6 +4915,19 @@ export default function SystemPage() {
                   </div>
                 )}
 
+                  {activePatientSubTab === 'planos' && (
+                    <div className="animate-fade-in">
+                      <PlanoTratamentoModule
+                        patients={patients}
+                        services={services}
+                        showAlert={showAlert}
+                        companyData={companyData}
+                        filterClienteId={selectedPatient.id}
+                        initialPatientId={selectedPatient.id}
+                      />
+                    </div>
+                  )}
+
               </div>
               ) : (
                 <div className="flex flex-col items-center justify-center h-full text-on-surface-variant/60 font-manrope space-y-4 pt-20">
@@ -5552,6 +5582,15 @@ export default function SystemPage() {
             selectedPatientId={selectedPatient?.id || null}
             showAlert={showAlert}
             setTransactions={setTransactions}
+          />
+        )}
+
+        {currentTab === 'planos-tratamento' && (
+          <PlanoTratamentoModule
+            patients={patients}
+            services={services}
+            showAlert={showAlert}
+            companyData={companyData}
           />
         )}
 
@@ -6875,12 +6914,23 @@ export default function SystemPage() {
                   </div>
                   <div>
                     <h2 className="text-[18px] font-bold text-on-surface">Gabi Almeida Estética Sistema</h2>
-                    <p className="text-[13px] text-on-surface-variant font-bold">Versão atual: 3.8.0</p>
+                    <p className="text-[13px] text-on-surface-variant font-bold">Versão atual: 3.9.0</p>
                   </div>
                 </div>
 
                 <div className="space-y-4">
                   <h3 className="text-[14px] font-bold text-primary border-b border-outline-variant/30 pb-2">Histórico de Versões (Changelog)</h3>
+
+                  <div className="bg-surface-container-lowest rounded-2xl p-4 border border-outline-variant/50 mb-4">
+                    <div className="flex justify-between items-center mb-2">
+                      <span className="font-bold text-[14px] text-on-surface">Versão 3.9.0</span>
+                      <span className="text-[11px] font-bold text-on-surface-variant px-2 py-1 bg-surface-container rounded-lg">02 Julho 2026</span>
+                    </div>
+                    <ul className="list-disc pl-5 space-y-1.5 text-[13px] text-on-surface-variant mt-3">
+                      <li><strong className="text-on-surface">Novo Módulo Planos de Tratamento:</strong> monte orçamentos com os serviços do cliente, exporte em PDF, aprove e acompanhe a execução de cada item até a conclusão.</li>
+                      <li><strong className="text-on-surface">Integração com o Prontuário:</strong> nova aba "Planos de Tratamento" dentro do prontuário do cliente, com criação rápida já vinculada ao cliente selecionado.</li>
+                    </ul>
+                  </div>
 
                   <div className="bg-surface-container-lowest rounded-2xl p-4 border border-outline-variant/50 mb-4">
                     <div className="flex justify-between items-center mb-2">
