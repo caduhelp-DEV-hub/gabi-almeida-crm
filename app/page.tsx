@@ -5591,6 +5591,11 @@ export default function SystemPage() {
             services={services}
             showAlert={showAlert}
             companyData={companyData}
+            onPlanoCriado={(clienteId) => {
+              setSelectedPatientId(clienteId);
+              setCurrentTab('clientes');
+              setActivePatientSubTab('planos');
+            }}
           />
         )}
 

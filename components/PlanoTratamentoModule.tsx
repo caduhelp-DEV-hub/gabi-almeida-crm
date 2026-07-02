@@ -20,6 +20,7 @@ interface PlanoTratamentoModuleProps {
   companyData: CompanyData;
   filterClienteId?: string;
   initialPatientId?: string | null;
+  onPlanoCriado?: (clienteId: string) => void;
 }
 
 type ViewMode = 'lista' | 'novo' | 'editar' | 'detalhe';
@@ -63,7 +64,8 @@ export default function PlanoTratamentoModule({
   showAlert,
   companyData,
   filterClienteId,
-  initialPatientId
+  initialPatientId,
+  onPlanoCriado
 }: PlanoTratamentoModuleProps) {
   const [planos, setPlanos] = useState<PlanoTratamento[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -155,39 +157,43 @@ export default function PlanoTratamentoModule({
     const valorTotal = plano.itens.reduce((acc, i) => acc + i.subtotal, 0);
     const descontoTotal = plano.itens.reduce((acc, i) => acc + i.desconto, 0);
 
+    // Ids locais (novo plano '', itens 'temp_...') nao sao uuids validos -- nunca devem ir para o insert.
+    const montarItensPayload = (planoId: string) => plano.itens.map((item, idx) => {
+      const payload = mapPlanoTratamentoItemToBackend({ ...item, ordem: idx });
+      delete payload.id;
+      return { ...payload, plano_id: planoId };
+    });
+
     try {
       if (plano.id) {
+        const planoPayload = mapPlanoTratamentoToBackend({ ...plano, valorTotal, descontoTotal });
+        delete planoPayload.id;
         const { error: updError } = await supabase
           .from('planos_tratamento')
-          .update(mapPlanoTratamentoToBackend({ ...plano, valorTotal, descontoTotal }))
+          .update(planoPayload)
           .eq('id', plano.id);
         if (updError) throw updError;
 
         await supabase.from('planos_tratamento_itens').delete().eq('plano_id', plano.id);
-        const itensPayload = plano.itens.map((item, idx) => ({
-          ...mapPlanoTratamentoItemToBackend({ ...item, ordem: idx }),
-          plano_id: plano.id
-        }));
-        const { error: itensError } = await supabase.from('planos_tratamento_itens').insert(itensPayload);
+        const { error: itensError } = await supabase.from('planos_tratamento_itens').insert(montarItensPayload(plano.id));
         if (itensError) throw itensError;
 
         showAlert('Plano de tratamento atualizado com sucesso!');
       } else {
+        const planoPayload = mapPlanoTratamentoToBackend({ ...plano, valorTotal, descontoTotal, status: 'Rascunho' });
+        delete planoPayload.id;
         const { data: planoResult, error: insError } = await supabase
           .from('planos_tratamento')
-          .insert([mapPlanoTratamentoToBackend({ ...plano, valorTotal, descontoTotal, status: 'Rascunho' })])
+          .insert([planoPayload])
           .select();
         if (insError) throw insError;
 
         const novoPlanoId = planoResult?.[0]?.id;
-        const itensPayload = plano.itens.map((item, idx) => ({
-          ...mapPlanoTratamentoItemToBackend({ ...item, ordem: idx }),
-          plano_id: novoPlanoId
-        }));
-        const { error: itensError } = await supabase.from('planos_tratamento_itens').insert(itensPayload);
+        const { error: itensError } = await supabase.from('planos_tratamento_itens').insert(montarItensPayload(novoPlanoId));
         if (itensError) throw itensError;
 
         showAlert('Plano de tratamento criado com sucesso!');
+        if (!filterClienteId) onPlanoCriado?.(plano.clienteId);
       }
 
       await fetchPlanos();
@@ -258,6 +264,24 @@ export default function PlanoTratamentoModule({
     gerarPdfPlano(plano, cliente, companyData);
   };
 
+  const handleExcluirPlano = async (plano: PlanoTratamento) => {
+    if (!window.confirm(`Excluir o plano de tratamento de ${plano.clienteNome || 'cliente'}? Essa ação não pode ser desfeita.`)) return;
+    try {
+      const { error } = await supabase.from('planos_tratamento').delete().eq('id', plano.id);
+      if (error) throw error;
+
+      setPlanos(prev => prev.filter(p => p.id !== plano.id));
+      if (planoAtivo?.id === plano.id) {
+        setViewMode('lista');
+        setPlanoAtivo(null);
+      }
+      showAlert('Plano de tratamento excluído com sucesso!');
+    } catch (error: any) {
+      console.error('Erro ao excluir plano de tratamento:', error);
+      showAlert(`Erro ao excluir plano de tratamento: ${error.message}`);
+    }
+  };
+
   return (
     <section className="flex-1 overflow-y-auto custom-scrollbar bg-[#f7f3f0] p-6 md:p-8 relative animate-fade-in">
       <div className="max-w-7xl mx-auto space-y-8">
@@ -281,6 +305,7 @@ export default function PlanoTratamentoModule({
             onEditarPlano={abrirEdicao}
             onExportarPdf={handleExportarPdf}
             onIniciarTratamento={(p) => handleMudarStatusPlano(p, 'Em tratamento')}
+            onExcluirPlano={handleExcluirPlano}
           />
         )}
 
@@ -289,6 +314,7 @@ export default function PlanoTratamentoModule({
             plano={planoAtivo}
             patients={patients}
             services={services}
+            clienteFixo={!!filterClienteId}
             onCancelar={() => { setViewMode('lista'); setPlanoAtivo(null); }}
             onSalvar={handleSalvarPlano}
           />
@@ -303,6 +329,7 @@ export default function PlanoTratamentoModule({
             onMudarStatusPlano={(status) => handleMudarStatusPlano(planoAtivo, status)}
             onMudarStatusItem={(item, status) => handleMudarStatusItem(planoAtivo, item, status)}
             onExportarPdf={() => handleExportarPdf(planoAtivo)}
+            onExcluir={() => handleExcluirPlano(planoAtivo)}
           />
         )}
       </div>
@@ -331,13 +358,14 @@ interface ListaPlanosProps {
   onEditarPlano: (p: PlanoTratamento) => void;
   onExportarPdf: (p: PlanoTratamento) => void;
   onIniciarTratamento: (p: PlanoTratamento) => void;
+  onExcluirPlano: (p: PlanoTratamento) => void;
 }
 
 function ListaPlanos({
   planos, planosAtivos, planosConcluidos, isLoading, filterClienteId,
   buscaCliente, setBuscaCliente, filtroStatus, setFiltroStatus,
   filtroDataInicio, setFiltroDataInicio, filtroDataFim, setFiltroDataFim,
-  onNovoPlano, onVerPlano, onEditarPlano, onExportarPdf, onIniciarTratamento
+  onNovoPlano, onVerPlano, onEditarPlano, onExportarPdf, onIniciarTratamento, onExcluirPlano
 }: ListaPlanosProps) {
   return (
     <>
@@ -439,6 +467,9 @@ function ListaPlanos({
                             <span className="material-symbols-outlined text-[18px]">play_circle</span>
                           </button>
                         )}
+                        <button onClick={() => onExcluirPlano(plano)} title="Excluir" className="p-2 rounded-lg hover:bg-error/10 hover:text-error text-on-surface-variant">
+                          <span className="material-symbols-outlined text-[18px]">delete</span>
+                        </button>
                       </div>
                     </td>
                   </tr>
@@ -458,11 +489,12 @@ interface FormularioPlanoProps {
   plano: PlanoTratamento;
   patients: Cliente[];
   services: Servico[];
+  clienteFixo?: boolean;
   onCancelar: () => void;
   onSalvar: (plano: PlanoTratamento) => void;
 }
 
-function FormularioPlano({ plano, patients, services, onCancelar, onSalvar }: FormularioPlanoProps) {
+function FormularioPlano({ plano, patients, services, clienteFixo, onCancelar, onSalvar }: FormularioPlanoProps) {
   const [clienteId, setClienteId] = useState(plano.clienteId);
   const [titulo, setTitulo] = useState(plano.titulo || '');
   const [observacoes, setObservacoes] = useState(plano.observacoes || '');
@@ -508,14 +540,21 @@ function FormularioPlano({ plano, patients, services, onCancelar, onSalvar }: Fo
 
       <div className="bg-white-pure rounded-3xl p-6 border border-outline-variant shadow-sm space-y-4">
         <label className="block text-[13px] font-bold text-on-surface-variant uppercase tracking-wider">1. Cliente</label>
-        <select
-          value={clienteId}
-          onChange={(e) => setClienteId(e.target.value)}
-          className="w-full p-4 bg-surface rounded-xl border border-outline-variant/60 focus:outline-none focus:ring-1 focus:ring-primary/40 text-[14px] font-medium"
-        >
-          <option value="">-- Selecione um cliente --</option>
-          {patients.map(p => <option key={p.id} value={p.id}>{p.nome}</option>)}
-        </select>
+        {clienteFixo ? (
+          <div className="w-full p-4 bg-surface rounded-xl border border-outline-variant/60 text-[14px] font-bold text-on-surface flex items-center gap-2">
+            <span className="material-symbols-outlined text-primary text-[18px]">person</span>
+            {patients.find(p => p.id === clienteId)?.nome || 'Cliente do prontuário'}
+          </div>
+        ) : (
+          <select
+            value={clienteId}
+            onChange={(e) => setClienteId(e.target.value)}
+            className="w-full p-4 bg-surface rounded-xl border border-outline-variant/60 focus:outline-none focus:ring-1 focus:ring-primary/40 text-[14px] font-medium"
+          >
+            <option value="">-- Selecione um cliente --</option>
+            {patients.map(p => <option key={p.id} value={p.id}>{p.nome}</option>)}
+          </select>
+        )}
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
@@ -610,9 +649,10 @@ interface DetalhePlanoProps {
   onMudarStatusPlano: (status: StatusPlanoTratamento) => void;
   onMudarStatusItem: (item: PlanoTratamentoItem, status: StatusItemPlanoTratamento) => void;
   onExportarPdf: () => void;
+  onExcluir: () => void;
 }
 
-function DetalhePlano({ plano, cliente, onVoltar, onEditar, onMudarStatusPlano, onMudarStatusItem, onExportarPdf }: DetalhePlanoProps) {
+function DetalhePlano({ plano, cliente, onVoltar, onEditar, onMudarStatusPlano, onMudarStatusItem, onExportarPdf, onExcluir }: DetalhePlanoProps) {
   const totalItens = plano.itens.length;
   const concluidos = plano.itens.filter(i => i.status === 'Concluido').length;
   const progresso = totalItens > 0 ? Math.round((concluidos / totalItens) * 100) : 0;
@@ -666,6 +706,9 @@ function DetalhePlano({ plano, cliente, onVoltar, onEditar, onMudarStatusPlano, 
           <button onClick={onEditar} className="px-4 py-2.5 rounded-xl font-bold text-[13px] border border-outline-variant text-on-surface-variant hover:bg-surface-container">Editar</button>
           <button onClick={onExportarPdf} className="px-4 py-2.5 rounded-xl font-bold text-[13px] border border-outline-variant text-on-surface-variant hover:bg-surface-container flex items-center gap-1.5">
             <span className="material-symbols-outlined text-[16px]">picture_as_pdf</span> Exportar PDF
+          </button>
+          <button onClick={onExcluir} className="px-4 py-2.5 rounded-xl font-bold text-[13px] border border-error text-error hover:bg-error/10 flex items-center gap-1.5">
+            <span className="material-symbols-outlined text-[16px]">delete</span> Excluir
           </button>
         </div>
       </div>
