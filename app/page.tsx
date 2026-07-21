@@ -1935,7 +1935,7 @@ export default function SystemPage() {
               <span>Acesso seguro. Todos os dados são criptografados.</span>
             </div>
             <span>© 2026 Gabi Almeida Estética.</span>
-            <span>Desenvolvido: caduhelp-dev | Ver. 3.9.0</span>
+            <span>Desenvolvido: caduhelp-dev | Ver. 3.10.0</span>
           </div>
         </div>
       </div>
@@ -6919,12 +6919,22 @@ export default function SystemPage() {
                   </div>
                   <div>
                     <h2 className="text-[18px] font-bold text-on-surface">Gabi Almeida Estética Sistema</h2>
-                    <p className="text-[13px] text-on-surface-variant font-bold">Versão atual: 3.9.0</p>
+                    <p className="text-[13px] text-on-surface-variant font-bold">Versão atual: 3.10.0</p>
                   </div>
                 </div>
 
                 <div className="space-y-4">
                   <h3 className="text-[14px] font-bold text-primary border-b border-outline-variant/30 pb-2">Histórico de Versões (Changelog)</h3>
+
+                  <div className="bg-surface-container-lowest rounded-2xl p-4 border border-outline-variant/50 mb-4">
+                    <div className="flex justify-between items-center mb-2">
+                      <span className="font-bold text-[14px] text-on-surface">Versão 3.10.0</span>
+                      <span className="text-[11px] font-bold text-on-surface-variant px-2 py-1 bg-surface-container rounded-lg">20 Julho 2026</span>
+                    </div>
+                    <ul className="list-disc pl-5 space-y-1.5 text-[13px] text-on-surface-variant mt-3">
+                      <li><strong className="text-on-surface">Manutenção Preventiva do Banco de Dados:</strong> configurada rotina automática interna que mantém o banco sempre ativo, evitando pausas por inatividade.</li>
+                    </ul>
+                  </div>
 
                   <div className="bg-surface-container-lowest rounded-2xl p-4 border border-outline-variant/50 mb-4">
                     <div className="flex justify-between items-center mb-2">

@@ -2,6 +2,21 @@
 
 Todas as mudanças notáveis neste projeto serão documentadas neste arquivo.
 
+## [3.10.0] - 2026-07-20
+### Adicionado
+- Manutenção Preventiva do Banco de Dados: rotina automática interna (cron a cada 6 dias) que mantém o banco de dados sempre ativo, evitando pausas por inatividade no plano gratuito do Supabase.
+
+## [3.9.0] - 2026-07-02
+### Adicionado
+- Módulo Planos de Tratamento: orçamentos compostos por serviços, com aprovação, acompanhamento de execução por item e exportação em PDF.
+- Nova aba "Planos de Tratamento" dentro do prontuário do cliente, com criação já vinculada ao cliente selecionado.
+
+## [3.8.0] - 2026-06-30
+### Adicionado
+- Ficha de Anamnese para Microagulhamento Completo, com seções específicas para Facial, Barba, Couro Cabeludo e Sobrancelhas.
+- Lógica condicional: seções de Avaliação Capilar e de Barba/Sobrancelhas aparecem automaticamente conforme a área selecionada na ficha.
+- Alerta clínico de contraindicação ao uso de Isotretinoína nos últimos 6 meses.
+
 ## [3.7.0] - 2026-06-23
 ### Adicionado
 - Ficha de Anamnese: Novo formulário específico para procedimentos de Microagulhamento com seções dinâmicas para Avaliação Capilar e de Barba/Sobrancelhas.
