@@ -1,14 +1,16 @@
 'use client';
+import dynamic from 'next/dynamic';
+import { DashboardProvider } from '@/contexts/DashboardContext';
 
 import React, {useState, useEffect, useRef, useCallback} from 'react';
 import Image from 'next/image';
-import AnamneseLimpezaDePele from '../components/AnamneseLimpezaDePele';
-import AnamneseMicroagulhamento from '../components/AnamneseMicroagulhamento';
-import AnamneseMicroagulhamentoCompleto from '../components/AnamneseMicroagulhamentoCompleto';
-import VendaSkincareModule from '../components/VendaSkincareModule';
-import PlanoTratamentoModule from '../components/PlanoTratamentoModule';
-import DocumentViewerModal from '../components/DocumentViewerModal';
-import ChangePasswordModal from '../components/modals/ChangePasswordModal';
+const AnamneseLimpezaDePele = dynamic(() => import('../components/AnamneseLimpezaDePele'), { ssr: false });
+const AnamneseMicroagulhamento = dynamic(() => import('../components/AnamneseMicroagulhamento'), { ssr: false });
+const AnamneseMicroagulhamentoCompleto = dynamic(() => import('../components/AnamneseMicroagulhamentoCompleto'), { ssr: false });
+const VendaSkincareModule = dynamic(() => import('../components/VendaSkincareModule'), { ssr: false });
+const PlanoTratamentoModule = dynamic(() => import('../components/PlanoTratamentoModule'), { ssr: false });
+const DocumentViewerModal = dynamic(() => import('../components/DocumentViewerModal'), { ssr: false });
+const ChangePasswordModal = dynamic(() => import('../components/modals/ChangePasswordModal'), { ssr: false });
 import { supabase } from '../lib/supabase';
 import {
   mapUserToFrontend,
@@ -1873,6 +1875,227 @@ export default function SystemPage() {
     );
   }
 
+  const dashboardState = {
+
+
+
+
+    dialogState,
+    setDialogState,
+    isAuthenticated,
+    setIsAuthenticated,
+    isInitialLoading,
+    setIsInitialLoading,
+    currentUser,
+    setCurrentUser,
+    appUsers,
+    setAppUsers,
+    loginUsername,
+    setLoginUsername,
+    loginPassword,
+    setLoginPassword,
+    loginError,
+    setLoginError,
+    currentTab,
+    setCurrentTab,
+    reportsSubTab,
+    setReportsSubTab,
+    performancePeriod,
+    setPerformancePeriod,
+    performanceContabilizarDespesas,
+    setPerformanceContabilizarDespesas,
+    selectedCashFlowDay,
+    setSelectedCashFlowDay,
+    despesas,
+    setDespesas,
+    isDespesaModalOpen,
+    setIsDespesaModalOpen,
+    newDespesa,
+    setNewDespesa,
+    dashboardPeriod,
+    setDashboardPeriod,
+    editingTimelineItemId,
+    setEditingTimelineItemId,
+    editingTimelineText,
+    setEditingTimelineText,
+    clearedNotifications,
+    setClearedNotifications,
+    mensagensPredefinidas,
+    setMensagensPredefinidas,
+    isMsgModalOpen,
+    setIsMsgModalOpen,
+    editingMsg,
+    setEditingMsg,
+    agendaView,
+    setAgendaView,
+    isNewUserModalOpen,
+    setIsNewUserModalOpen,
+    newUserAvatarUrl,
+    setNewUserAvatarUrl,
+    newUserAvatarUploading,
+    setNewUserAvatarUploading,
+    editingUser,
+    setEditingUser,
+    editingAppointment,
+    setEditingAppointment,
+    isProfileMenuOpen,
+    setIsProfileMenuOpen,
+    isEditProfileModalOpen,
+    setIsEditProfileModalOpen,
+    isChangePasswordModalOpen,
+    setIsChangePasswordModalOpen,
+    isPatientModalOpen,
+    setIsPatientModalOpen,
+    editingPatientId,
+    setEditingPatientId,
+    newPatAvatar,
+    setNewPatAvatar,
+    newApptStatus,
+    setNewApptStatus,
+    isServiceModalOpen,
+    setIsServiceModalOpen,
+    editingService,
+    setEditingService,
+    isInventoryModalOpen,
+    setIsInventoryModalOpen,
+    editingInventory,
+    setEditingInventory,
+    isTransactionModalOpen,
+    setIsTransactionModalOpen,
+    editingCobranca,
+    setEditingTransaction,
+    isClientInteractModalOpen,
+    setIsClientInteractModalOpen,
+    interactClient,
+    setInteractClient,
+    interactAppointmentId,
+    setInteractAppointmentId,
+    isWhatsAppSubmenuOpen,
+    setIsWhatsAppSubmenuOpen,
+    isClientDetailsWhatsAppOpen,
+    setIsClientDetailsWhatsAppOpen,
+    patientFinancials,
+    setPatientFinancials,
+    patientDocuments,
+    setPatientDocuments,
+    viewingDocument,
+    setViewingDocument,
+    primaryRevenueTarget,
+    setPrimaryRevenueTarget,
+    agendaNavDate,
+    setAgendaNavDate,
+    companyData,
+    setCompanyData,
+    currentProfessional,
+    setCurrentProfessional,
+    isProfDropdownOpen,
+    setIsProfDropdownOpen,
+    isAlertNotificationOpen,
+    setIsAlertNotificationOpen,
+    isMobileMenuOpen,
+    setIsMobileMenuOpen,
+    isMobileSearchOpen,
+    setIsMobileSearchOpen,
+    aiAdvice,
+    setAiAdvice,
+    aiCustomInput,
+    setAiCustomInput,
+    aiLoading,
+    setAiLoading,
+    apiKeyConfigured,
+    setApiKeyConfigured,
+    selectedProfessional,
+    setSelectedProfessional,
+    selectedCategoryFilter,
+    setSelectedCategoryFilter,
+    selectedStatusFilter,
+    setSelectedStatusFilter,
+    isDrawing,
+    setIsDrawing,
+    signatureSaved,
+    setSignatureSaved,
+    isNewAppointmentOpen,
+    setIsNewAppointmentOpen,
+    isConflictModalOpen,
+    setIsConflictModalOpen,
+    conflictPendingData,
+    setConflictPendingData,
+    conflictPassword,
+    setConflictPassword,
+    conflictError,
+    setConflictError,
+    isValidatingConflict,
+    setIsValidatingConflict,
+    newApptPatient,
+    setNewApptPatient,
+    newApptProcedure,
+    setNewApptProcedure,
+    newApptProfessional,
+    setNewApptProfessional,
+    newApptTime,
+    setNewApptTime,
+    newApptDate,
+    setNewApptDate,
+    newApptCategory,
+    setNewApptCategory,
+    newApptValor,
+    setNewApptValor,
+    activePatientSubTab,
+    setActivePatientSubTab,
+    selectedAnamneseType,
+    setSelectedAnamneseType,
+    retornoTime,
+    setRetornoTime,
+    activeLightboxImage,
+    setActiveLightboxImage,
+    isComparing,
+    setIsComparing,
+    compareSelectedIds,
+    setCompareSelectedIds,
+    pendingEvolutionPhoto,
+    setPendingEvolutionPhoto,
+    financialTimeframe,
+    setFinancialTimeframe,
+    hoveredCategory,
+    setHoveredCategory,
+    hoveredDay,
+    setHoveredDay,
+    patients,
+    setPatients,
+    selectedPatientId,
+    setSelectedPatientId,
+    appointments,
+    setAppointments,
+    transactions,
+    setTransactions,
+    services,
+    setServices,
+    inventory,
+    setInventory,
+    searchQuery,
+    setSearchQuery,
+    clientesSearchQuery,
+    setClientesSearchQuery,
+    clientesSortOrder,
+    setClientesSortOrder,
+    listSearchQuery,
+    setListSearchQuery,
+    listSortOrder,
+    setListSortOrder,
+
+    handleScheduleReturn,
+    handleAddNewAgendamento,
+    handleConfirmConflict,
+
+    handleQueryAI,
+    handleLogin,
+    handleLogout,
+    getServiceDuration,
+    getProcedureStyles,
+    showAlert,
+    showConfirm
+  };
+
   if (!isAuthenticated) {
     return (
       <div className="bg-surface-container-lowest text-on-surface font-sans h-[100dvh] flex flex-col items-center justify-center p-4 relative" style={{backgroundImage: 'radial-gradient(circle at top, rgba(163,34,216,0.05), transparent 60%)'}}>
@@ -1935,7 +2158,7 @@ export default function SystemPage() {
               <span>Acesso seguro. Todos os dados são criptografados.</span>
             </div>
             <span>© 2026 Gabi Almeida Estética.</span>
-            <span>Desenvolvido: caduhelp-dev | Ver. 3.10.0</span>
+            <span>Desenvolvido: caduhelp-dev | Ver. 3.11.0</span>
           </div>
         </div>
       </div>
@@ -2309,7 +2532,7 @@ export default function SystemPage() {
             <div className="flex items-center gap-4 text-on-surface-variant">
               
               {/* Notifications Dropdown trigger */}
-              <div className="relative hidden sm:block">
+              <div className="relative block">
                 <button 
                   id="notif-bell"
                   onClick={() => setIsAlertNotificationOpen(!isAlertNotificationOpen)}
@@ -6919,12 +7142,24 @@ export default function SystemPage() {
                   </div>
                   <div>
                     <h2 className="text-[18px] font-bold text-on-surface">Gabi Almeida Estética Sistema</h2>
-                    <p className="text-[13px] text-on-surface-variant font-bold">Versão atual: 3.10.0</p>
+                    <p className="text-[13px] text-on-surface-variant font-bold">Versão atual: 3.11.0</p>
                   </div>
                 </div>
 
                 <div className="space-y-4">
                   <h3 className="text-[14px] font-bold text-primary border-b border-outline-variant/30 pb-2">Histórico de Versões (Changelog)</h3>
+
+                  <div className="bg-surface-container-lowest rounded-2xl p-4 border border-outline-variant/50 mb-4">
+                    <div className="flex justify-between items-center mb-2">
+                      <span className="font-bold text-[14px] text-on-surface">Versão 3.11.0</span>
+                      <span className="text-[11px] font-bold text-on-surface-variant px-2 py-1 bg-surface-container rounded-lg">13 Agosto 2026</span>
+                    </div>
+                    <ul className="list-disc pl-5 space-y-1.5 text-[13px] text-on-surface-variant mt-3">
+                      <li><strong className="text-on-surface">Performance Otimizada:</strong> Redução significativa do pacote de carregamento inicial (First Load JS) utilizando Dynamic Imports e Code Splitting nos modais pesados.</li>
+                      <li><strong className="text-on-surface">Limpeza Profunda:</strong> Remoção de 18 componentes órfãos e dependências inativas da arquitetura antiga.</li>
+                      <li><strong className="text-on-surface">Layout Responsivo:</strong> Resolução de bugs no cabeçalho mobile identificados pela automação E2E.</li>
+                    </ul>
+                  </div>
 
                   <div className="bg-surface-container-lowest rounded-2xl p-4 border border-outline-variant/50 mb-4">
                     <div className="flex justify-between items-center mb-2">
