@@ -2,6 +2,17 @@
 
 Todas as mudanças notáveis neste projeto serão documentadas neste arquivo.
 
+## [3.12.0] - 2026-08-23
+### Segurança
+- Trava de tentativas no login: 5 falhas por IP+usuário e 20 por IP em janela de 15 minutos, contando apenas tentativas que falham e liberando no acesso bem-sucedido (`lib/rateLimit.ts`).
+- A leitura da tabela `users` pelo frontend passou a usar colunas explícitas (`USER_PUBLIC_COLUMNS`), eliminando o envio de `password_hash` ao navegador.
+- Preparado o acesso autenticado ao banco: o navegador passa a apresentar um token de curta duração assinado pelo servidor (`lib/supabaseToken.ts`, rota `/api/auth/db-token`), em vez da chave pública.
+- Nova migration `20260823000000_rls_authenticated.sql` restringe todas as policies a `authenticated` e revoga o acesso da role `anon`. **Só deve ser aplicada após configurar `SUPABASE_JWT_SECRET`** — ver instruções no topo do arquivo.
+
+### Alterado
+- Componentes extraídos na v3.11.0 e nunca importados foram ligados ao app: Sidebar, DespesaModal, ServicePieChart e CustomSearchableSelect.
+- `app/page.tsx` reduzido de 8882 para ~8280 linhas.
+
 ## [3.11.0] - 2026-08-13
 ### Alterado
 - Performance Otimizada: redução significativa do pacote de carregamento inicial (First Load JS) com Dynamic Imports e Code Splitting nos modais pesados.

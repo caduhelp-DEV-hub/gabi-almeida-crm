@@ -1,5 +1,13 @@
 import type { AppUser, Cliente, Agendamento, InventoryItem, Servico, Cobranca, Despesa, PlanoTratamento, PlanoTratamentoItem } from './types';
 
+/**
+ * Colunas de `users` que o frontend pode ler.
+ * Nunca use select('*') nessa tabela: ela contem `password_hash`.
+ * Mantenha em sincronia com mapUserToFrontend abaixo.
+ */
+export const USER_PUBLIC_COLUMNS =
+  'id, name, username, role, status, specialty, phone, avatar, commission_rate, permissions, created_at';
+
 export const mapUserToFrontend = (u: any): AppUser => ({
   id: u.id,
   name: u.name,

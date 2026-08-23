@@ -14,7 +14,7 @@ import CustomSearchableSelect from '../components/ui/CustomSearchableSelect';
 import ServicePieChart from '../components/dashboard/ServicePieChart';
 import DespesaModal from '../components/modals/DespesaModal';
 import Sidebar from '../components/layout/Sidebar';
-import { supabase } from '../lib/supabase';
+import { supabase, refreshDbAuth, clearDbToken } from '../lib/supabase';
 import {
   mapUserToFrontend,
   mapUserToBackend,
@@ -28,7 +28,8 @@ import {
   mapServicoToBackend,
   mapCobrancaToFrontend,
   mapCobrancaToBackend,
-  getAppointmentColorClass
+  getAppointmentColorClass,
+  USER_PUBLIC_COLUMNS
 } from '../lib/mappers';
 import type {
   TimelineItem,
@@ -1106,7 +1107,7 @@ export default function SystemPage() {
         supabase.from('cobrancas').select('*'),
         supabase.from('servicos').select('*'),
         supabase.from('inventory').select('*'),
-        supabase.from('users').select('*'),
+        supabase.from('users').select(USER_PUBLIC_COLUMNS),
         supabase.from('mensagens_predefinidas').select('*').order('created_at', { ascending: false }),
         supabase.from('despesas').select('*').order('data', { ascending: false }),
         supabase.from('configuracoes_empresa').select('*').limit(1)
@@ -1165,8 +1166,6 @@ export default function SystemPage() {
       setIsInitialLoading(false);
     };
 
-    fetchInitial();
-
     // Setup Realtime subscriptions for auto-sync
     const dbChangesChannel = supabase
       .channel('schema-db-changes')
@@ -1222,11 +1221,20 @@ export default function SystemPage() {
         supabase.from('inventory').select('*').then((res: any) => { const data = res.data; if (data) setInventory(data.map(mapInventoryToFrontend)); });
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'users' }, () => {
-        supabase.from('users').select('*').then((res: any) => { const data = res.data; if (data) setAppUsers(data.map(mapUserToFrontend)); });
-      })
-      .subscribe();
+        supabase.from('users').select(USER_PUBLIC_COLUMNS).then((res: any) => { const data = res.data; if (data) setAppUsers(data.map(mapUserToFrontend)); });
+      });
+
+    // O Realtime so le o token de acesso ao abrir a conexao, entao aplicamos
+    // o token antes de assinar os canais. As leituras REST pegam o token sozinhas.
+    let cancelled = false;
+    refreshDbAuth().then(() => {
+      if (cancelled) return;
+      fetchInitial();
+      dbChangesChannel.subscribe();
+    });
 
     return () => {
+      cancelled = true;
       supabase.removeChannel(dbChangesChannel);
     };
   }, [isAuthenticated]);
@@ -1720,11 +1728,13 @@ export default function SystemPage() {
   const handleLogout = async () => {
     try {
       await fetch('/api/auth/session', { method: 'DELETE' });
+      clearDbToken();
       setCurrentUser(null);
       setIsAuthenticated(false);
     } catch (err) {
       console.error('Logout error:', err);
       // Fallback local clearing
+      clearDbToken();
       setCurrentUser(null);
       setIsAuthenticated(false);
     }
@@ -1804,7 +1814,7 @@ export default function SystemPage() {
               <span>Acesso seguro. Todos os dados são criptografados.</span>
             </div>
             <span>© 2026 Gabi Almeida Estética.</span>
-            <span>Desenvolvido: caduhelp-dev | Ver. 3.11.0</span>
+            <span>Desenvolvido: caduhelp-dev | Ver. 3.12.0</span>
           </div>
         </div>
       </div>
@@ -6538,12 +6548,25 @@ export default function SystemPage() {
                   </div>
                   <div>
                     <h2 className="text-[18px] font-bold text-on-surface">Gabi Almeida Estética Sistema</h2>
-                    <p className="text-[13px] text-on-surface-variant font-bold">Versão atual: 3.11.0</p>
+                    <p className="text-[13px] text-on-surface-variant font-bold">Versão atual: 3.12.0</p>
                   </div>
                 </div>
 
                 <div className="space-y-4">
                   <h3 className="text-[14px] font-bold text-primary border-b border-outline-variant/30 pb-2">Histórico de Versões (Changelog)</h3>
+
+                  <div className="bg-surface-container-lowest rounded-2xl p-4 border border-outline-variant/50 mb-4">
+                    <div className="flex justify-between items-center mb-2">
+                      <span className="font-bold text-[14px] text-on-surface">Versão 3.12.0</span>
+                      <span className="text-[11px] font-bold text-on-surface-variant px-2 py-1 bg-surface-container rounded-lg">23 Agosto 2026</span>
+                    </div>
+                    <ul className="list-disc pl-5 space-y-1.5 text-[13px] text-on-surface-variant mt-3">
+                      <li><strong className="text-on-surface">Proteção de Acesso:</strong> o login agora bloqueia tentativas repetidas de adivinhar senha, liberando automaticamente após alguns minutos.</li>
+                      <li><strong className="text-on-surface">Dados Sensíveis Protegidos:</strong> a lista de usuários deixou de trafegar as senhas criptografadas para o navegador.</li>
+                      <li><strong className="text-on-surface">Acesso ao Banco Blindado:</strong> preparada a troca da chave pública por um acesso individual e temporário, válido apenas para quem está logado.</li>
+                      <li><strong className="text-on-surface">Organização Interna:</strong> componentes de menu, gráficos e modais reorganizados em arquivos próprios, reduzindo o arquivo principal do sistema.</li>
+                    </ul>
+                  </div>
 
                   <div className="bg-surface-container-lowest rounded-2xl p-4 border border-outline-variant/50 mb-4">
                     <div className="flex justify-between items-center mb-2">
