@@ -1,6 +1,5 @@
 'use client';
 import dynamic from 'next/dynamic';
-import { DashboardProvider } from '@/contexts/DashboardContext';
 
 import React, {useState, useEffect, useRef, useCallback} from 'react';
 import Image from 'next/image';
@@ -11,6 +10,10 @@ const VendaSkincareModule = dynamic(() => import('../components/VendaSkincareMod
 const PlanoTratamentoModule = dynamic(() => import('../components/PlanoTratamentoModule'), { ssr: false });
 const DocumentViewerModal = dynamic(() => import('../components/DocumentViewerModal'), { ssr: false });
 const ChangePasswordModal = dynamic(() => import('../components/modals/ChangePasswordModal'), { ssr: false });
+import CustomSearchableSelect from '../components/ui/CustomSearchableSelect';
+import ServicePieChart from '../components/dashboard/ServicePieChart';
+import DespesaModal from '../components/modals/DespesaModal';
+import Sidebar from '../components/layout/Sidebar';
 import { supabase } from '../lib/supabase';
 import {
   mapUserToFrontend,
@@ -36,7 +39,8 @@ import type {
   InventoryItem,
   Cobranca,
   CommissionLeader,
-  AppUser
+  AppUser,
+  SystemTab
 } from '../lib/types';
 
 const checkTimeOverlap = (time1: string, dur1: number, time2: string, dur2: number) => {
@@ -83,143 +87,6 @@ const getProcedureStyles = (procName: string) => {
   };
 };
 
-const CustomSearchableSelect = ({ value, onChange, options, placeholder }: { value: string, onChange: (v: string) => void, options: {label: string, value: string}[], placeholder: string }) => {
-  const [isOpen, setIsOpen] = useState(false);
-  const [search, setSearch] = useState('');
-  const wrapperRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const handleClickOutside = (event: any) => {
-      if (wrapperRef.current && !wrapperRef.current.contains(event.target)) {
-        setIsOpen(false);
-      }
-    };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
-
-  const filtered = options.filter(o => o.label.toLowerCase().includes(search.toLowerCase()));
-
-  return (
-    <div className="relative w-full" ref={wrapperRef}>
-      <div 
-        className={`w-full p-2.5 bg-surface rounded-xl border ${isOpen ? 'border-primary ring-1 ring-primary/40' : 'border-outline-variant/60'} flex justify-between items-center cursor-text text-[13px] font-medium transition-all`}
-        onClick={() => setIsOpen(true)}
-      >
-        <input 
-          type="text"
-          className="w-full bg-transparent focus:outline-none placeholder:text-on-surface-variant/50"
-          placeholder={placeholder}
-          value={isOpen ? search : value}
-          onChange={(e) => {
-            setSearch(e.target.value);
-            onChange(e.target.value);
-            setIsOpen(true);
-          }}
-          onFocus={() => { setIsOpen(true); setSearch(''); }}
-        />
-        <button type="button" className="outline-none focus:outline-none" onClick={(e) => { e.stopPropagation(); setIsOpen(!isOpen); setSearch(''); }}>
-          <span className={`material-symbols-outlined text-on-surface-variant text-[20px] transition-transform ${isOpen ? 'rotate-180 text-primary' : ''}`}>arrow_drop_down</span>
-        </button>
-      </div>
-      {isOpen && (
-        <div className="absolute z-[70] top-full left-0 w-full mt-1.5 bg-white-pure border border-outline-variant shadow-xl rounded-xl max-h-56 overflow-y-auto custom-scrollbar animate-fade-in">
-          {filtered.length === 0 ? (
-            <div className="p-4 text-on-surface-variant text-[12px] italic text-center">Nenhum resultado...</div>
-          ) : (
-            filtered.map((o, i) => (
-              <div 
-                key={i} 
-                className="p-3 hover:bg-primary/10 cursor-pointer text-[13px] font-medium border-b border-outline-variant/30 last:border-0 text-on-surface transition-colors"
-                onClick={() => {
-                  onChange(o.value);
-                  setSearch('');
-                  setIsOpen(false);
-                }}
-              >
-                {o.label}
-              </div>
-            ))
-          )}
-        </div>
-      )}
-    </div>
-  );
-};
-
-const ServicePieChart = ({ data }: { data: Array<{ name: string; count: number; total: number }> }) => {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-
-    // Clear canvas
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-    const total = data.reduce((acc, item) => acc + item.total, 0);
-    if (total === 0) {
-      // Draw empty placeholder circle
-      ctx.beginPath();
-      ctx.arc(canvas.width / 2, canvas.height / 2, 80, 0, 2 * Math.PI);
-      ctx.fillStyle = '#f1edea';
-      ctx.fill();
-      ctx.fillStyle = '#82756a';
-      ctx.font = 'bold 12px sans-serif';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText('Sem dados', canvas.width / 2, canvas.height / 2);
-      return;
-    }
-
-    const colors = ['#7B2FBE', '#c9a84c', '#2ecc71', '#3b82f6', '#765444'];
-    let startAngle = 0;
-    const centerX = canvas.width / 2;
-    const centerY = canvas.height / 2;
-    const radius = 90;
-
-    data.forEach((item, index) => {
-      const sliceAngle = (item.total / total) * 2 * Math.PI;
-      const color = colors[index % colors.length];
-
-      // Draw slice
-      ctx.beginPath();
-      ctx.moveTo(centerX, centerY);
-      ctx.arc(centerX, centerY, radius, startAngle, startAngle + sliceAngle);
-      ctx.closePath();
-      ctx.fillStyle = color;
-      ctx.fill();
-
-      // Draw percentage text inside slice
-      const percent = Math.round((item.total / total) * 100);
-      if (percent > 4) {
-        const middleAngle = startAngle + sliceAngle / 2;
-        const textX = centerX + Math.cos(middleAngle) * (radius * 0.65);
-        const textY = centerY + Math.sin(middleAngle) * (radius * 0.65);
-
-        ctx.fillStyle = '#ffffff';
-        ctx.font = 'bold 11px sans-serif';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillText(`${percent}%`, textX, textY);
-      }
-
-      startAngle += sliceAngle;
-    });
-
-    // Draw center circle for donut chart look
-    ctx.beginPath();
-    ctx.arc(centerX, centerY, radius * 0.45, 0, 2 * Math.PI);
-    ctx.fillStyle = '#ffffff';
-    ctx.fill();
-
-  }, [data]);
-
-  return <canvas ref={canvasRef} width={240} height={240} className="mx-auto" />;
-};
-
 export default function SystemPage() {
   // Global Modal State
   const [dialogState, setDialogState] = useState<{isOpen: boolean, type: 'alert' | 'confirm', message: string, onConfirm?: () => void}>({isOpen: false, type: 'alert', message: ''});
@@ -238,7 +105,7 @@ export default function SystemPage() {
   const [loginError, setLoginError] = useState('');
 
   // Sidebar tab control
-  const [currentTab, setCurrentTab] = useState<'dashboard' | 'agenda' | 'clientes' | 'financeiro' | 'usuarios' | 'cadastro-cliente' | 'servicos' | 'planos-tratamento' | 'estoque' | 'venda-skincare' | 'comandas' | 'mensagens-pre' | 'despesas' | 'funcionarios' | 'relatorios-performance' | 'relatorios-financeiro' | 'relatorios-melhores-clientes' | 'configuracoes' | 'dados-empresa' | 'sobre'>('agenda');
+  const [currentTab, setCurrentTab] = useState<SystemTab>('agenda');
   const [reportsSubTab, setReportsSubTab] = useState<'pizza' | 'caixa' | 'barras'>('barras');
   const [performancePeriod, setPerformancePeriod] = useState<'mes_atual' | '30_dias' | '7_dias'>('mes_atual');
   const [performanceContabilizarDespesas, setPerformanceContabilizarDespesas] = useState(false);
@@ -1875,227 +1742,6 @@ export default function SystemPage() {
     );
   }
 
-  const dashboardState = {
-
-
-
-
-    dialogState,
-    setDialogState,
-    isAuthenticated,
-    setIsAuthenticated,
-    isInitialLoading,
-    setIsInitialLoading,
-    currentUser,
-    setCurrentUser,
-    appUsers,
-    setAppUsers,
-    loginUsername,
-    setLoginUsername,
-    loginPassword,
-    setLoginPassword,
-    loginError,
-    setLoginError,
-    currentTab,
-    setCurrentTab,
-    reportsSubTab,
-    setReportsSubTab,
-    performancePeriod,
-    setPerformancePeriod,
-    performanceContabilizarDespesas,
-    setPerformanceContabilizarDespesas,
-    selectedCashFlowDay,
-    setSelectedCashFlowDay,
-    despesas,
-    setDespesas,
-    isDespesaModalOpen,
-    setIsDespesaModalOpen,
-    newDespesa,
-    setNewDespesa,
-    dashboardPeriod,
-    setDashboardPeriod,
-    editingTimelineItemId,
-    setEditingTimelineItemId,
-    editingTimelineText,
-    setEditingTimelineText,
-    clearedNotifications,
-    setClearedNotifications,
-    mensagensPredefinidas,
-    setMensagensPredefinidas,
-    isMsgModalOpen,
-    setIsMsgModalOpen,
-    editingMsg,
-    setEditingMsg,
-    agendaView,
-    setAgendaView,
-    isNewUserModalOpen,
-    setIsNewUserModalOpen,
-    newUserAvatarUrl,
-    setNewUserAvatarUrl,
-    newUserAvatarUploading,
-    setNewUserAvatarUploading,
-    editingUser,
-    setEditingUser,
-    editingAppointment,
-    setEditingAppointment,
-    isProfileMenuOpen,
-    setIsProfileMenuOpen,
-    isEditProfileModalOpen,
-    setIsEditProfileModalOpen,
-    isChangePasswordModalOpen,
-    setIsChangePasswordModalOpen,
-    isPatientModalOpen,
-    setIsPatientModalOpen,
-    editingPatientId,
-    setEditingPatientId,
-    newPatAvatar,
-    setNewPatAvatar,
-    newApptStatus,
-    setNewApptStatus,
-    isServiceModalOpen,
-    setIsServiceModalOpen,
-    editingService,
-    setEditingService,
-    isInventoryModalOpen,
-    setIsInventoryModalOpen,
-    editingInventory,
-    setEditingInventory,
-    isTransactionModalOpen,
-    setIsTransactionModalOpen,
-    editingCobranca,
-    setEditingTransaction,
-    isClientInteractModalOpen,
-    setIsClientInteractModalOpen,
-    interactClient,
-    setInteractClient,
-    interactAppointmentId,
-    setInteractAppointmentId,
-    isWhatsAppSubmenuOpen,
-    setIsWhatsAppSubmenuOpen,
-    isClientDetailsWhatsAppOpen,
-    setIsClientDetailsWhatsAppOpen,
-    patientFinancials,
-    setPatientFinancials,
-    patientDocuments,
-    setPatientDocuments,
-    viewingDocument,
-    setViewingDocument,
-    primaryRevenueTarget,
-    setPrimaryRevenueTarget,
-    agendaNavDate,
-    setAgendaNavDate,
-    companyData,
-    setCompanyData,
-    currentProfessional,
-    setCurrentProfessional,
-    isProfDropdownOpen,
-    setIsProfDropdownOpen,
-    isAlertNotificationOpen,
-    setIsAlertNotificationOpen,
-    isMobileMenuOpen,
-    setIsMobileMenuOpen,
-    isMobileSearchOpen,
-    setIsMobileSearchOpen,
-    aiAdvice,
-    setAiAdvice,
-    aiCustomInput,
-    setAiCustomInput,
-    aiLoading,
-    setAiLoading,
-    apiKeyConfigured,
-    setApiKeyConfigured,
-    selectedProfessional,
-    setSelectedProfessional,
-    selectedCategoryFilter,
-    setSelectedCategoryFilter,
-    selectedStatusFilter,
-    setSelectedStatusFilter,
-    isDrawing,
-    setIsDrawing,
-    signatureSaved,
-    setSignatureSaved,
-    isNewAppointmentOpen,
-    setIsNewAppointmentOpen,
-    isConflictModalOpen,
-    setIsConflictModalOpen,
-    conflictPendingData,
-    setConflictPendingData,
-    conflictPassword,
-    setConflictPassword,
-    conflictError,
-    setConflictError,
-    isValidatingConflict,
-    setIsValidatingConflict,
-    newApptPatient,
-    setNewApptPatient,
-    newApptProcedure,
-    setNewApptProcedure,
-    newApptProfessional,
-    setNewApptProfessional,
-    newApptTime,
-    setNewApptTime,
-    newApptDate,
-    setNewApptDate,
-    newApptCategory,
-    setNewApptCategory,
-    newApptValor,
-    setNewApptValor,
-    activePatientSubTab,
-    setActivePatientSubTab,
-    selectedAnamneseType,
-    setSelectedAnamneseType,
-    retornoTime,
-    setRetornoTime,
-    activeLightboxImage,
-    setActiveLightboxImage,
-    isComparing,
-    setIsComparing,
-    compareSelectedIds,
-    setCompareSelectedIds,
-    pendingEvolutionPhoto,
-    setPendingEvolutionPhoto,
-    financialTimeframe,
-    setFinancialTimeframe,
-    hoveredCategory,
-    setHoveredCategory,
-    hoveredDay,
-    setHoveredDay,
-    patients,
-    setPatients,
-    selectedPatientId,
-    setSelectedPatientId,
-    appointments,
-    setAppointments,
-    transactions,
-    setTransactions,
-    services,
-    setServices,
-    inventory,
-    setInventory,
-    searchQuery,
-    setSearchQuery,
-    clientesSearchQuery,
-    setClientesSearchQuery,
-    clientesSortOrder,
-    setClientesSortOrder,
-    listSearchQuery,
-    setListSearchQuery,
-    listSortOrder,
-    setListSortOrder,
-
-    handleScheduleReturn,
-    handleAddNewAgendamento,
-    handleConfirmConflict,
-
-    handleQueryAI,
-    handleLogin,
-    handleLogout,
-    getServiceDuration,
-    getProcedureStyles,
-    showAlert,
-    showConfirm
-  };
-
   if (!isAuthenticated) {
     return (
       <div className="bg-surface-container-lowest text-on-surface font-sans h-[100dvh] flex flex-col items-center justify-center p-4 relative" style={{backgroundImage: 'radial-gradient(circle at top, rgba(163,34,216,0.05), transparent 60%)'}}>
@@ -2200,284 +1846,34 @@ export default function SystemPage() {
   return (
     <div className="bg-background text-on-surface font-sans overflow-hidden h-[100dvh] flex relative">
       
-      {/* Mobile Menu Overlay */}
-      
       {/* Modal Nova Despesa */}
-      {isDespesaModalOpen && (
-        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white-pure rounded-[32px] w-full max-w-md p-8 shadow-2xl relative animate-in fade-in zoom-in duration-200">
-            <button onClick={() => setIsDespesaModalOpen(false)} className="absolute top-6 right-6 text-on-surface-variant hover:text-primary transition-colors bg-surface-container-lowest rounded-full p-2">
-              <span className="material-symbols-outlined text-[20px]">close</span>
-            </button>
-            <h2 className="text-[24px] font-black text-primary font-manrope mb-2">Nova Despesa</h2>
-            <p className="text-[13px] text-on-surface-variant mb-6 leading-relaxed">Cadastre uma nova conta, aluguel ou gasto em materiais.</p>
-            <form onSubmit={addDespesa} className="space-y-4">
-              <div>
-                <label className="block text-[11px] font-bold text-on-surface-variant mb-1">Descrição</label>
-                <input required value={newDespesa.descricao} onChange={e => setNewDespesa({...newDespesa, descricao: e.target.value})} placeholder="Ex: Energia Elétrica, Aluguel..." className="w-full bg-surface-container-lowest border border-outline-variant rounded-xl px-4 py-3 text-[13px] text-primary focus:outline-none focus:border-primary transition-colors placeholder:text-outline" />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-[11px] font-bold text-on-surface-variant mb-1">Valor (R$)</label>
-                  <input required value={newDespesa.valor} onChange={e => setNewDespesa({...newDespesa, valor: e.target.value})} placeholder="0,00" type="number" step="0.01" className="w-full bg-surface-container-lowest border border-outline-variant rounded-xl px-4 py-3 text-[13px] text-primary focus:outline-none focus:border-primary transition-colors" />
-                </div>
-                <div>
-                  <label className="block text-[11px] font-bold text-on-surface-variant mb-1">Data</label>
-                  <input required value={newDespesa.data} onChange={e => setNewDespesa({...newDespesa, data: e.target.value})} type="date" className="w-full bg-surface-container-lowest border border-outline-variant rounded-xl px-4 py-3 text-[13px] text-primary focus:outline-none focus:border-primary transition-colors" />
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-[11px] font-bold text-on-surface-variant mb-1">Status</label>
-                  <select value={newDespesa.status} onChange={e => setNewDespesa({...newDespesa, status: e.target.value})} className="w-full bg-surface-container-lowest border border-outline-variant rounded-xl px-4 py-3 text-[13px] text-primary focus:outline-none focus:border-primary transition-colors appearance-none">
-                    <option value="Pago">Pago</option>
-                    <option value="Pendente">Pendente</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-[11px] font-bold text-on-surface-variant mb-1">Categoria</label>
-                  <select value={newDespesa.categoria} onChange={e => setNewDespesa({...newDespesa, categoria: e.target.value})} className="w-full bg-surface-container-lowest border border-outline-variant rounded-xl px-4 py-3 text-[13px] text-primary focus:outline-none focus:border-primary transition-colors appearance-none">
-                    <option value="Fixa">Fixa (Aluguel, Luz)</option>
-                    <option value="Insumos">Insumos/Materiais</option>
-                    <option value="Marketing">Marketing</option>
-                    <option value="Outros">Outros</option>
-                  </select>
-                </div>
-              </div>
-              <button type="submit" className="w-full bg-primary text-white-pure font-bold text-[14px] py-3.5 rounded-xl hover:opacity-90 transition-opacity mt-4 flex justify-center items-center gap-2">
-                <span className="material-symbols-outlined text-[20px]">check</span>
-                Adicionar Despesa
-              </button>
-            </form>
-          </div>
-        </div>
-      )}
-      
-      {isMobileMenuOpen && (
-        <div 
-          className="fixed inset-0 bg-black/40 z-30 lg:hidden backdrop-blur-sm transition-opacity"
-          onClick={() => setIsMobileMenuOpen(false)}
-        />
-      )}
+      <DespesaModal
+        isOpen={isDespesaModalOpen}
+        onClose={() => setIsDespesaModalOpen(false)}
+        newDespesa={newDespesa}
+        setNewDespesa={setNewDespesa}
+        addDespesa={addDespesa}
+      />
 
       {/* 1. Left SideNavBar */}
-      <aside className={`sidebar fixed lg:relative left-0 top-0 h-full w-72 flex flex-col border-r border-outline-variant bg-surface-container-low backdrop-blur-md z-40 transition-transform duration-300 ${isMobileMenuOpen ? 'open translate-x-0' : '-translate-x-full lg:translate-x-0'}`}>
-        <div className="p-8 pb-4 flex flex-col">
-          <div className="h-16 flex items-center gap-2">
-            <span className="material-symbols-outlined text-primary text-3xl">spa</span>
-            <div className="flex flex-col">
-              <span className="font-manrope text-primary tracking-tighter text-2xl font-black uppercase leading-none">Gabi Almeida</span>
-              <span className="font-manrope text-outline tracking-[0.22em] uppercase text-[9px] mt-0.5 font-bold">Estética Avançada</span>
-            </div>
-          </div>
-        </div>
-
-        <nav className="flex-1 px-4 space-y-1.5 flex flex-col pt-2 overflow-y-auto custom-scrollbar">
-          <button 
-            id="nav-agenda"
-            onClick={() => { setCurrentTab('agenda'); setSearchQuery(''); setIsMobileMenuOpen(false); }}
-            className={`flex items-center gap-4 px-4 py-2.5 rounded-xl transition-all duration-300 text-left ${currentTab === 'agenda' ? 'text-primary font-bold border-r-4 border-primary bg-primary/10 scale-95' : 'text-on-surface-variant hover:text-primary hover:bg-surface-container'}`}
-          >
-            <span className="material-symbols-outlined text-primary" style={{fontVariationSettings: currentTab === 'agenda' ? "'FILL' 1" : "'FILL' 0"}}>calendar_month</span>
-            <span className="font-manrope text-[14px] leading-none text-primary">Agenda</span>
-          </button>
-
-          <button 
-            id="nav-financeiro"
-            onClick={() => { setCurrentTab('financeiro'); setSearchQuery(''); setIsMobileMenuOpen(false); }}
-            className={`flex items-center gap-4 px-4 py-2.5 rounded-xl transition-all duration-300 text-left ${currentTab === 'financeiro' ? 'text-primary font-bold border-r-4 border-primary bg-primary/10 scale-95' : 'text-on-surface-variant hover:text-primary hover:bg-surface-container'}`}
-          >
-            <span className="material-symbols-outlined text-primary" style={{fontVariationSettings: currentTab === 'financeiro' ? "'FILL' 1" : "'FILL' 0"}}>payments</span>
-            <span className="font-manrope text-[14px] leading-none text-primary">Cobranças</span>
-          </button>
-
-
-
-          <button 
-            id="nav-mensagens-pre"
-            onClick={() => { setCurrentTab('mensagens-pre'); setSearchQuery(''); setIsMobileMenuOpen(false); }}
-            className={`flex items-center gap-4 px-4 py-2.5 rounded-xl transition-all duration-300 text-left ${currentTab === 'mensagens-pre' ? 'text-primary font-bold border-r-4 border-primary bg-primary/10 scale-95' : 'text-on-surface-variant hover:text-primary hover:bg-surface-container'}`}
-          >
-            <span className="material-symbols-outlined text-primary" style={{fontVariationSettings: currentTab === 'mensagens-pre' ? "'FILL' 1" : "'FILL' 0"}}>chat_bubble</span>
-            <span className="font-manrope text-[14px] leading-none text-primary">Msgs Pre-definidas</span>
-          </button>
-
-          <button 
-            id="nav-cadastro-cliente"
-            onClick={() => { setCurrentTab('cadastro-cliente'); setSearchQuery(''); setIsMobileMenuOpen(false); }}
-            className={`flex items-center gap-4 px-4 py-2.5 rounded-xl transition-all duration-300 text-left ${currentTab === 'cadastro-cliente' ? 'text-primary font-bold border-r-4 border-primary bg-primary/10 scale-95' : 'text-on-surface-variant hover:text-primary hover:bg-surface-container'}`}
-          >
-            <span className="material-symbols-outlined text-primary" style={{fontVariationSettings: currentTab === 'cadastro-cliente' ? "'FILL' 1" : "'FILL' 0"}}>person_add</span>
-            <span className="font-manrope text-[14px] leading-none text-primary">Cadastro de Clientes</span>
-          </button>
-
-          <button 
-            id="nav-clientes"
-            onClick={() => { setCurrentTab('clientes'); setSearchQuery(''); setIsMobileMenuOpen(false); }}
-            className={`flex items-center gap-4 px-4 py-2.5 rounded-xl transition-all duration-300 text-left ${currentTab === 'clientes' ? 'text-primary font-bold border-r-4 border-primary bg-primary/10 scale-95' : 'text-on-surface-variant hover:text-primary hover:bg-surface-container'}`}
-          >
-            <span className="material-symbols-outlined text-primary" style={{fontVariationSettings: currentTab === 'clientes' ? "'FILL' 1" : "'FILL' 0"}}>group</span>
-            <span className="font-manrope text-[14px] leading-none text-primary">Prontuário (Sistema)</span>
-          </button>
-
-          <button 
-            id="nav-servicos"
-            onClick={() => { setCurrentTab('servicos'); setSearchQuery(''); setIsMobileMenuOpen(false); }}
-            className={`flex items-center gap-4 px-4 py-2.5 rounded-xl transition-all duration-300 text-left ${currentTab === 'servicos' ? 'text-primary font-bold border-r-4 border-primary bg-primary/10 scale-95' : 'text-on-surface-variant hover:text-primary hover:bg-surface-container'}`}
-          >
-            <span className="material-symbols-outlined text-primary" style={{fontVariationSettings: currentTab === 'servicos' ? "'FILL' 1" : "'FILL' 0"}}>medical_services</span>
-            <span className="font-manrope text-[14px] leading-none text-primary">Serviços & Pacotes</span>
-          </button>
-
-          <button
-            id="nav-planos-tratamento"
-            onClick={() => { setCurrentTab('planos-tratamento'); setSearchQuery(''); setIsMobileMenuOpen(false); }}
-            className={`flex items-center gap-4 px-4 py-2.5 rounded-xl transition-all duration-300 text-left ${currentTab === 'planos-tratamento' ? 'text-primary font-bold border-r-4 border-primary bg-primary/10 scale-95' : 'text-on-surface-variant hover:text-primary hover:bg-surface-container'}`}
-          >
-            <span className="material-symbols-outlined text-primary" style={{fontVariationSettings: currentTab === 'planos-tratamento' ? "'FILL' 1" : "'FILL' 0"}}>checklist</span>
-            <span className="font-manrope text-[14px] leading-none text-primary">Planos de Tratamento</span>
-          </button>
-
-          <button
-            id="nav-estoque"
-            onClick={() => { setCurrentTab('estoque'); setSearchQuery(''); setIsMobileMenuOpen(false); }}
-            className={`flex items-center gap-4 px-4 py-2.5 rounded-xl transition-all duration-300 text-left ${currentTab === 'estoque' ? 'text-primary font-bold border-r-4 border-primary bg-primary/10 scale-95' : 'text-on-surface-variant hover:text-primary hover:bg-surface-container'}`}
-          >
-            <span className="material-symbols-outlined text-primary" style={{fontVariationSettings: currentTab === 'estoque' ? "'FILL' 1" : "'FILL' 0"}}>shopping_cart</span>
-            <span className="font-manrope text-[14px] leading-none text-primary">Produtos & Estoque</span>
-          </button>
-
-          <button 
-            id="nav-venda-skincare"
-            onClick={() => { setCurrentTab('venda-skincare'); setSearchQuery(''); setIsMobileMenuOpen(false); }}
-            className={`flex items-center gap-4 px-4 py-2.5 rounded-xl transition-all duration-300 text-left ${currentTab === 'venda-skincare' ? 'text-primary font-bold border-r-4 border-primary bg-primary/10 scale-95' : 'text-on-surface-variant hover:text-primary hover:bg-surface-container'}`}
-          >
-            <span className="material-symbols-outlined text-primary" style={{fontVariationSettings: currentTab === 'venda-skincare' ? "'FILL' 1" : "'FILL' 0"}}>local_mall</span>
-            <span className="font-manrope text-[14px] leading-none text-primary">Venda Skincare</span>
-          </button>
-
-          <button 
-            id="nav-despesas"
-            onClick={() => { setCurrentTab('despesas'); setSearchQuery(''); setIsMobileMenuOpen(false); }}
-            className={`flex items-center gap-4 px-4 py-2.5 rounded-xl transition-all duration-300 text-left ${currentTab === 'despesas' ? 'text-primary font-bold border-r-4 border-primary bg-primary/10 scale-95' : 'text-on-surface-variant hover:text-primary hover:bg-surface-container'}`}
-          >
-            <span className="material-symbols-outlined text-primary" style={{fontVariationSettings: currentTab === 'despesas' ? "'FILL' 1" : "'FILL' 0"}}>monetization_on</span>
-            <span className="font-manrope text-[14px] leading-none text-primary">Despesas</span>
-          </button>
-
-          <button 
-            id="nav-funcionarios"
-            onClick={() => { setCurrentTab('funcionarios'); setSearchQuery(''); setIsMobileMenuOpen(false); }}
-            className={`flex items-center gap-4 px-4 py-2.5 rounded-xl transition-all duration-300 text-left ${currentTab === 'funcionarios' ? 'text-primary font-bold border-r-4 border-primary bg-primary/10 scale-95' : 'text-on-surface-variant hover:text-primary hover:bg-surface-container'}`}
-          >
-            <span className="material-symbols-outlined text-primary" style={{fontVariationSettings: currentTab === 'funcionarios' ? "'FILL' 1" : "'FILL' 0"}}>badge</span>
-            <span className="font-manrope text-[14px] leading-none text-primary">Funcionários</span>
-          </button>
-
-          <div className="pt-4 pb-1">
-            <span className="text-[10px] uppercase font-bold text-outline tracking-wider px-4">Relatórios</span>
-          </div>
-
-          <button 
-            id="nav-relatorios-performance"
-            onClick={() => { setCurrentTab('relatorios-performance'); setSearchQuery(''); setIsMobileMenuOpen(false); }}
-            className={`flex items-center gap-4 px-4 py-2 rounded-xl transition-all duration-300 text-left ${currentTab === 'relatorios-performance' ? 'text-primary font-bold border-r-4 border-primary bg-primary/10' : 'text-on-surface-variant hover:text-primary hover:bg-surface-container'}`}
-          >
-            <span className="material-symbols-outlined text-primary text-[18px]" style={{fontVariationSettings: currentTab === 'relatorios-performance' ? "'FILL' 1" : "'FILL' 0"}}>speed</span>
-            <span className="font-manrope text-[13px] leading-none text-primary">Performance</span>
-          </button>
-
-          <button 
-            id="nav-relatorios-financeiro"
-            onClick={() => { setCurrentTab('relatorios-financeiro'); setSearchQuery(''); setIsMobileMenuOpen(false); }}
-            className={`flex items-center gap-4 px-4 py-2 rounded-xl transition-all duration-300 text-left ${currentTab === 'relatorios-financeiro' ? 'text-primary font-bold border-r-4 border-primary bg-primary/10' : 'text-on-surface-variant hover:text-primary hover:bg-surface-container'}`}
-          >
-            <span className="material-symbols-outlined text-primary text-[18px]" style={{fontVariationSettings: currentTab === 'relatorios-financeiro' ? "'FILL' 1" : "'FILL' 0"}}>bar_chart</span>
-            <span className="font-manrope text-[13px] leading-none text-primary">Resumo Financeiro</span>
-          </button>
-
-          <button 
-            id="nav-relatorios-melhores-clientes"
-            onClick={() => { setCurrentTab('relatorios-melhores-clientes'); setSearchQuery(''); setIsMobileMenuOpen(false); }}
-            className={`flex items-center gap-4 px-4 py-2 rounded-xl transition-all duration-300 text-left ${currentTab === 'relatorios-melhores-clientes' ? 'text-primary font-bold border-r-4 border-primary bg-primary/10' : 'text-on-surface-variant hover:text-primary hover:bg-surface-container'}`}
-          >
-            <span className="material-symbols-outlined text-primary text-[18px]" style={{fontVariationSettings: currentTab === 'relatorios-melhores-clientes' ? "'FILL' 1" : "'FILL' 0"}}>person</span>
-            <span className="font-manrope text-[13px] leading-none text-primary">Melhores Clientes</span>
-          </button>
-
-          <button 
-            id="nav-configuracoes"
-            onClick={() => { setCurrentTab('configuracoes'); setSearchQuery(''); setIsMobileMenuOpen(false); }}
-            className={`flex items-center gap-4 px-4 py-2 rounded-xl transition-all duration-300 text-left ${currentTab === 'configuracoes' ? 'text-primary font-bold border-r-4 border-primary bg-primary/10' : 'text-on-surface-variant hover:text-primary hover:bg-surface-container'}`}
-          >
-            <span className="material-symbols-outlined text-primary text-[18px]" style={{fontVariationSettings: currentTab === 'configuracoes' ? "'FILL' 1" : "'FILL' 0"}}>settings</span>
-            <span className="font-manrope text-[13px] leading-none text-primary">Configurações</span>
-          </button>
-
-          <button 
-            id="nav-dados-empresa"
-            onClick={() => { setCurrentTab('dados-empresa'); setSearchQuery(''); setIsMobileMenuOpen(false); }}
-            className={`flex items-center gap-4 px-4 py-2 rounded-xl transition-all duration-300 text-left ${currentTab === 'dados-empresa' ? 'text-primary font-bold border-r-4 border-primary bg-primary/10' : 'text-on-surface-variant hover:text-primary hover:bg-surface-container'}`}
-          >
-            <span className="material-symbols-outlined text-primary text-[18px]" style={{fontVariationSettings: currentTab === 'dados-empresa' ? "'FILL' 1" : "'FILL' 0"}}>business</span>
-            <span className="font-manrope text-[13px] leading-none text-primary">Dados da Empresa</span>
-          </button>
-
-          <button 
-            id="nav-sobre"
-            onClick={() => { setCurrentTab('sobre'); setSearchQuery(''); setIsMobileMenuOpen(false); }}
-            className={`flex items-center gap-4 px-4 py-2 rounded-xl transition-all duration-300 text-left ${currentTab === 'sobre' ? 'text-primary font-bold border-r-4 border-primary bg-primary/10' : 'text-on-surface-variant hover:text-primary hover:bg-surface-container'}`}
-          >
-            <span className="material-symbols-outlined text-primary text-[18px]" style={{fontVariationSettings: currentTab === 'sobre' ? "'FILL' 1" : "'FILL' 0"}}>info</span>
-            <span className="font-manrope text-[13px] leading-none text-primary">Sobre (Versão)</span>
-          </button>
-        </nav>
-
-        {/* Create appointment trigger from sidebar */}
-        <div className="p-4 mx-4 mb-4 bg-surface-container-lowest/40 rounded-2xl border border-outline-variant shadow-sm space-y-4">
-          <button 
-            id="sidebar-new-appointment"
-            onClick={() => {
-              setEditingAppointment(null);
-              setNewApptPatient('');
-              setNewApptProcedure('');
-              setNewApptTime('09:00');
-              setNewApptDate(new Date().toISOString().split('T')[0]);
-              setNewApptValor('');
-              setIsNewAppointmentOpen(true);
-              setIsMobileMenuOpen(false);
-            }}
-            className="w-full bg-primary text-on-primary py-3 rounded-xl font-manrope font-bold text-[14px] flex items-center justify-center gap-2 hover:opacity-90 transition-all cursor-pointer active:scale-95"
-          >
-            <span className="material-symbols-outlined text-[18px]">add</span>
-            Novo Agendamento
-          </button>
-        </div>
-
-        {/* Bottom utility links */}
-        <div className="px-4 pb-8 space-y-1">
-          {currentUser?.role === 'admin' && (
-            <button 
-              id="nav-usuarios"
-              onClick={() => { setCurrentTab('usuarios'); setSearchQuery(''); setIsMobileMenuOpen(false); }}
-              className={`w-full flex items-center gap-4 px-4 py-2.5 rounded-xl transition-all duration-300 text-left text-[14px] ${currentTab === 'usuarios' ? 'text-primary font-bold border-r-4 border-primary bg-primary/10' : 'text-on-surface-variant hover:text-primary hover:bg-surface-container'}`}
-            >
-              <span className="material-symbols-outlined" style={{fontVariationSettings: currentTab === 'usuarios' ? "'FILL' 1" : "'FILL' 0"}}>manage_accounts</span>
-              <span className="font-manrope">Usuários</span>
-            </button>
-          )}
-           <button onClick={() => {
-            handleLogout();
-            setCurrentTab('dashboard');
-          }} className="w-full flex items-center gap-4 px-4 py-2.5 rounded-xl text-error/80 hover:text-error transition-colors text-left text-[14px]">
-            <span className="material-symbols-outlined">logout</span>
-            <span className="font-manrope">Sair</span>
-          </button>
-        </div>
-      </aside>
-      <div 
-        className={`sidebar-overlay ${isMobileMenuOpen ? 'open' : ''}`}
-        onClick={() => setIsMobileMenuOpen(false)}
+      <Sidebar
+        currentTab={currentTab}
+        setCurrentTab={setCurrentTab}
+        setSearchQuery={setSearchQuery}
+        currentUser={currentUser}
+        isMobileMenuOpen={isMobileMenuOpen}
+        setIsMobileMenuOpen={setIsMobileMenuOpen}
+        handleLogout={handleLogout}
+        onNewAppointment={() => {
+          setEditingAppointment(null);
+          setNewApptPatient('');
+          setNewApptProcedure('');
+          setNewApptTime('09:00');
+          setNewApptDate(new Date().toISOString().split('T')[0]);
+          setNewApptValor('');
+          setIsNewAppointmentOpen(true);
+          setIsMobileMenuOpen(false);
+        }}
       />
 
       {/* 2. Top Header and Main Section */}

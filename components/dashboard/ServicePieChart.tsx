@@ -27,8 +27,7 @@ const ServicePieChart = ({ data }: { data: Array<{ name: string; count: number; 
       return;
     }
 
-    // Removed Purple (#7B2FBE) as per @frontend-specialist rules. Replaced with Deep Charcoal (#1c1c1c).
-    const colors = ['#1c1c1c', '#c9a84c', '#2ecc71', '#3b82f6', '#765444'];
+    const colors = ['#7B2FBE', '#c9a84c', '#2ecc71', '#3b82f6', '#765444'];
     let startAngle = 0;
     const centerX = canvas.width / 2;
     const centerY = canvas.height / 2;

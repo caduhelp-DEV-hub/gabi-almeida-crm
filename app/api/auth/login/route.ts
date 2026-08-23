@@ -2,8 +2,21 @@ import { NextRequest, NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
 import { supabaseAdmin } from '../../../../lib/supabase';
 import { signSessionToken, COOKIE_NAME } from '../../../../lib/auth';
+import { checkLimit, registerFailure, clearFailures, getClientIp } from '../../../../lib/rateLimit';
 
 const TOKEN_EXPIRY_SECONDS = 60 * 60 * 24 * 7;
+
+// Trava contra tentativa de adivinhar senha. Conta apenas tentativas que falharam.
+const WINDOW_MS = 15 * 60 * 1000;
+const MAX_FAILURES_PER_ACCOUNT = 5;   // mesmo IP tentando o mesmo usuario
+const MAX_FAILURES_PER_IP = 20;       // mesmo IP tentando varios usuarios
+
+function tooManyAttempts(retryAfterSeconds: number) {
+  return NextResponse.json(
+    { error: 'Muitas tentativas de acesso. Aguarde alguns minutos e tente novamente.' },
+    { status: 429, headers: { 'Retry-After': String(retryAfterSeconds) } }
+  );
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -16,6 +29,21 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const ip = getClientIp(request.headers);
+    const ipKey = `login:ip:${ip}`;
+    const accountKey = `login:acct:${ip}:${String(username).toLowerCase()}`;
+
+    const ipStatus = checkLimit(ipKey, MAX_FAILURES_PER_IP);
+    if (ipStatus.limited) return tooManyAttempts(ipStatus.retryAfterSeconds);
+
+    const accountStatus = checkLimit(accountKey, MAX_FAILURES_PER_ACCOUNT);
+    if (accountStatus.limited) return tooManyAttempts(accountStatus.retryAfterSeconds);
+
+    const registerFailedAttempt = () => {
+      registerFailure(ipKey, WINDOW_MS);
+      registerFailure(accountKey, WINDOW_MS);
+    };
+
     const { data: user, error } = await supabaseAdmin
       .from('users')
       .select('*')
@@ -23,6 +51,7 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (error || !user) {
+      registerFailedAttempt();
       return NextResponse.json(
         { error: 'Usuário ou senha inválidos.' },
         { status: 401 }
@@ -30,6 +59,7 @@ export async function POST(request: NextRequest) {
     }
 
     if (user.status !== 'active') {
+      registerFailedAttempt();
       return NextResponse.json(
         { error: 'Conta desativada. Contate o administrador.' },
         { status: 403 }
@@ -38,11 +68,15 @@ export async function POST(request: NextRequest) {
 
     const passwordValid = await bcrypt.compare(password, user.password_hash);
     if (!passwordValid) {
+      registerFailedAttempt();
       return NextResponse.json(
         { error: 'Usuário ou senha inválidos.' },
         { status: 401 }
       );
     }
+
+    clearFailures(ipKey);
+    clearFailures(accountKey);
 
     const token = signSessionToken({
       userId: user.id,

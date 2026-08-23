@@ -2,6 +2,14 @@
 
 Todas as mudanças notáveis neste projeto serão documentadas neste arquivo.
 
+## [3.11.0] - 2026-08-13
+### Alterado
+- Performance Otimizada: redução significativa do pacote de carregamento inicial (First Load JS) com Dynamic Imports e Code Splitting nos modais pesados.
+- Limpeza Profunda: remoção de 18 componentes órfãos e dependências inativas da arquitetura antiga.
+
+### Corrigido
+- Layout Responsivo: correção de bugs no cabeçalho mobile identificados pela automação E2E.
+
 ## [3.10.0] - 2026-07-20
 ### Adicionado
 - Manutenção Preventiva do Banco de Dados: rotina automática interna (cron a cada 6 dias) que mantém o banco de dados sempre ativo, evitando pausas por inatividade no plano gratuito do Supabase.

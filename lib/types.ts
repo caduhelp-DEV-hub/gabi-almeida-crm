@@ -183,3 +183,26 @@ export interface PlanoTratamento {
   itens: PlanoTratamentoItem[];
 }
 
+// Abas navegaveis do sistema (usado pela Sidebar e pelo estado da page)
+export type SystemTab =
+  | 'dashboard'
+  | 'agenda'
+  | 'clientes'
+  | 'financeiro'
+  | 'usuarios'
+  | 'cadastro-cliente'
+  | 'servicos'
+  | 'planos-tratamento'
+  | 'estoque'
+  | 'venda-skincare'
+  | 'comandas'
+  | 'mensagens-pre'
+  | 'despesas'
+  | 'funcionarios'
+  | 'relatorios-performance'
+  | 'relatorios-financeiro'
+  | 'relatorios-melhores-clientes'
+  | 'configuracoes'
+  | 'dados-empresa'
+  | 'sobre';
+

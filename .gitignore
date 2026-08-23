@@ -8,3 +8,13 @@ coverage/
 tsconfig.tsbuildinfo
 
 test-results/
+
+# Ferramentas de agente / IA (nao fazem parte do produto)
+.agents/
+.ag-kit-backups/
+
+# Scripts descartaveis e artefatos de depuracao
+scratch/
+agenda_diff.txt
+clientes.png
+home.png
