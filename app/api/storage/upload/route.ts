@@ -11,7 +11,7 @@ export async function POST(request: NextRequest) {
   try {
     const { bucket, path, base64, contentType } = await request.json();
 
-    const ALLOWED_BUCKETS = ['avatars', 'patient-photos', 'documents', 'financeiro'];
+    const ALLOWED_BUCKETS = ['avatars', 'signatures'];
     const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'application/pdf', 'image/svg+xml'];
     const MAX_SIZE_MB = 10;
 
