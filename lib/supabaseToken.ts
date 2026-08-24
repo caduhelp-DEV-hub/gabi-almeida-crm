@@ -15,6 +15,13 @@ import jwt from 'jsonwebtoken';
 // Validade curta de proposito: se vazar, expira rapido. O frontend renova sozinho.
 export const DB_TOKEN_TTL_SECONDS = 60 * 60; // 1 hora
 
+/**
+ * Folga para diferenca de relogio entre este servidor e o Supabase.
+ * Sem isso, um relogio adiantado gera token com `iat` no futuro e o Postgres
+ * recusa com "JWT issued at future" (ja aconteceu: 42s de diferenca).
+ */
+export const CLOCK_SKEW_TOLERANCE_SECONDS = 60;
+
 export function getSupabaseJwtSecret(): string {
   const secret = process.env.SUPABASE_JWT_SECRET;
   if (!secret) {
@@ -30,6 +37,8 @@ export function isSupabaseTokenConfigured(): boolean {
 }
 
 export function signSupabaseToken(userId: string, appRole: string): string {
+  const agora = Math.floor(Date.now() / 1000);
+
   return jwt.sign(
     {
       sub: userId,
@@ -38,8 +47,10 @@ export function signSupabaseToken(userId: string, appRole: string): string {
       role: 'authenticated',
       // Papel interno do sistema (admin/staff/prestador), para policies mais finas no futuro.
       app_role: appRole,
+      // Emitido com folga para tras: protege contra relogio adiantado.
+      iat: agora - CLOCK_SKEW_TOLERANCE_SECONDS,
+      exp: agora + DB_TOKEN_TTL_SECONDS,
     },
-    getSupabaseJwtSecret(),
-    { expiresIn: DB_TOKEN_TTL_SECONDS }
+    getSupabaseJwtSecret()
   );
 }

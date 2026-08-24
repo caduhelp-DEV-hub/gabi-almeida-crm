@@ -39,11 +39,21 @@ describe('supabaseToken', () => {
   });
 
   it('gera token com validade curta', async () => {
-    const { signSupabaseToken, DB_TOKEN_TTL_SECONDS } = await loadModule();
+    const { signSupabaseToken, DB_TOKEN_TTL_SECONDS, CLOCK_SKEW_TOLERANCE_SECONDS } = await loadModule();
     const payload = jwt.verify(signSupabaseToken('abc', 'staff'), SECRET) as { exp: number; iat: number };
 
-    expect(payload.exp - payload.iat).toBe(DB_TOKEN_TTL_SECONDS);
+    expect(payload.exp - payload.iat).toBe(DB_TOKEN_TTL_SECONDS + CLOCK_SKEW_TOLERANCE_SECONDS);
     expect(DB_TOKEN_TTL_SECONDS).toBeLessThanOrEqual(60 * 60);
+  });
+
+  it('emite o token no passado para tolerar relogio adiantado', async () => {
+    // Sem essa folga o Postgres recusa com "JWT issued at future".
+    const { signSupabaseToken, CLOCK_SKEW_TOLERANCE_SECONDS } = await loadModule();
+    const agora = Math.floor(Date.now() / 1000);
+    const payload = jwt.verify(signSupabaseToken('abc', 'admin'), SECRET) as { iat: number };
+
+    expect(payload.iat).toBeLessThanOrEqual(agora - CLOCK_SKEW_TOLERANCE_SECONDS + 1);
+    expect(CLOCK_SKEW_TOLERANCE_SECONDS).toBeGreaterThanOrEqual(60);
   });
 
   it('nao aceita token assinado com outro segredo', async () => {

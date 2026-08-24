@@ -17,7 +17,6 @@ import Sidebar from '../components/layout/Sidebar';
 import { supabase, refreshDbAuth, clearDbToken } from '../lib/supabase';
 import {
   mapUserToFrontend,
-  mapUserToBackend,
   mapClienteToFrontend,
   mapClienteToBackend,
   mapAgendamentoToFrontend,
@@ -28,12 +27,9 @@ import {
   mapServicoToBackend,
   mapCobrancaToFrontend,
   mapCobrancaToBackend,
-  getAppointmentColorClass,
   USER_PUBLIC_COLUMNS
 } from '../lib/mappers';
 import type {
-  TimelineItem,
-  EvolutionPhoto,
   Cliente,
   Agendamento,
   Servico,
@@ -116,7 +112,6 @@ export default function SystemPage() {
   const [isDespesaModalOpen, setIsDespesaModalOpen] = useState(false);
   const [newDespesa, setNewDespesa] = useState({ descricao: '', valor: '', data: new Date().toISOString().split('T')[0], categoria: 'Outros', status: 'Pago' });
 
-  const [dashboardPeriod, setDashboardPeriod] = useState('Hoje');
   const [editingTimelineItemId, setEditingTimelineItemId] = useState<string | null>(null);
   const [editingTimelineText, setEditingTimelineText] = useState('');
   const [clearedNotifications, setClearedNotifications] = useState(false);
@@ -184,7 +179,6 @@ export default function SystemPage() {
   const [patientDocuments, setPatientDocuments] = useState<Record<string, PatientDocument[]>>({});
 
   const [viewingDocument, setViewingDocument] = useState<PatientDocument | null>(null);
-  const [primaryRevenueTarget, setPrimaryRevenueTarget] = useState<number>(170000);
   const [agendaNavDate, setAgendaNavDate] = useState<Date>(new Date());
   const selectedCalendarDay = agendaNavDate.getDate();
 
@@ -198,11 +192,6 @@ export default function SystemPage() {
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      const savedTarget = localStorage.getItem('primaryRevenueTarget');
-      if (savedTarget) {
-        setPrimaryRevenueTarget(parseFloat(savedTarget));
-      }
-      
       const fetchCompany = async () => {
         const { data, error } = await supabase.from('configuracoes_empresa').select('*').limit(1).single();
         if (data && !error) {
@@ -215,29 +204,16 @@ export default function SystemPage() {
 
   // Search state (unified search experience across views)
   
-  // Current logged in medical professional representation
-  const [currentProfessional, setCurrentProfessional] = useState<{name: string; role: string; avatar: string}>({
-    name: 'Gabi Almeida',
-    role: 'Especialista em Estética',
-    avatar: 'https://lh3.googleusercontent.com/aida-public/AB6AXuAT08URyhdfggkdZ7ICFiM_aQytGw7uUJWUutntKzSZ2THn_qUatoCkxPlUDBzFo87XxXHDIl7bCPEF2zrZVbTVxZ6-ljXhgCjobz-tjjXWRgRPn8QgwKryuOkx4g6g_vI6k7ReJVAlRtFVi6oS_cA6ulr-fFIr2DH5ORI4qFAGBjKPoXtENy5oCT-Oi75JuN0RlQBMgw7dzZwQ5Fis2TriJ2rG67NgCQN4Hi2OzqyWrFUUPWiR2Dp4895lJRurxR0r_L6Qa600ado'
-  });
-
   // Professionals derived from DB users (active only) - synced with CRUD de usuários
   const professionals = appUsers
     .filter(u => u.status === 'active')
     .map(u => ({ id: u.id, name: u.name, role: u.specialty || u.role, avatar: u.avatar }));
 
   // Active Dropdowns state
-  const [isProfDropdownOpen, setIsProfDropdownOpen] = useState(false);
   const [isAlertNotificationOpen, setIsAlertNotificationOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
 
-  // Gabi Almeida AI State Engine
-  const [aiAdvice, setAiAdvice] = useState<string>('Dica Gabi Almeida AI: Você tem 3 clientes com interesse em Bioestimuladores hoje. Que tal oferecer o novo protocolo?');
-  const [aiCustomInput, setAiCustomInput] = useState<string>('');
-  const [aiLoading, setAiLoading] = useState<boolean>(false);
-  const [apiKeyConfigured, setApiKeyConfigured] = useState<boolean>(true);
   const [selectedProfessional, setSelectedProfessional] = useState<string>('todos');
   const [selectedCategoryFilter, setSelectedCategoryFilter] = useState<string>('todos');
   const [selectedStatusFilter, setSelectedStatusFilter] = useState<string>('todos');
@@ -307,9 +283,6 @@ export default function SystemPage() {
   // Agendamento states
   const [appointments, setAppointments] = useState<Agendamento[]>([]);
 
-  // Current list of upcoming/next appointments to list in the detailed sidebars
-  const activeNextAppointments: { time: string; name: string; category: string; tagColor: string }[] = [];
-
   // Core Financial Database
   const [transactions, setTransactions] = useState<Cobranca[]>([]);
 
@@ -322,8 +295,6 @@ export default function SystemPage() {
   // Commissions Leaders database will be computed dynamically below
 
   // Dynamic metrics helpers
-  const todayDate = new Date();
-  const todayDateStr = todayDate.toISOString().split('T')[0]; // YYYY-MM-DD
   const todayStr = agendaNavDate.toLocaleDateString('pt-BR'); // DD/MM/YYYY
   const [,, todayYear] = todayStr.split('/');
   const [, todayMonth] = todayStr.split('/');
@@ -381,29 +352,12 @@ export default function SystemPage() {
     }
   });
 
-  const totalRevenueThisMonth = receitaRecebida + aReceber;
   const receitaEsperada = receitaRecebida + aReceber;
 
   // Finance: Despesas (desde 2026)
   const despesasDesde2026 = despesas
     .filter(d => parseAnyDate(d.data) >= cutoffDate)
     .reduce((acc, d) => acc + Number(d.valor), 0);
-
-  const dailyFinancialRevenue = transactions
-    .filter(t => t.data === todayStr && t.valor > 0)
-    .reduce((acc, t) => acc + t.valor, 0);
-
-  const appointmentsToConsider = appointments;
-  const appointmentsToday = appointmentsToConsider.filter(a => a.data === todayDateStr).length;
-  const totalAtendimentosDisplay = appointmentsToday;
-  const totalDailyRevenueDisplay = dailyFinancialRevenue;
-  const ticketMedio = totalAtendimentosDisplay > 0 ? (totalDailyRevenueDisplay / totalAtendimentosDisplay) : 0;
-  
-  // Performance Metrics
-  const leadsAtivos = patients.length;
-  // Taxa de Conversao: Clientes unicos atendidos desde 2026 / Total Base
-  const uniqueClientsAttended = new Set(validAgendamentosFin.filter(a => a.status === 'Finalizado' || a.status === 'Confirmado').map(a => a.clienteId || a.clienteNome)).size;
-  const taxaConversao = leadsAtivos > 0 ? Math.round((uniqueClientsAttended / leadsAtivos) * 100) : 0;
 
   // Get date range for performance page based on selected period
   const getPerformanceDateRange = () => {
@@ -778,19 +732,6 @@ export default function SystemPage() {
 
   // --- Chart Data Generation ---
 
-  // Performance Chart: Last 7 days
-  const last7DaysData = Array.from({ length: 7 }).map((_, i) => {
-    const d = new Date();
-    d.setDate(d.getDate() - (6 - i));
-    const ds = d.toISOString().split('T')[0];
-    const count = appointments.filter(a => a.data === ds).length;
-    return {
-      label: d.toLocaleDateString('pt-BR', { weekday: 'short' }).replace('.', ''),
-      count
-    };
-  });
-  const maxPerformanceCount = Math.max(...last7DaysData.map(d => d.count), 1);
-
   // Finance Chart: Last 6 months (Receitas vs Despesas)
   const last6MonthsData = Array.from({ length: 6 }).map((_, i) => {
     const d = new Date();
@@ -879,7 +820,6 @@ export default function SystemPage() {
   };
 
   const { leaders: commissionLeaders, total: commissionsToPay } = getDynamicCommissions();
-  const currentRevenuePercent = Math.min(100, Math.round((totalRevenueThisMonth / primaryRevenueTarget) * 100));
 
   // Active Alerts state derived from inventory
   
@@ -917,25 +857,6 @@ export default function SystemPage() {
       setNewPatAvatar('');
     }
   }, [editingPatientId, isPatientModalOpen, patients]);
-
-  // Check Gemini API Key status on mount
-  useEffect(() => {
-    const checkAI = async () => {
-      try {
-        const res = await fetch('/api/assistant', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ message: 'check_status' })
-        });
-        if (res.status === 500) setApiKeyConfigured(false);
-        else setApiKeyConfigured(true);
-      } catch (err) {
-        console.error('API check failed:', err);
-        setApiKeyConfigured(false);
-      }
-    };
-    checkAI();
-  }, []);
 
   const deleteTimelineItem = async (patientId: string, itemId: string) => {
     if (!window.confirm('Tem certeza que deseja excluir este protocolo?')) return;
@@ -1325,7 +1246,6 @@ export default function SystemPage() {
         if (data && data[0]) {
           setAppointments(prev => [...prev, mapAgendamentoToFrontend(data[0])]);
         }
-        setAiAdvice(`Dica Gabi Almeida AI: Agendamento agendado às ${newApptTime}. Com isso, sua jornada de ocupação de hoje subiu para ${Math.min(98, 92 + 2)}%. Excelente trabalho de otimização de horário!`);
       }
       setIsNewAppointmentOpen(false);
       setEditingAppointment(null);
@@ -1378,7 +1298,6 @@ export default function SystemPage() {
         if (newData && newData[0]) {
           setAppointments(prev => [...prev, mapAgendamentoToFrontend(newData[0])]);
         }
-        setAiAdvice(`Dica Gabi Almeida AI: Agendamento forçado às ${finalApptData.hora}. Cuidado com o choque de horário!`);
       }
       
       setIsNewAppointmentOpen(false);
@@ -1537,41 +1456,6 @@ export default function SystemPage() {
     }, 100);
   };
 
-  // Call dynamic Gemini AI Suggestion route
-  const handleQueryAI = async () => {
-    if (!aiCustomInput.trim()) return;
-    setAiLoading(true);
-    try {
-      const res = await fetch('/api/assistant', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({
-          message: aiCustomInput,
-          context: {
-            currentTab,
-            selectedPatientName: selectedPatient.nome,
-            totalRevenue: totalRevenueThisMonth,
-            percentTarget: currentRevenuePercent
-          }
-        })
-      });
-
-      const data = await res.json();
-      if (data.response) {
-        setAiAdvice(`Dica Gabi Almeida AI: ${data.response}`);
-        setAiCustomInput('');
-      } else if (data.error) {
-        console.error('Gemini API Error:', data.error);
-        setApiKeyConfigured(false);
-      }
-    } catch (err: any) {
-      console.error('AI Fetch Error:', err);
-      setApiKeyConfigured(false);
-    } finally {
-      setAiLoading(false);
-    }
-  };
-
   // Search state (unified search experience across views)
   const [searchQuery, setSearchQuery] = useState('');
   
@@ -1583,11 +1467,6 @@ export default function SystemPage() {
   const [listSearchQuery, setListSearchQuery] = useState('');
   const [listSortOrder, setListSortOrder] = useState<'asc' | 'desc'>('asc');
 
-  // Filter patients by global search query
-  const filteredPatients = patients.filter(p => 
-    p.nome.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    p.status.toLowerCase().includes(searchQuery.toLowerCase())
-  );
 
   // Filter and sort patients specifically for the Clientes tab
   const clientesTabPatients = patients
@@ -2504,7 +2383,6 @@ export default function SystemPage() {
                         {(() => {
                           const d = agendaNavDate;
                           const isToday = d.toDateString() === new Date().toDateString();
-                          const weekday = d.toLocaleDateString('pt-BR', { weekday: 'long' });
                           const day = d.getDate();
                           const month = d.toLocaleDateString('pt-BR', { month: 'long' });
                           const year = d.getFullYear();
@@ -3749,7 +3627,7 @@ export default function SystemPage() {
                       <div className="relative">
                         <div className="absolute left-[24px] top-2 bottom-2 w-[1px] bg-surface-container-high"></div>
                         <div className="space-y-8">
-                          {selectedPatient.historico.map((item, index) => (
+                          {selectedPatient.historico.map((item) => (
                             <div key={item.id} className="relative flex gap-6 items-start">
                               <div className="z-10 bg-primary w-12 h-12 rounded-full flex items-center justify-center shadow border-4 border-white-pure text-white-pure">
                                 <span className="material-symbols-outlined text-[18px]">
