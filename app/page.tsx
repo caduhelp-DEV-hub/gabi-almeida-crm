@@ -3,9 +3,8 @@ import dynamic from 'next/dynamic';
 
 import React, {useState, useEffect} from 'react';
 import Image from 'next/image';
-const AnamneseLimpezaDePele = dynamic(() => import('../components/AnamneseLimpezaDePele'), { ssr: false });
-const AnamneseMicroagulhamento = dynamic(() => import('../components/AnamneseMicroagulhamento'), { ssr: false });
-const AnamneseMicroagulhamentoCompleto = dynamic(() => import('../components/AnamneseMicroagulhamentoCompleto'), { ssr: false });
+const AnamneseForm = dynamic(() => import('../components/AnamneseForm'), { ssr: false });
+const SelecionarAnamneseModal = dynamic(() => import('../components/modals/SelecionarAnamneseModal'), { ssr: false });
 const VendaSkincareModule = dynamic(() => import('../components/VendaSkincareModule'), { ssr: false });
 const PlanoTratamentoModule = dynamic(() => import('../components/PlanoTratamentoModule'), { ssr: false });
 const DocumentViewerModal = dynamic(() => import('../components/DocumentViewerModal'), { ssr: false });
@@ -19,6 +18,8 @@ import { supabase, refreshDbAuth, clearDbToken } from '../lib/supabase';
 import { dataLocalISO } from '../lib/utils';
 import { calcularEstatisticasProntuario } from '../lib/patientStats';
 import { usePlanosResumoCliente } from '../hooks/usePlanosResumoCliente';
+import type { AnamneseFormPayload } from '../components/AnamneseForm';
+import { ANAMNESE_TEMPLATES, type AnamneseTemplateId } from '../lib/anamneseTemplates';
 import {
   mapUserToFrontend,
   mapClienteToFrontend,
@@ -44,7 +45,10 @@ import type {
   Cobranca,
   CommissionLeader,
   AppUser,
-  SystemTab
+  SystemTab,
+  PatientDocument,
+  AnamneseDocumentoConteudo,
+  TimelineItem
 } from '../lib/types';
 
 const checkTimeOverlap = (time1: string, dur1: number, time2: string, dur2: number) => {
@@ -169,17 +173,6 @@ export default function SystemPage() {
     method: string;
   }
 
-  interface PatientDocument {
-    id: string;
-    name: string;
-    type: string;
-    date: string;
-    size: string;
-    signed: boolean;
-    signatureBase64?: string;
-    content?: any;
-  }
-
   const [patientFinancials, setPatientFinancials] = useState<Record<string, PatientFinancialItem[]>>({});
 
   const [patientDocuments, setPatientDocuments] = useState<Record<string, PatientDocument[]>>({});
@@ -241,7 +234,8 @@ export default function SystemPage() {
 
   // Clientes Module Detail Tab
   const [activePatientSubTab, setActivePatientSubTab] = useState<'evolution' | 'anamnese' | 'financeiro' | 'documentos' | 'retorno' | 'planos'>('evolution');
-  const [selectedAnamneseType, setSelectedAnamneseType] = useState<'padrao' | 'microagulhamento' | 'microagulhamento-completo'>('padrao');
+  const [anamneseModalAberto, setAnamneseModalAberto] = useState(false);
+  const [anamneseAtiva, setAnamneseAtiva] = useState<AnamneseTemplateId | null>(null);
   const [retornoTime, setRetornoTime] = useState('09:00');
   const [activeLightboxImage, setActiveLightboxImage] = useState<string>('');
   const [isComparing, setIsComparing] = useState<boolean>(false);
@@ -948,6 +942,85 @@ export default function SystemPage() {
     }
   };
 
+  const handleSalvarAnamnese = async (templateId: AnamneseTemplateId, payload: AnamneseFormPayload) => {
+    if (!selectedPatient.id) return;
+    try {
+      let assinaturaUrl: string | undefined;
+      try {
+        const uploadRes = await fetch('/api/storage/upload', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            bucket: 'signatures',
+            path: `anamnese/${selectedPatient.id}/${crypto.randomUUID()}.png`,
+            base64: payload.signatureBase64,
+            contentType: 'image/png'
+          })
+        });
+        if (uploadRes.ok) {
+          const uploadData = await uploadRes.json();
+          assinaturaUrl = uploadData.url;
+        }
+      } catch (uploadErr) {
+        console.warn('Falha no upload da assinatura:', uploadErr);
+      }
+      // Mesmo padrao ja provado em PlanoTratamentoModule.tsx: aceite eletronico
+      // real, sem selo de seguranca falso.
+      const assinaturaAceiteEm = assinaturaUrl ? new Date().toISOString() : undefined;
+
+      const template = ANAMNESE_TEMPLATES[templateId];
+      const conteudo: AnamneseDocumentoConteudo = {
+        templateId,
+        respostas: payload.respostas,
+        diagnosticoFisico: payload.diagnosticoFisico,
+        lesoesPele: payload.lesoesPele,
+        autorizaFotos: payload.autorizaFotos,
+        observacoesGerais: payload.observacoesGerais
+      };
+
+      const newDoc: PatientDocument = {
+        id: 'doc_anamnese_' + crypto.randomUUID(),
+        name: `Ficha Anamnese - ${template.titulo} - ${new Date().toLocaleDateString('pt-BR')}`,
+        type: 'Anamnese',
+        date: new Date().toLocaleDateString('pt-BR'),
+        size: '0.1 MB',
+        signed: true,
+        signatureBase64: assinaturaUrl || payload.signatureBase64,
+        content: conteudo
+      };
+      const updatedDocs = [...(patientDocuments[selectedPatient.id] || []), newDoc];
+
+      // Vinculo com o Historico: assinaturaUrl/assinaturaAceiteEm ja sao
+      // renderizados la (pill "Ver assinatura" abrindo o lightbox), so
+      // faltava alguem preencher esses 2 campos na hora de salvar.
+      const newTimelineItem: TimelineItem = {
+        id: 'tl_anamnese_' + crypto.randomUUID(),
+        title: 'Anamnese Preenchida',
+        date: new Date().toLocaleDateString('pt-BR'),
+        description: `Ficha de Anamnese: ${template.titulo} salva e assinada digitalmente.`,
+        category: 'Procedimento',
+        status: 'Concluído',
+        assinaturaUrl,
+        assinaturaAceiteEm
+      };
+      const updatedTimeline = [newTimelineItem, ...(selectedPatient.historico || [])];
+
+      const { error } = await supabase.from('clientes').update({
+        documents: updatedDocs,
+        historico: updatedTimeline
+      }).eq('id', selectedPatient.id);
+      if (error) throw error;
+
+      setPatients(prev => prev.map(p => p.id === selectedPatient.id ? { ...p, historico: updatedTimeline } : p));
+      setPatientDocuments(prev => ({ ...prev, [selectedPatient.id]: updatedDocs }));
+      showAlert('Ficha de anamnese salva com sucesso!');
+      setAnamneseAtiva(null);
+      setActivePatientSubTab('evolution');
+    } catch (err: any) {
+      showAlert(`Erro ao salvar ficha: ${err.message || err}`);
+    }
+  };
+
   const saveMsgPredefinida = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
@@ -1605,7 +1678,7 @@ export default function SystemPage() {
               <span>Acesso seguro. Todos os dados são criptografados.</span>
             </div>
             <span>© 2026 Gabi Almeida Estética.</span>
-            <span>Desenvolvido: caduhelp-dev | Ver. 3.18.0</span>
+            <span>Desenvolvido: caduhelp-dev | Ver. 3.19.0</span>
           </div>
         </div>
       </div>
@@ -3623,330 +3696,28 @@ export default function SystemPage() {
                 {/* Anamnese */}
                 {activePatientSubTab === 'anamnese' && (
                   <div>
-                    <div className="flex justify-center mb-6">
-                      <div className="bg-surface rounded-full p-1 flex shadow-sm border border-outline-variant">
-                        <button
-                          onClick={() => setSelectedAnamneseType('padrao')}
-                          className={`px-6 py-2 rounded-full text-[13px] font-bold transition-all ${selectedAnamneseType === 'padrao' ? 'bg-primary text-white-pure shadow-md' : 'text-on-surface-variant hover:text-primary'}`}
-                        >
-                          Limpeza de Pele (Padrão)
-                        </button>
-                        <button
-                          onClick={() => setSelectedAnamneseType('microagulhamento')}
-                          className={`px-6 py-2 rounded-full text-[13px] font-bold transition-all ${selectedAnamneseType === 'microagulhamento' ? 'bg-primary text-white-pure shadow-md' : 'text-on-surface-variant hover:text-primary'}`}
-                        >
-                          Microagulhamento
-                        </button>
-                        <button
-                          onClick={() => setSelectedAnamneseType('microagulhamento-completo')}
-                          className={`px-6 py-2 rounded-full text-[13px] font-bold transition-all ${selectedAnamneseType === 'microagulhamento-completo' ? 'bg-primary text-white-pure shadow-md' : 'text-on-surface-variant hover:text-primary'}`}
-                        >
-                          Microagulhamento Completo
-                        </button>
-                      </div>
-                    </div>
-
-                    {selectedAnamneseType === 'padrao' ? (
-                      <AnamneseLimpezaDePele 
-                        patientName={selectedPatient.nome} 
-                        onCancel={() => setActivePatientSubTab('evolution')} 
-                        onSave={async (data) => {
-                          try {
-                            let signatureUrl = data.signatureBase64;
-                            try {
-                              const uploadRes = await fetch('/api/storage/upload', {
-                                method: 'POST',
-                                headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({
-                                  bucket: 'signatures',
-                                  path: `anamnese/${selectedPatient.id}/${crypto.randomUUID()}.png`,
-                                  base64: data.signatureBase64,
-                                  contentType: 'image/png'
-                                })
-                              });
-                              if (uploadRes.ok) {
-                                const uploadData = await uploadRes.json();
-                                signatureUrl = uploadData.url;
-                              }
-                            } catch (uploadErr) {
-                              console.warn('Falha no upload da assinatura:', uploadErr);
-                            }
-
-                            let allergiesStr = selectedPatient.alergias || 'Nenhuma';
-                            if (data.healthToggles['Possui algum tipo de alergia?']) allergiesStr = 'Sim (verificar anamnese)';
-                            if (data.otherHealth) allergiesStr += ` - Outros relatos: ${data.otherHealth}`;
-
-                            let medicationsStr = selectedPatient.medicacoes || 'Nenhum';
-                            if (data.healthToggles['Utiliza anticoncepcional?'] || data.healthToggles['Utiliza cremes ou loções facial?']) {
-                              const meds = [];
-                              if (data.healthToggles['Utiliza anticoncepcional?']) meds.push('Anticoncepcional');
-                              if (data.healthToggles['Utiliza cremes ou loções facial?']) meds.push('Cremes/Loções Faciais');
-                              medicationsStr = meds.join(', ');
-                            }
-
-                            let prevProceduresStr = selectedPatient.procedimentosAnteriores || 'Nenhum';
-                            if (data.healthToggles['Tratamento facial anterior?']) prevProceduresStr = 'Sim (verificar anamnese)';
-
-                            const newDoc: PatientDocument = {
-                              id: 'doc_anamnese_' + crypto.randomUUID(),
-                              name: `Ficha Anamnese - Limpeza de Pele - ${new Date().toLocaleDateString('pt-BR')}`,
-                              type: 'Anamnese',
-                              date: new Date().toLocaleDateString('pt-BR'),
-                              size: '0.1 MB',
-                              signed: true,
-                              signatureBase64: signatureUrl,
-                              content: data
-                            };
-
-                            const updatedDocs = [...(patientDocuments[selectedPatient.id] || []), newDoc];
-
-                            const newTimelineItem = {
-                              id: 'tl_anamnese_' + crypto.randomUUID(),
-                              title: 'Anamnese Preenchida',
-                              date: new Date().toLocaleDateString('pt-BR'),
-                              description: 'Ficha de Anamnese: Limpeza de Pele salva e assinada digitalmente.',
-                              category: 'Procedimento',
-                              status: 'Concluído'
-                            };
-
-                            const updatedTimeline = [newTimelineItem, ...(selectedPatient.historico || [])];
-
-                            const { error } = await supabase.from('clientes').update({
-                              alergias: allergiesStr,
-                              medicacoes: medicationsStr,
-                              procedimentos_anteriores: prevProceduresStr,
-                              documents: updatedDocs,
-                              historico: updatedTimeline
-                            }).eq('id', selectedPatient.id);
-
-                            if (error) throw error;
-
-                            setPatients(prev => prev.map(p => {
-                              if (p.id === selectedPatient.id) {
-                                return {
-                                  ...p,
-                                  alergias: allergiesStr,
-                                  medicacoes: medicationsStr,
-                                  procedimentosAnteriores: prevProceduresStr,
-                                  historico: updatedTimeline
-                                };
-                              }
-                              return p;
-                            }));
-
-                            setPatientDocuments(prev => ({ ...prev, [selectedPatient.id]: updatedDocs }));
-                            showAlert('Ficha de anamnese salva com sucesso!');
-                            setActivePatientSubTab('evolution');
-                          } catch (err: any) {
-                            showAlert(`Erro ao salvar ficha: ${err.message || err}`);
-                          }
-                        }} 
-                      />
-                    ) : selectedAnamneseType === 'microagulhamento' ? (
-                      <AnamneseMicroagulhamento
+                    {anamneseAtiva ? (
+                      <AnamneseForm
+                        templateId={anamneseAtiva}
                         patientName={selectedPatient.nome}
-                        patientPhone={selectedPatient.telefone || ''}
-                        onCancel={() => setActivePatientSubTab('evolution')}
-                        onSave={async (data: any) => {
-                          try {
-                            let signatureUrl = data.signatureBase64;
-                            try {
-                              const uploadRes = await fetch('/api/storage/upload', {
-                                method: 'POST',
-                                headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({
-                                  bucket: 'signatures',
-                                  path: `anamnese/${selectedPatient.id}/${crypto.randomUUID()}.png`,
-                                  base64: data.signatureBase64,
-                                  contentType: 'image/png'
-                                })
-                              });
-                              if (uploadRes.ok) {
-                                const uploadData = await uploadRes.json();
-                                signatureUrl = uploadData.url;
-                              }
-                            } catch (uploadErr) {
-                              console.warn('Falha no upload da assinatura:', uploadErr);
-                            }
-
-                            let allergiesStr = selectedPatient.alergias || 'Nenhuma';
-                            if (data.healthToggles['Possui algum tipo de alergia (anestésicos, metais, ativos)?']) {
-                              allergiesStr = data.healthDetails['Possui algum tipo de alergia (anestésicos, metais, ativos)?'] || 'Sim (verificar anamnese)';
-                            }
-                            if (data.otherHealth) allergiesStr += ` - Outros relatos: ${data.otherHealth}`;
-
-                            let medicationsStr = selectedPatient.medicacoes || 'Nenhum';
-                            if (data.healthToggles['Utiliza isotretinoína (Roacutan) ou derivados de vitamina A?'] || data.healthToggles['Utiliza anticoagulantes ou AAS?'] || data.healthToggles['Utiliza cremes ou ácidos tópicos?']) {
-                              const meds = [];
-                              if (data.healthToggles['Utiliza isotretinoína (Roacutan) ou derivados de vitamina A?']) meds.push('Isotretinoína/Derivados Vit. A');
-                              if (data.healthToggles['Utiliza anticoagulantes ou AAS?']) meds.push('Anticoagulantes/AAS');
-                              if (data.healthToggles['Utiliza cremes ou ácidos tópicos?']) meds.push('Cremes/Ácidos Tópicos');
-                              if (data.healthToggles['Utiliza anticoncepcional?']) meds.push('Anticoncepcional');
-                              medicationsStr = meds.join(', ');
-                            }
-
-                            let prevProceduresStr = selectedPatient.procedimentosAnteriores || 'Nenhum';
-                            if (data.healthToggles['Realizou procedimento estético nos últimos 15 dias?']) prevProceduresStr = data.healthDetails['Realizou procedimento estético nos últimos 15 dias?'] || 'Sim (verificar anamnese)';
-                            if (data.healthToggles['Tratamento dermatológico em andamento?']) prevProceduresStr += ` | Tratamento em andamento: ${data.healthDetails['Tratamento dermatológico em andamento?'] || 'Sim'}`;
-
-
-                            const newDoc: PatientDocument = {
-                              id: 'doc_anamnese_' + crypto.randomUUID(),
-                              name: `Ficha Anamnese - Microagulhamento - ${new Date().toLocaleDateString('pt-BR')}`,
-                              type: 'Anamnese',
-                              date: new Date().toLocaleDateString('pt-BR'),
-                              size: '0.1 MB',
-                              signed: true,
-                              signatureBase64: signatureUrl,
-                              content: data
-                            };
-
-                            const updatedDocs = [...(patientDocuments[selectedPatient.id] || []), newDoc];
-
-                            const newTimelineItem = {
-                              id: 'tl_anamnese_' + crypto.randomUUID(),
-                              title: 'Anamnese Preenchida',
-                              date: new Date().toLocaleDateString('pt-BR'),
-                              description: 'Ficha de Anamnese: Microagulhamento salva e assinada digitalmente.',
-                              category: 'Procedimento',
-                              status: 'Concluído'
-                            };
-
-                            const updatedTimeline = [newTimelineItem, ...(selectedPatient.historico || [])];
-
-                            const { error } = await supabase.from('clientes').update({
-                              alergias: allergiesStr,
-                              medicacoes: medicationsStr,
-                              procedimentos_anteriores: prevProceduresStr,
-                              documents: updatedDocs,
-                              historico: updatedTimeline
-                            }).eq('id', selectedPatient.id);
-
-                            if (error) throw error;
-
-                            setPatients(prev => prev.map(p => {
-                              if (p.id === selectedPatient.id) {
-                                return {
-                                  ...p,
-                                  alergias: allergiesStr,
-                                  medicacoes: medicationsStr,
-                                  procedimentosAnteriores: prevProceduresStr,
-                                  historico: updatedTimeline
-                                };
-                              }
-                              return p;
-                            }));
-
-                            setPatientDocuments(prev => ({ ...prev, [selectedPatient.id]: updatedDocs }));
-                            showAlert('Ficha de anamnese salva com sucesso!');
-                            setActivePatientSubTab('evolution');
-                          } catch (err: any) {
-                            showAlert(`Erro ao salvar ficha: ${err.message || err}`);
-                          }
-                        }}
+                        onCancel={() => setAnamneseAtiva(null)}
+                        onSave={(payload) => handleSalvarAnamnese(anamneseAtiva, payload)}
                       />
                     ) : (
-                      <AnamneseMicroagulhamentoCompleto
-                        patientName={selectedPatient.nome}
-                        patientPhone={selectedPatient.telefone || ''}
-                        patientEmail={(selectedPatient as any).email || ''}
-                        onCancel={() => setActivePatientSubTab('evolution')}
-                        onSave={async (data: any) => {
-                          try {
-                            let signatureUrl = data.signatureBase64;
-                            try {
-                              const uploadRes = await fetch('/api/storage/upload', {
-                                method: 'POST',
-                                headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({
-                                  bucket: 'signatures',
-                                  path: `anamnese/${selectedPatient.id}/${crypto.randomUUID()}.png`,
-                                  base64: data.signatureBase64,
-                                  contentType: 'image/png'
-                                })
-                              });
-                              if (uploadRes.ok) {
-                                const uploadData = await uploadRes.json();
-                                signatureUrl = uploadData.url;
-                              }
-                            } catch (uploadErr) {
-                              console.warn('Falha no upload da assinatura:', uploadErr);
-                            }
-
-                            let allergiesStr = selectedPatient.alergias || 'Nenhuma';
-                            if (data.saude?.alergias === true) {
-                              allergiesStr = data.saudeDetalhes?.alergias || 'Sim (verificar anamnese)';
-                            }
-
-                            let medicationsStr = selectedPatient.medicacoes || 'Nenhum';
-                            if (data.saude?.medicamentos === true) {
-                              medicationsStr = data.saudeDetalhes?.medicamentos || 'Sim (verificar anamnese)';
-                            }
-                            if (data.isotretinoina === true) {
-                              medicationsStr += (medicationsStr !== 'Nenhum' ? ', ' : '') + 'Isotretinoína (últimos 6 meses)';
-                            }
-
-                            let prevProceduresStr = selectedPatient.procedimentosAnteriores || 'Nenhum';
-                            if (data.procedAnteriores?.length > 0) {
-                              prevProceduresStr = [...data.procedAnteriores, data.procedOutro].filter(Boolean).join(', ');
-                            }
-
-                            const newDoc: PatientDocument = {
-                              id: 'doc_anamnese_' + crypto.randomUUID(),
-                              name: `Ficha Anamnese - Microagulhamento Completo - ${new Date().toLocaleDateString('pt-BR')}`,
-                              type: 'Anamnese',
-                              date: new Date().toLocaleDateString('pt-BR'),
-                              size: '0.1 MB',
-                              signed: true,
-                              signatureBase64: signatureUrl,
-                              content: data
-                            };
-
-                            const updatedDocs = [...(patientDocuments[selectedPatient.id] || []), newDoc];
-
-                            const areas = (data.areasTratadas || []).join(', ');
-                            const newTimelineItem = {
-                              id: 'tl_anamnese_' + crypto.randomUUID(),
-                              title: 'Anamnese Preenchida',
-                              date: new Date().toLocaleDateString('pt-BR'),
-                              description: `Ficha de Anamnese: Microagulhamento Completo salva e assinada digitalmente.${areas ? ` Áreas: ${areas}.` : ''}`,
-                              category: 'Procedimento',
-                              status: 'Concluído'
-                            };
-
-                            const updatedTimeline = [newTimelineItem, ...(selectedPatient.historico || [])];
-
-                            const { error } = await supabase.from('clientes').update({
-                              alergias: allergiesStr,
-                              medicacoes: medicationsStr,
-                              procedimentos_anteriores: prevProceduresStr,
-                              documents: updatedDocs,
-                              historico: updatedTimeline
-                            }).eq('id', selectedPatient.id);
-
-                            if (error) throw error;
-
-                            setPatients(prev => prev.map(p => {
-                              if (p.id === selectedPatient.id) {
-                                return {
-                                  ...p,
-                                  alergias: allergiesStr,
-                                  medicacoes: medicationsStr,
-                                  procedimentosAnteriores: prevProceduresStr,
-                                  historico: updatedTimeline
-                                };
-                              }
-                              return p;
-                            }));
-
-                            setPatientDocuments(prev => ({ ...prev, [selectedPatient.id]: updatedDocs }));
-                            showAlert('Ficha de anamnese salva com sucesso!');
-                            setActivePatientSubTab('evolution');
-                          } catch (err: any) {
-                            showAlert(`Erro ao salvar ficha: ${err.message || err}`);
-                          }
-                        }}
-                      />
+                      <div className="flex flex-col items-center justify-center py-20 gap-4 text-center">
+                        <span className="material-symbols-outlined text-6xl text-outline/40">assignment</span>
+                        <div>
+                          <p className="font-bold text-on-surface text-[15px]">Nenhuma ficha selecionada</p>
+                          <p className="text-[13px] text-on-surface-variant mt-1 max-w-sm">Escolha um modelo de anamnese para preencher com o cliente. É possível preencher quantas fichas forem necessárias, uma para cada procedimento.</p>
+                        </div>
+                        <button
+                          onClick={() => setAnamneseModalAberto(true)}
+                          className="px-6 py-3 bg-primary text-white-pure font-bold rounded-xl text-[13px] shadow-md hover:opacity-90 transition-all flex items-center gap-2 cursor-pointer"
+                        >
+                          <span className="material-symbols-outlined text-[18px]">add</span>
+                          Escolher Modelo
+                        </button>
+                      </div>
                     )}
                   </div>
                 )}
@@ -6357,12 +6128,24 @@ export default function SystemPage() {
                   </div>
                   <div>
                     <h2 className="text-[18px] font-bold text-on-surface">Gabi Almeida Estética Sistema</h2>
-                    <p className="text-[13px] text-on-surface-variant font-bold">Versão atual: 3.18.0</p>
+                    <p className="text-[13px] text-on-surface-variant font-bold">Versão atual: 3.19.0</p>
                   </div>
                 </div>
 
                 <div className="space-y-4">
                   <h3 className="text-[14px] font-bold text-primary border-b border-outline-variant/30 pb-2">Histórico de Versões (Changelog)</h3>
+
+                  <div className="bg-surface-container-lowest rounded-2xl p-4 border border-outline-variant/50 mb-4">
+                    <div className="flex justify-between items-center mb-2">
+                      <span className="font-bold text-[14px] text-on-surface">Versão 3.19.0</span>
+                      <span className="text-[11px] font-bold text-on-surface-variant px-2 py-1 bg-surface-container rounded-lg">24 Agosto 2026</span>
+                    </div>
+                    <ul className="list-disc pl-5 space-y-1.5 text-[13px] text-on-surface-variant mt-3">
+                      <li><strong className="text-on-surface">10 Modelos de Anamnese:</strong> a ficha de anamnese agora tem 10 modelos (Limpeza de Pele, Microagulhamento, Sobrancelha com Henna, Acne, Clareamento de Manchas, Rejuvenescimento Facial, Depilação, Maquiagem, Manicure e Pedicure, Reconstrução de Sobrancelhas), escolhidos num novo seletor agrupado por categoria. Dá para preencher quantas fichas o cliente precisar, uma para cada procedimento.</li>
+                      <li><strong className="text-on-surface">Observação em toda pergunta:</strong> toda pergunta Sim/Não da anamnese agora tem uma caixa para escrever uma observação, sempre visível.</li>
+                      <li><strong className="text-on-surface">Assinatura da Anamnese no Histórico:</strong> a ficha assinada agora aparece vinculada ao Histórico do prontuário, do mesmo jeito que já acontece com as sessões do plano de tratamento.</li>
+                    </ul>
+                  </div>
 
                   <div className="bg-surface-container-lowest rounded-2xl p-4 border border-outline-variant/50 mb-4">
                     <div className="flex justify-between items-center mb-2">
@@ -7890,9 +7673,16 @@ export default function SystemPage() {
       )}
 
       {viewingDocument && (
-        <DocumentViewerModal 
-          document={viewingDocument} 
-          onClose={() => setViewingDocument(null)} 
+        <DocumentViewerModal
+          document={viewingDocument}
+          onClose={() => setViewingDocument(null)}
+        />
+      )}
+
+      {anamneseModalAberto && (
+        <SelecionarAnamneseModal
+          onSelect={(id) => { setAnamneseAtiva(id); setAnamneseModalAberto(false); }}
+          onClose={() => setAnamneseModalAberto(false)}
         />
       )}
 

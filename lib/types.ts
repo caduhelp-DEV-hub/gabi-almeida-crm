@@ -1,3 +1,5 @@
+import type { AnamneseTemplateId } from './anamneseTemplates';
+
 export interface TimelineItem {
   id: string;
   title: string;
@@ -21,6 +23,34 @@ export interface EvolutionPhoto {
   type: 'Antes' | 'Depois' | 'Evolução';
   /** Observacao clinica opcional sobre a foto. */
   observacao?: string;
+}
+
+export interface AnamneseRespostaItem {
+  valor: boolean | null;
+  observacao?: string;
+}
+
+/** Conteudo de um PatientDocument do tipo 'Anamnese' gerado pelo motor generico (AnamneseForm). */
+export interface AnamneseDocumentoConteudo {
+  /** Presenca deste campo distingue do formato antigo (fichas retiradas). */
+  templateId: AnamneseTemplateId;
+  respostas: Record<string, AnamneseRespostaItem>;
+  diagnosticoFisico?: Record<string, string>;
+  lesoesPele?: string[];
+  autorizaFotos: boolean;
+  observacoesGerais?: string;
+}
+
+export interface PatientDocument {
+  id: string;
+  name: string;
+  type: string;
+  date: string;
+  size: string;
+  signed: boolean;
+  signatureBase64?: string;
+  /** Formato novo (AnamneseDocumentoConteudo) ou formato antigo de documentos ja salvos. */
+  content?: AnamneseDocumentoConteudo | Record<string, unknown>;
 }
 
 export interface Cliente {

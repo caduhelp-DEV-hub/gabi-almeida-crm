@@ -2,6 +2,20 @@
 
 Todas as mudanças notáveis neste projeto serão documentadas neste arquivo.
 
+## [3.19.0] - 2026-08-24
+### Adicionado
+- **Motor genérico de Anamnese, expandido de 3 para 10 modelos.** Além de Limpeza de Pele e Microagulhamento (agora com listas de perguntas revisadas e ampliadas), entram Design de Sobrancelha com Henna, Acne, Clareamento de Manchas, Rejuvenescimento Facial, Depilação, Maquiagem, Manicure e Pedicure, e Reconstrução de Sobrancelhas. As 3 fichas antigas (cada uma um componente inteiro quase duplicado, cada uma reimplementando sua própria captura de assinatura) foram substituídas por um único formulário guiado por um registro central de modelos (`lib/anamneseTemplates.ts`) — inclusive a ficha "Microagulhamento Completo", retirada e substituída pela nova lista simples de Microagulhamento.
+- **Toda pergunta Sim/Não ganhou uma caixa de observação sempre visível** — antes só aparecia condicionalmente quando a resposta era "Sim", e olhe lá só em 2 das 3 fichas antigas. Corrigido também um bug relacionado: uma ficha sem nenhuma descrição preenchida não deixava rastro no Histórico; agora toda ficha salva sempre vira um Protocolo.
+- **Novo seletor de modelos agrupado por categoria** (Rosto & Pele, Sobrancelhas, Procedimentos Avançados, Corpo & Depilação, Beleza & Estética), substituindo os 3 botões fixos que não escalariam para 10 opções. Continua sendo possível preencher quantas fichas o cliente precisar ao longo do tempo — cada procedimento pode ter sua própria anamnese.
+- **Assinatura da Anamnese vinculada ao Histórico do prontuário**, mesmo padrão já entregue para as sessões de tratamento: cada ficha salva mostra um link "Ver assinatura" no Protocolo correspondente, com o horário do aceite eletrônico.
+
+### Corrigido
+- Removido o selo de segurança falso "Documento autenticado via ICP-Brasil" que ainda existia no visualizador de documentos.
+- Um documento de Anamnese antigo (ficha "Microagulhamento Completo", já retirada) aparecia em branco no visualizador — agora mostra uma leitura básica das respostas salvas.
+
+### Testes
+- 5 arquivos novos (registro de modelos, formulário genérico, visualizador de documentos) e um teste E2E completo: escolhe um modelo no seletor, responde perguntas com observação, desenha uma assinatura real, salva, e confere que ela aparece em Documentos e no Histórico — passando em desktop e iPad.
+
 ## [3.18.0] - 2026-08-24
 ### Adicionado
 - **Assinatura vinculada ao Histórico do prontuário.** A assinatura de cada sessão (v3.17.0) ficava salva no banco mas invisível na consulta — só aparecia a assinatura da primeira ficha de anamnese. Agora, toda sessão registrada vira um Protocolo no Histórico com um link "Ver assinatura" (abre a imagem ampliada) ou, quando dispensada, o motivo registrado visível diretamente no card — mesmo sessões sem descrição (antes, uma sessão só com assinatura e sem descrição não gerava Protocolo nenhum).
