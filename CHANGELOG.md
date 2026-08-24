@@ -2,6 +2,11 @@
 
 Todas as mudanças notáveis neste projeto serão documentadas neste arquivo.
 
+## [3.15.0] - 2026-08-24
+### Segurança
+- **Escalonamento de privilégio corrigido.** `POST /api/auth/users/update` verificava se o usuário podia editar o alvo (admin ou o próprio perfil), mas aceitava `role`, `status`, `permissions` e `commission_rate` sem checar se o valor havia mudado. Um usuário `staff`/`prestador` editando o próprio perfil podia enviar `role: "admin"` diretamente na requisição (fora do que a interface envia) e se promover. A UI nunca oferecia essa opção, mas a API precisa se defender por conta própria — o cliente não é confiável. Agora, uma edição do próprio perfil que tente mudar qualquer um desses quatro campos é recusada com 403; edições de admin sobre outra conta continuam funcionando normalmente. Coberto por 7 testes que reproduzem o ataque e confirmam que a versão anterior falhava 4 deles.
+- Verificado no banco de produção: apenas as 2 contas admin esperadas existem hoje, sem indício de exploração.
+
 ## [3.14.0] - 2026-08-24
 ### Performance
 - **Carga inicial 94% mais leve.** A listagem de clientes usava `select('*')`, baixando `fotos_evolucao`, `foto_antes`, `foto_depois`, `documents` e `financials` de todos os clientes a cada abertura do sistema: 2,48 MB e 2,2 s só nessa consulta, sendo ~2,2 MB de imagem em base64 que a lista sequer exibe. Agora a lista usa `CLIENTE_LIST_COLUMNS` (0,14 MB, 267 ms) e os campos pesados são buscados sob demanda ao abrir o prontuário (`CLIENTE_DETALHE_COLUMNS`). O custo era linear no número de clientes.

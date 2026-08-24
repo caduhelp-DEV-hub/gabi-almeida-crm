@@ -14,11 +14,35 @@ export async function POST(request: NextRequest) {
   try {
     const { id, name, username, role, status, phone, specialty, commissionRate, permissions, password, avatar } = await request.json();
 
-    if (auth.role !== 'admin' && auth.id !== id) {
+    const isAdmin = auth.role === 'admin';
+    const isSelf = auth.id === id;
+
+    if (!isAdmin && !isSelf) {
       return NextResponse.json(
         { error: 'Acesso negado. Você só pode atualizar o seu próprio perfil.' },
         { status: 403 }
       );
+    }
+
+    // Um usuario editando o proprio perfil nao pode se promover: role, status,
+    // permissions e commission_rate so mudam por um admin editando outra conta.
+    // Sem essa checagem, o endpoint aceitava qualquer valor enviado pelo
+    // cliente e um staff/prestador podia se tornar admin manipulando o
+    // corpo da requisicao (a UI nunca envia isso, mas a API precisa recusar
+    // por conta propria).
+    if (!isAdmin && isSelf) {
+      if (role !== undefined && role !== auth.role) {
+        return NextResponse.json({ error: 'Você não pode alterar o seu próprio perfil de acesso.' }, { status: 403 });
+      }
+      if (status !== undefined && status !== auth.status) {
+        return NextResponse.json({ error: 'Você não pode alterar o seu próprio status.' }, { status: 403 });
+      }
+      if (permissions !== undefined && JSON.stringify(permissions) !== JSON.stringify(auth.permissions || {})) {
+        return NextResponse.json({ error: 'Você não pode alterar as suas próprias permissões.' }, { status: 403 });
+      }
+      if (commissionRate !== undefined && Number(commissionRate) !== Number(auth.commissionRate || 0)) {
+        return NextResponse.json({ error: 'Você não pode alterar a sua própria comissão.' }, { status: 403 });
+      }
     }
 
     if (!id || !name || !username || !role) {
