@@ -14,7 +14,9 @@ export default defineConfig({
   projects: [
     {
       name: 'chromium-desktop',
-      use: { ...devices['Desktop Chrome'] }
+      // 1280x720 (padrao do device) e baixo demais e nao representa o uso real;
+      // com ele o prontuario nao cabe e os testes ficam presos em rolagem.
+      use: { ...devices['Desktop Chrome'], viewport: { width: 1440, height: 900 } }
     },
     {
       name: 'mobile-iphone',
@@ -23,6 +25,14 @@ export default defineConfig({
     {
       name: 'mobile-pixel',
       use: { ...devices['Pixel 5'] }
+    },
+    {
+      name: 'ipad',
+      use: { ...devices['iPad Pro 11'] }
+    },
+    {
+      name: 'ipad-landscape',
+      use: { ...devices['iPad Pro 11 landscape'] }
     }
   ],
   webServer: {

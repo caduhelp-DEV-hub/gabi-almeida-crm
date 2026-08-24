@@ -10,8 +10,11 @@ export interface TimelineItem {
 export interface EvolutionPhoto {
   id: string;
   url: string;
+  /** Data no formato DD/MM/AAAA. Editavel pelo prontuario. */
   date: string;
   type: 'Antes' | 'Depois' | 'Evolução';
+  /** Observacao clinica opcional sobre a foto. */
+  observacao?: string;
 }
 
 export interface Cliente {

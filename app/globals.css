@@ -306,3 +306,90 @@ body {
   transform: translateY(-1px) scale(1.01);
   box-shadow: 0 6px 16px rgba(109, 34, 168, 0.3);
 }
+
+/* ==========================================================================
+   Aparelhos de toque (iPad / iPhone / Safari)
+   ========================================================================== */
+
+/*
+ * Acoes que so aparecem no hover.
+ * No Tailwind 4 o `hover:` so vale em aparelhos com mouse, entao no iPad um
+ * overlay `opacity-0 group-hover:opacity-100` NUNCA fica visivel — e pior,
+ * continua capturando o toque por cima do conteudo. Por isso o padrao aqui e
+ * "visivel", e o comportamento de hover so entra onde existe mouse de verdade.
+ */
+.hover-actions {
+  opacity: 1;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .hover-actions {
+    opacity: 0;
+    transition: opacity 0.2s ease;
+  }
+  .group:hover .hover-actions,
+  .hover-actions:focus-within {
+    opacity: 1;
+  }
+}
+
+/*
+ * O Safari do iOS aplica zoom automatico na pagina quando o campo focado tem
+ * fonte menor que 16px. O app usa 13px na maioria dos campos, o que fazia a
+ * tela "pular" a cada toque num input no iPad. Vale so para toque, entao o
+ * desktop mantem o tamanho original.
+ */
+@media (hover: none) and (pointer: coarse) {
+  input:not([type='checkbox']):not([type='radio']),
+  select,
+  textarea {
+    font-size: 16px;
+  }
+}
+
+/* Remove o flash cinza do iOS ao tocar e o menu de contexto do toque longo. */
+@media (hover: none) {
+  * {
+    -webkit-tap-highlight-color: transparent;
+  }
+  button,
+  a,
+  label,
+  [role='button'] {
+    -webkit-touch-callout: none;
+  }
+}
+
+/* Rolagem com inercia e sem "puxar" a pagina inteira junto no iOS. */
+.custom-scrollbar,
+.no-scrollbar,
+aside.sidebar nav,
+.main-content {
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+}
+
+/*
+ * Alvos de toque: a diretriz da Apple pede no minimo 44x44pt.
+ * Vale so para toque para nao inchar o layout no desktop.
+ */
+@media (hover: none) and (pointer: coarse) {
+  .touch-target {
+    min-width: 44px;
+    min-height: 44px;
+  }
+}
+
+/*
+ * Mostrado apenas em aparelhos de toque. Serve para dar a pista visual que o
+ * hover daria no desktop (ex.: o icone de lupa sobre as fotos do prontuario).
+ */
+.touch-only {
+  display: none;
+}
+
+@media (hover: none) and (pointer: coarse) {
+  .touch-only {
+    display: flex;
+  }
+}

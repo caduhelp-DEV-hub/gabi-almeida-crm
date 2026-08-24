@@ -10,6 +10,7 @@ const VendaSkincareModule = dynamic(() => import('../components/VendaSkincareMod
 const PlanoTratamentoModule = dynamic(() => import('../components/PlanoTratamentoModule'), { ssr: false });
 const DocumentViewerModal = dynamic(() => import('../components/DocumentViewerModal'), { ssr: false });
 const ChangePasswordModal = dynamic(() => import('../components/modals/ChangePasswordModal'), { ssr: false });
+const EditarFotoModal = dynamic(() => import('../components/modals/EditarFotoModal'), { ssr: false });
 import CustomSearchableSelect from '../components/ui/CustomSearchableSelect';
 import ServicePieChart from '../components/dashboard/ServicePieChart';
 import DespesaModal from '../components/modals/DespesaModal';
@@ -30,6 +31,7 @@ import {
   USER_PUBLIC_COLUMNS
 } from '../lib/mappers';
 import type {
+  EvolutionPhoto,
   Cliente,
   Agendamento,
   Servico,
@@ -248,6 +250,7 @@ export default function SystemPage() {
   const [isComparing, setIsComparing] = useState<boolean>(false);
   const [compareSelectedIds, setCompareSelectedIds] = useState<string[]>([]);
   const [pendingEvolutionPhoto, setPendingEvolutionPhoto] = useState<{file: File, base64: string} | null>(null);
+  const [editingPhoto, setEditingPhoto] = useState<EvolutionPhoto | null>(null);
 
   // Financeiro module detailed view timeframe
   const [financialTimeframe, setFinancialTimeframe] = useState<'semanal' | 'mensal'>('mensal');
@@ -1145,12 +1148,15 @@ export default function SystemPage() {
         supabase.from('users').select(USER_PUBLIC_COLUMNS).then((res: any) => { const data = res.data; if (data) setAppUsers(data.map(mapUserToFrontend)); });
       });
 
-    // O Realtime so le o token de acesso ao abrir a conexao, entao aplicamos
-    // o token antes de assinar os canais. As leituras REST pegam o token sozinhas.
+    // As leituras REST pegam o token sozinhas (opcao accessToken do supabase-js),
+    // entao a carga inicial NAO deve esperar pelo Realtime — se esperasse, a tela
+    // ficaria presa em "Carregando Sistema" enquanto o websocket negocia.
+    fetchInitial();
+
+    // Ja o Realtime so le o token ao abrir a conexao, entao ele precisa esperar.
     let cancelled = false;
     refreshDbAuth().then(() => {
       if (cancelled) return;
-      fetchInitial();
       dbChangesChannel.subscribe();
     });
 
@@ -1693,7 +1699,7 @@ export default function SystemPage() {
               <span>Acesso seguro. Todos os dados são criptografados.</span>
             </div>
             <span>© 2026 Gabi Almeida Estética.</span>
-            <span>Desenvolvido: caduhelp-dev | Ver. 3.12.0</span>
+            <span>Desenvolvido: caduhelp-dev | Ver. 3.13.0</span>
           </div>
         </div>
       </div>
@@ -1735,6 +1741,30 @@ export default function SystemPage() {
   return (
     <div className="bg-background text-on-surface font-sans overflow-hidden h-[100dvh] flex relative">
       
+      {/* Modal de edicao de foto do prontuario */}
+      <EditarFotoModal
+        foto={editingPhoto}
+        onClose={() => setEditingPhoto(null)}
+        onSalvar={async ({ date, type, observacao }) => {
+          if (!editingPhoto || !selectedPatient.id) return;
+          const atualizadas = (selectedPatient.fotosEvolucao || []).map(p =>
+            p.id === editingPhoto.id ? { ...p, date, type, observacao: observacao || undefined } : p
+          );
+          try {
+            const { error } = await supabase
+              .from('clientes')
+              .update({ fotos_evolucao: atualizadas })
+              .eq('id', selectedPatient.id);
+            if (error) throw error;
+            setPatients(prev => prev.map(p => p.id === selectedPatient.id ? { ...p, fotosEvolucao: atualizadas } : p));
+            setEditingPhoto(null);
+            showAlert('Foto atualizada com sucesso!');
+          } catch (err: any) {
+            showAlert('Erro ao atualizar a foto: ' + err.message);
+          }
+        }}
+      />
+
       {/* Modal Nova Despesa */}
       <DespesaModal
         isOpen={isDespesaModalOpen}
@@ -1773,6 +1803,7 @@ export default function SystemPage() {
           
           <button
             onClick={() => setIsMobileMenuOpen(true)}
+            aria-label="Abrir menu"
             className="lg:hidden p-2 text-on-surface-variant hover:text-primary transition-colors cursor-pointer flex items-center justify-center -ml-2"
           >
             <span className="material-symbols-outlined text-[24px]">menu</span>
@@ -1962,6 +1993,7 @@ export default function SystemPage() {
               <div className="h-14 flex items-center justify-between px-4">
                 <button 
                   onClick={() => setIsMobileMenuOpen(true)}
+            aria-label="Abrir menu"
                   className="p-2 text-on-surface-variant hover:text-primary transition-colors cursor-pointer flex items-center justify-center -ml-2"
                 >
                   <span className="material-symbols-outlined text-[24px]">menu</span>
@@ -3344,9 +3376,22 @@ export default function SystemPage() {
                                 <button 
                                   onClick={() => setActiveLightboxImage(selectedPatient.fotoAntes)}
                                   className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white-pure font-bold text-[12px] gap-1 cursor-pointer print-hidden"
+                                  aria-label="Abrir foto em tela cheia"
                                 >
                                   <span className="material-symbols-outlined">zoom_in</span> Abrir / Visualizar
                                 </button>
+                              )}
+                              {selectedPatient.fotoDepois && (
+                                /* Pista visual no iPad/iPhone, onde nao existe hover. */
+                                <span className="touch-only absolute top-3 right-3 items-center justify-center w-9 h-9 rounded-full bg-black/55 text-white-pure pointer-events-none print-hidden">
+                                  <span className="material-symbols-outlined text-[20px]">zoom_in</span>
+                                </span>
+                              )}
+                              {selectedPatient.fotoAntes && (
+                                /* Pista visual no iPad/iPhone, onde nao existe hover. */
+                                <span className="touch-only absolute top-3 right-3 items-center justify-center w-9 h-9 rounded-full bg-black/55 text-white-pure pointer-events-none print-hidden">
+                                  <span className="material-symbols-outlined text-[20px]">zoom_in</span>
+                                </span>
                               )}
                             </div>
                             
@@ -3366,6 +3411,7 @@ export default function SystemPage() {
                                 <button 
                                   onClick={() => setActiveLightboxImage(selectedPatient.fotoDepois)}
                                   className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white-pure font-bold text-[12px] gap-1 cursor-pointer print-hidden"
+                                  aria-label="Abrir foto em tela cheia"
                                 >
                                   <span className="material-symbols-outlined">zoom_in</span> Abrir / Visualizar
                                 </button>
@@ -3380,33 +3426,39 @@ export default function SystemPage() {
                           {(!selectedPatient.fotosEvolucao || selectedPatient.fotosEvolucao.length === 0) ? (
                             <p className="text-[11px] text-on-surface-variant italic">Nenhuma foto carregada na galeria. Clique em "Nova Foto" para começar o histórico do paciente.</p>
                           ) : (
-                            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+                            <div className="grid grid-cols-[repeat(auto-fill,minmax(120px,1fr))] gap-4">
                               {selectedPatient.fotosEvolucao.map(photo => {
                                 const isSelected = compareSelectedIds.includes(photo.id);
                                 return (
-                                  <div key={photo.id} className={`relative rounded-xl overflow-hidden group border transition-all ${isSelected ? 'border-primary ring-2 ring-primary/20 scale-[0.98]' : 'border-outline-variant/40 bg-surface'}`}>
-                                    <Image width={500} height={500} unoptimized src={photo.url} className="w-full h-24 object-cover" alt="Histórico" sizes="(max-width: 768px) 100vw, 500px" />
-                                    
-                                    <div className="p-1.5 text-center">
-                                      <p className="text-[9px] font-bold text-on-surface truncate">{photo.date}</p>
-                                      <span className={`inline-block mt-0.5 px-2 py-0.2 rounded text-[7px] font-extrabold uppercase ${photo.type === 'Antes' ? 'bg-[#735c00]/10 text-[#735c00]' : (photo.type === 'Depois' ? 'bg-[#7B2FBE]/10 text-[#7B2FBE]' : 'bg-surface-container-highest text-on-surface-variant')}`}>
-                                        {photo.type}
-                                      </span>
-                                    </div>
+                                  <div key={photo.id} className={`relative rounded-xl overflow-hidden border transition-all ${isSelected ? 'border-primary ring-2 ring-primary/20 scale-[0.98]' : 'border-outline-variant/40 bg-surface'}`}>
+                                    <button
+                                      type="button"
+                                      onClick={() => setActiveLightboxImage(photo.url)}
+                                      className="block w-full cursor-pointer"
+                                      aria-label={`Abrir foto de ${photo.date} em tela cheia`}
+                                    >
+                                      <Image width={500} height={500} unoptimized src={photo.url} className="w-full h-24 object-cover" alt={`Foto ${photo.type} de ${photo.date}`} sizes="(max-width: 768px) 100vw, 500px" />
+                                    </button>
 
-                                    {/* Action Hover Overlay */}
-                                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-1.5 p-1 text-white-pure">
-                                      <button 
+                                    {/*
+                                      Acoes sempre visiveis. Antes ficavam num overlay que so aparecia
+                                      no hover, o que as tornava inalcancaveis no iPad (sem mouse nao ha hover).
+                                    */}
+                                    <div className="absolute top-1 right-1 flex items-center gap-1">
+                                      <button
+                                        type="button"
                                         onClick={(e) => {
                                           e.stopPropagation();
-                                          setActiveLightboxImage(photo.url);
+                                          setEditingPhoto(photo);
                                         }}
-                                        className="p-1 rounded-full bg-white-pure/20 hover:bg-white-pure/40 transition-colors flex items-center justify-center cursor-pointer"
-                                        title="Abrir Foto"
+                                        className="w-7 h-7 rounded-full bg-black/55 hover:bg-black/75 active:bg-black/80 transition-colors flex items-center justify-center cursor-pointer shrink-0"
+                                        title="Editar data e observação"
+                                        aria-label="Editar data e observação da foto"
                                       >
-                                        <span className="material-symbols-outlined text-[16px] text-white-pure">zoom_in</span>
+                                        <span className="material-symbols-outlined text-[15px] text-white-pure">edit</span>
                                       </button>
-                                      <button 
+                                      <button
+                                        type="button"
                                         onClick={(e) => {
                                           e.stopPropagation();
                                           showConfirm('Tem certeza que deseja apagar esta foto do histórico?', async () => {
@@ -3415,10 +3467,10 @@ export default function SystemPage() {
                                               let updateField: any = { fotos_evolucao: updatedPhotos };
                                               if (selectedPatient.fotoAntes === photo.url) updateField.foto_antes = null;
                                               if (selectedPatient.fotoDepois === photo.url) updateField.foto_depois = null;
-                                              
+
                                               const { error } = await supabase.from('clientes').update(updateField).eq('id', selectedPatient.id);
                                               if (error) throw error;
-                                              
+
                                               setPatients(prev => prev.map(p => {
                                                 if (p.id !== selectedPatient.id) return p;
                                                 return {
@@ -3434,13 +3486,27 @@ export default function SystemPage() {
                                             }
                                           });
                                         }}
-                                        className="p-1 mt-1 rounded-full bg-error/20 hover:bg-error/40 transition-colors flex items-center justify-center cursor-pointer"
-                                        title="Apagar Foto"
+                                        className="w-7 h-7 rounded-full bg-black/55 hover:bg-error/80 active:bg-error/90 transition-colors flex items-center justify-center cursor-pointer shrink-0"
+                                        title="Apagar foto"
+                                        aria-label="Apagar foto"
                                       >
-                                        <span className="material-symbols-outlined text-[16px] text-[#ff4444]">delete</span>
+                                        <span className="material-symbols-outlined text-[15px] text-[#ff6b6b]">delete</span>
                                       </button>
+                                    </div>
+
+                                    <div className="p-1.5 text-center">
+                                      <p className="text-[9px] font-bold text-on-surface truncate">{photo.date}</p>
+                                      <span className={`inline-block mt-0.5 px-2 py-0.2 rounded text-[7px] font-extrabold uppercase ${photo.type === 'Antes' ? 'bg-[#735c00]/10 text-[#735c00]' : (photo.type === 'Depois' ? 'bg-[#7B2FBE]/10 text-[#7B2FBE]' : 'bg-surface-container-highest text-on-surface-variant')}`}>
+                                        {photo.type}
+                                      </span>
+                                      {photo.observacao && (
+                                        <p className="mt-1 text-[8px] leading-snug text-on-surface-variant line-clamp-2" title={photo.observacao}>
+                                          {photo.observacao}
+                                        </p>
+                                      )}
                                       {isComparing && (
                                         <button
+                                          type="button"
                                           onClick={() => {
                                             if (isSelected) {
                                               setCompareSelectedIds(prev => prev.filter(id => id !== photo.id));
@@ -3452,7 +3518,7 @@ export default function SystemPage() {
                                               setCompareSelectedIds(prev => [...prev, photo.id]);
                                             }
                                           }}
-                                          className={`px-2 py-0.5 rounded text-[8px] font-black uppercase cursor-pointer ${isSelected ? 'bg-primary text-white-pure' : 'bg-white-pure text-on-surface'}`}
+                                          className={`mt-1.5 w-full py-1.5 rounded text-[8px] font-black uppercase cursor-pointer transition-colors ${isSelected ? 'bg-primary text-white-pure' : 'bg-surface-container-highest text-on-surface hover:bg-primary/10'}`}
                                         >
                                           {isSelected ? 'Selecionada' : 'Comparar'}
                                         </button>
@@ -6426,12 +6492,27 @@ export default function SystemPage() {
                   </div>
                   <div>
                     <h2 className="text-[18px] font-bold text-on-surface">Gabi Almeida Estética Sistema</h2>
-                    <p className="text-[13px] text-on-surface-variant font-bold">Versão atual: 3.12.0</p>
+                    <p className="text-[13px] text-on-surface-variant font-bold">Versão atual: 3.13.0</p>
                   </div>
                 </div>
 
                 <div className="space-y-4">
                   <h3 className="text-[14px] font-bold text-primary border-b border-outline-variant/30 pb-2">Histórico de Versões (Changelog)</h3>
+
+                  <div className="bg-surface-container-lowest rounded-2xl p-4 border border-outline-variant/50 mb-4">
+                    <div className="flex justify-between items-center mb-2">
+                      <span className="font-bold text-[14px] text-on-surface">Versão 3.13.0</span>
+                      <span className="text-[11px] font-bold text-on-surface-variant px-2 py-1 bg-surface-container rounded-lg">23 Agosto 2026</span>
+                    </div>
+                    <ul className="list-disc pl-5 space-y-1.5 text-[13px] text-on-surface-variant mt-3">
+                      <li><strong className="text-on-surface">Correção no iPad:</strong> os botões de apagar e editar foto do prontuário não apareciam em tablets e celulares, porque só surgiam ao passar o mouse. Agora ficam sempre visíveis.</li>
+                      <li><strong className="text-on-surface">Editar Foto:</strong> novo botão em cada foto da galeria para corrigir a data, trocar a classificação (Antes/Depois/Evolução) e registrar uma observação clínica.</li>
+                      <li><strong className="text-on-surface">Observação na Galeria:</strong> a observação de cada foto aparece junto da miniatura no acompanhamento cronológico.</li>
+                      <li><strong className="text-on-surface">Fim do Zoom Indesejado:</strong> no iPhone e iPad a tela não dá mais aquele salto de zoom ao tocar num campo de formulário.</li>
+                      <li><strong className="text-on-surface">Galeria Adaptável:</strong> as miniaturas passam a respeitar o espaço real disponível, sem espremer os botões quando a lista de clientes está aberta ao lado.</li>
+                      <li><strong className="text-on-surface">Toque Mais Confortável:</strong> removido o realce cinza ao tocar, rolagem com inércia e alvos de toque maiores nos aparelhos Apple.</li>
+                    </ul>
+                  </div>
 
                   <div className="bg-surface-container-lowest rounded-2xl p-4 border border-outline-variant/50 mb-4">
                     <div className="flex justify-between items-center mb-2">

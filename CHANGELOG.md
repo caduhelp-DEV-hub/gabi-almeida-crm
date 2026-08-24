@@ -2,6 +2,21 @@
 
 Todas as mudanças notáveis neste projeto serão documentadas neste arquivo.
 
+## [3.13.0] - 2026-08-23
+### Corrigido
+- **Ações da foto inacessíveis no iPad:** os botões de apagar/editar da galeria do prontuário ficavam num overlay `opacity-0 group-hover:opacity-100`. No Tailwind 4 o `hover:` só se aplica onde há mouse, então em aparelhos de toque eles nunca apareciam — e ainda capturavam o toque por cima da foto. Agora são botões sempre visíveis.
+- **Grade da galeria seguia a janela, não o container:** `grid-cols-2 sm:grid-cols-3 md:grid-cols-4` produzia cartões de ~60px quando a lista de clientes estava aberta ao lado, cortando os botões. Trocado por `auto-fill/minmax(120px,1fr)`.
+- **Zoom automático do Safari:** campos com fonte menor que 16px faziam o iOS ampliar a página ao focar. Aplicado 16px apenas em aparelhos de toque.
+- Carga inicial de dados não espera mais a autenticação do Realtime, evitando atraso na tela "Carregando Sistema".
+
+### Adicionado
+- Edição de foto no prontuário: data, classificação (Antes/Depois/Evolução) e observação clínica opcional (até 500 caracteres), em `components/modals/EditarFotoModal.tsx`. Campo `observacao` adicionado a `EvolutionPhoto` (retrocompatível, sem migration).
+- Observação exibida junto da miniatura na galeria cronológica.
+- Utilitários de toque em `globals.css`: `.hover-actions`, `.touch-only`, `.touch-target`, remoção do realce de toque, rolagem com inércia e `overscroll-behavior: contain`.
+- `aria-label` nos botões de abrir menu e nas ações de foto.
+- Perfis `ipad` e `ipad-landscape` no Playwright; viewport do perfil desktop ajustada para 1440x900.
+- Testes: 8 de componente para o modal de edição e 3 E2E de regressão da galeria em toque.
+
 ## [3.12.0] - 2026-08-23
 ### Segurança
 - Trava de tentativas no login: 5 falhas por IP+usuário e 20 por IP em janela de 15 minutos, contando apenas tentativas que falham e liberando no acesso bem-sucedido (`lib/rateLimit.ts`).
