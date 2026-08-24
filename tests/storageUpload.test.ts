@@ -7,8 +7,9 @@ import { NextRequest } from 'next/server';
  * assinatura digital) nao estava na lista, entao todo upload de assinatura
  * falhava silenciosamente e a assinatura caia no fallback de base64 gravado
  * direto no banco, em vez de virar uma URL enxuta.
- * 'patient-photos', 'documents' e 'financeiro' estavam liberados mas nem
- * existem como bucket no projeto.
+ * 'documents' e 'financeiro' estavam liberados mas nem existem como bucket
+ * no projeto. 'patient-photos' foi criado depois, para as fotos de sessao
+ * do modulo de Planos de Tratamento (ver migration das sessoes).
  */
 
 const mockRequireUser = vi.fn();
@@ -38,13 +39,13 @@ beforeEach(() => {
 });
 
 describe('POST /api/storage/upload — lista de buckets', () => {
-  it.each(['avatars', 'signatures'])('aceita o bucket real "%s"', async (bucket) => {
+  it.each(['avatars', 'signatures', 'patient-photos'])('aceita o bucket real "%s"', async (bucket) => {
     const { POST } = await import('../app/api/storage/upload/route');
     const res = await POST(requisicao({ bucket, path: 'x.png', base64: PIXEL, contentType: 'image/png' }));
     expect(res.status).toBe(201);
   });
 
-  it.each(['patient-photos', 'documents', 'financeiro', 'qualquer-coisa'])(
+  it.each(['documents', 'financeiro', 'qualquer-coisa'])(
     'recusa bucket que nao existe no projeto: "%s"',
     async (bucket) => {
       const { POST } = await import('../app/api/storage/upload/route');

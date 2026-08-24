@@ -1,10 +1,28 @@
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
+import Image from 'next/image';
 import { supabase } from '../lib/supabase';
-import { Cliente, Servico, PlanoTratamento, PlanoTratamentoItem, StatusPlanoTratamento, StatusItemPlanoTratamento } from '../lib/types';
-import { mapPlanoTratamentoToFrontend, mapPlanoTratamentoToBackend, mapPlanoTratamentoItemToBackend } from '../lib/mappers';
+import {
+  Cliente,
+  Servico,
+  PlanoTratamento,
+  PlanoTratamentoItem,
+  PlanoTratamentoSessao,
+  StatusPlanoTratamento,
+  StatusItemPlanoTratamento,
+  EvolutionPhoto,
+  TimelineItem
+} from '../lib/types';
+import {
+  mapPlanoTratamentoToFrontend,
+  mapPlanoTratamentoToBackend,
+  mapPlanoTratamentoItemToBackend,
+  mapPlanoTratamentoSessaoToFrontend,
+  mapPlanoTratamentoSessaoToBackend
+} from '../lib/mappers';
 import { gerarPdfPlano } from '../lib/pdf/planoTratamentoPdf';
+import RegistrarSessaoModal, { type DadosNovaSessao } from './modals/RegistrarSessaoModal';
 
 interface CompanyData {
   nome: string;
@@ -21,6 +39,10 @@ interface PlanoTratamentoModuleProps {
   filterClienteId?: string;
   initialPatientId?: string | null;
   onPlanoCriado?: (clienteId: string) => void;
+  /** Nome pre-preenchido em "Realizado por" ao registrar uma sessao. */
+  nomeProfissionalPadrao?: string;
+  /** Sincroniza historico/fotos_evolucao do cliente com a tela de prontuario aberta. */
+  onClienteAtualizado?: (clienteId: string, patch: Partial<Cliente>) => void;
 }
 
 type ViewMode = 'lista' | 'novo' | 'editar' | 'detalhe';
@@ -65,12 +87,15 @@ export default function PlanoTratamentoModule({
   companyData,
   filterClienteId,
   initialPatientId,
-  onPlanoCriado
+  onPlanoCriado,
+  nomeProfissionalPadrao,
+  onClienteAtualizado
 }: PlanoTratamentoModuleProps) {
   const [planos, setPlanos] = useState<PlanoTratamento[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [viewMode, setViewMode] = useState<ViewMode>('lista');
   const [planoAtivo, setPlanoAtivo] = useState<PlanoTratamento | null>(null);
+  const [itemParaRegistrarSessao, setItemParaRegistrarSessao] = useState<PlanoTratamentoItem | null>(null);
 
   const [buscaCliente, setBuscaCliente] = useState('');
   const [filtroStatus, setFiltroStatus] = useState<StatusPlanoTratamento | ''>('');
@@ -130,9 +155,40 @@ export default function PlanoTratamentoModule({
     setViewMode('novo');
   };
 
-  const abrirDetalhe = (plano: PlanoTratamento) => {
+  const abrirDetalhe = async (plano: PlanoTratamento) => {
+    // A listagem nao busca sessoes (pesaria a query de todos os planos), entao
+    // carrega aqui, so quando o detalhe de um plano especifico e aberto.
     setPlanoAtivo(plano);
     setViewMode('detalhe');
+
+    if (plano.itens.length === 0) return;
+    try {
+      const { data, error } = await supabase
+        .from('planos_tratamento_sessoes')
+        .select('*')
+        .in('item_id', plano.itens.map(i => i.id))
+        .order('numero_sessao', { ascending: true });
+      if (error) throw error;
+
+      const sessoesPorItem = new Map<string, PlanoTratamentoSessao[]>();
+      (data || []).forEach((registro: any) => {
+        const s = mapPlanoTratamentoSessaoToFrontend(registro);
+        const lista = sessoesPorItem.get(s.itemId) || [];
+        lista.push(s);
+        sessoesPorItem.set(s.itemId, lista);
+      });
+
+      const planoComSessoes: PlanoTratamento = {
+        ...plano,
+        itens: plano.itens.map(i => ({ ...i, sessoes: sessoesPorItem.get(i.id) || [] }))
+      };
+      setPlanoAtivo(planoComSessoes);
+      setPlanos(prev => prev.map(p => p.id === plano.id ? planoComSessoes : p));
+    } catch (error: any) {
+      console.error('Erro ao carregar sessões do plano:', error);
+      // Nao bloqueia a visualizacao do plano por causa disso -- so fica sem o
+      // historico de sessoes carregado.
+    }
   };
 
   const abrirEdicao = (plano: PlanoTratamento) => {
@@ -153,6 +209,10 @@ export default function PlanoTratamentoModule({
       showAlert('Há valores inválidos nos itens do plano (preço, quantidade ou desconto negativos).');
       return;
     }
+    if (plano.itens.some(i => i.desconto > i.precoUnitario * i.quantidade)) {
+      showAlert('Há um desconto maior que o valor do próprio item. Ajuste antes de salvar.');
+      return;
+    }
 
     const valorTotal = plano.itens.reduce((acc, i) => acc + i.subtotal, 0);
     const descontoTotal = plano.itens.reduce((acc, i) => acc + i.desconto, 0);
@@ -166,6 +226,36 @@ export default function PlanoTratamentoModule({
 
     try {
       if (plano.id) {
+        const itensExistentes = plano.itens.filter(i => !i.id.startsWith('temp_'));
+
+        // Nao deixa reduzir a quantidade de um item abaixo do numero de sessoes
+        // ja registradas nele (sessao registrada vira historico/foto no
+        // prontuario do cliente, nao pode virar orfa de uma hora pra outra).
+        if (itensExistentes.length > 0) {
+          const { data: sessoesDosItens, error: sessoesError } = await supabase
+            .from('planos_tratamento_sessoes')
+            .select('item_id')
+            .in('item_id', itensExistentes.map(i => i.id));
+          if (sessoesError) throw sessoesError;
+
+          const contagemPorItem = new Map<string, number>();
+          (sessoesDosItens || []).forEach((s: any) => {
+            contagemPorItem.set(s.item_id, (contagemPorItem.get(s.item_id) || 0) + 1);
+          });
+
+          const itemAbaixoDoRegistrado = itensExistentes.find(
+            i => i.quantidade < (contagemPorItem.get(i.id) || 0)
+          );
+          if (itemAbaixoDoRegistrado) {
+            const jaFeitas = contagemPorItem.get(itemAbaixoDoRegistrado.id) || 0;
+            showAlert(
+              `"${itemAbaixoDoRegistrado.servicoNome}" já tem ${jaFeitas} sessão(ões) registrada(s). ` +
+              `A quantidade não pode ficar menor que isso.`
+            );
+            return;
+          }
+        }
+
         const planoPayload = mapPlanoTratamentoToBackend({ ...plano, valorTotal, descontoTotal });
         delete planoPayload.id;
         const { error: updError } = await supabase
@@ -174,9 +264,37 @@ export default function PlanoTratamentoModule({
           .eq('id', plano.id);
         if (updError) throw updError;
 
-        await supabase.from('planos_tratamento_itens').delete().eq('plano_id', plano.id);
-        const { error: itensError } = await supabase.from('planos_tratamento_itens').insert(montarItensPayload(plano.id));
-        if (itensError) throw itensError;
+        // Diff em vez de apagar tudo e recriar: itens ja existentes preservam o
+        // id (e, com ele, as sessoes ja registradas ligadas via FK). So os
+        // itens removidos pelo usuario nesta edicao sao de fato deletados.
+        const { data: idsAtuaisNoBanco, error: idsError } = await supabase
+          .from('planos_tratamento_itens')
+          .select('id')
+          .eq('plano_id', plano.id);
+        if (idsError) throw idsError;
+
+        const idsMantidos = new Set(itensExistentes.map(i => i.id));
+        const idsParaRemover = (idsAtuaisNoBanco || [])
+          .map((i: any) => i.id)
+          .filter((id: string) => !idsMantidos.has(id));
+
+        if (idsParaRemover.length > 0) {
+          const { error: delError } = await supabase.from('planos_tratamento_itens').delete().in('id', idsParaRemover);
+          if (delError) throw delError;
+        }
+
+        for (const [idx, item] of plano.itens.entries()) {
+          const payload = mapPlanoTratamentoItemToBackend({ ...item, ordem: idx });
+          delete payload.id;
+
+          if (item.id.startsWith('temp_')) {
+            const { error } = await supabase.from('planos_tratamento_itens').insert({ ...payload, plano_id: plano.id });
+            if (error) throw error;
+          } else {
+            const { error } = await supabase.from('planos_tratamento_itens').update(payload).eq('id', item.id);
+            if (error) throw error;
+          }
+        }
 
         showAlert('Plano de tratamento atualizado com sucesso!');
       } else {
@@ -226,7 +344,31 @@ export default function PlanoTratamentoModule({
       const { error } = await supabase.from('planos_tratamento').update(mapPlanoTratamentoToBackend(updates)).eq('id', plano.id);
       if (error) throw error;
 
-      const planoAtualizado = { ...plano, ...updates };
+      // Concluir/cancelar o plano manualmente resolve tambem os itens que
+      // ainda estavam em aberto -- sem isso o plano ficava com o badge
+      // "Concluido" e a barra de progresso mostrando itens pendentes na
+      // mesma tela.
+      let itensAtualizados = plano.itens;
+      if (novoStatus === 'Concluido' || novoStatus === 'Cancelado') {
+        const idsEmAberto = plano.itens
+          .filter(i => i.status === 'Pendente' || i.status === 'Agendado' || i.status === 'Em andamento')
+          .map(i => i.id);
+
+        if (idsEmAberto.length > 0) {
+          const itemConcluidoEm = novoStatus === 'Concluido' ? agora : undefined;
+          const { error: itensError } = await supabase
+            .from('planos_tratamento_itens')
+            .update(mapPlanoTratamentoItemToBackend({ status: novoStatus, concluidoEm: itemConcluidoEm }))
+            .in('id', idsEmAberto);
+          if (itensError) throw itensError;
+
+          itensAtualizados = plano.itens.map(i =>
+            idsEmAberto.includes(i.id) ? { ...i, status: novoStatus, concluidoEm: itemConcluidoEm } : i
+          );
+        }
+      }
+
+      const planoAtualizado = { ...plano, ...updates, itens: itensAtualizados };
       setPlanoAtivo(planoAtualizado);
       setPlanos(prev => prev.map(p => p.id === plano.id ? planoAtualizado : p));
       showAlert(`Plano marcado como "${novoStatus}".`);
@@ -250,12 +392,133 @@ export default function PlanoTratamentoModule({
       setPlanoAtivo(planoAtualizado);
       setPlanos(prev => prev.map(p => p.id === plano.id ? planoAtualizado : p));
 
-      if (itensAtualizados.every(i => i.status === 'Concluido') && plano.status !== 'Concluido') {
+      // Um plano so completa sozinho quando todo item chegou a um estado
+      // final (Concluido OU Cancelado) e pelo menos um foi de fato concluido
+      // -- um plano 100% cancelado nao deveria virar "Concluido".
+      const todosResolvidos = itensAtualizados.every(i => i.status === 'Concluido' || i.status === 'Cancelado');
+      const algumConcluido = itensAtualizados.some(i => i.status === 'Concluido');
+      if (todosResolvidos && algumConcluido && plano.status !== 'Concluido') {
         await handleMudarStatusPlano(planoAtualizado, 'Concluido');
       }
     } catch (error: any) {
       console.error('Erro ao mudar status do item:', error);
       showAlert(`Erro ao mudar status do item: ${error.message}`);
+    }
+  };
+
+  /** Sobe uma foto redimensionada para o Storage; se falhar, mantem o base64 inline. */
+  const uploadFotoSessao = async (clienteId: string, itemId: string, base64: string): Promise<string> => {
+    try {
+      const res = await fetch('/api/storage/upload', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          bucket: 'patient-photos',
+          path: `planos/${clienteId}/${itemId}/${crypto.randomUUID()}.jpg`,
+          base64,
+          contentType: 'image/jpeg'
+        })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        return data.url;
+      }
+    } catch (err) {
+      console.warn('Falha no upload da foto da sessão, mantendo inline:', err);
+    }
+    return base64;
+  };
+
+  const handleRegistrarSessao = async (plano: PlanoTratamento, item: PlanoTratamentoItem, dados: DadosNovaSessao) => {
+    const numeroSessao = (item.sessoes?.length || 0) + 1;
+    const dataSessaoBr = dados.dataSessao
+      ? (() => { const [y, m, d] = dados.dataSessao.split('-'); return `${d}/${m}/${y}`; })()
+      : new Date().toLocaleDateString('pt-BR');
+
+    try {
+      // Busca o cliente fresco: patients pode ter so as colunas leves da
+      // listagem (sem fotos_evolucao) quando este modulo roda fora do
+      // prontuario (aba global "Planos de Tratamento").
+      const { data: clienteAtual, error: clienteError } = await supabase
+        .from('clientes')
+        .select('id, historico, fotos_evolucao')
+        .eq('id', plano.clienteId)
+        .single();
+      if (clienteError) throw clienteError;
+
+      const urlsFotos = await Promise.all(
+        dados.fotos.map(base64 => uploadFotoSessao(plano.clienteId, item.id, base64))
+      );
+
+      const fotosEvolucao: EvolutionPhoto[] = urlsFotos.map(url => ({
+        id: 'foto_sessao_' + crypto.randomUUID(),
+        url,
+        date: dataSessaoBr,
+        type: 'Evolução',
+        observacao: dados.descricao || undefined
+      }));
+
+      const clienteUpdate: Record<string, unknown> = {};
+
+      if (dados.descricao) {
+        const novoProtocolo: TimelineItem = {
+          id: 'tl_sessao_' + crypto.randomUUID(),
+          title: `${item.servicoNome} — Sessão ${numeroSessao}/${item.quantidade}`,
+          date: dataSessaoBr,
+          description: dados.descricao,
+          category: 'Procedimento',
+          status: 'Concluído'
+        };
+        clienteUpdate.historico = [novoProtocolo, ...(clienteAtual.historico || [])];
+      }
+
+      if (fotosEvolucao.length > 0) {
+        clienteUpdate.fotos_evolucao = [...(clienteAtual.fotos_evolucao || []), ...fotosEvolucao];
+      }
+
+      if (Object.keys(clienteUpdate).length > 0) {
+        const { error: updateError } = await supabase.from('clientes').update(clienteUpdate).eq('id', plano.clienteId);
+        if (updateError) throw updateError;
+        onClienteAtualizado?.(plano.clienteId, {
+          ...(clienteUpdate.historico ? { historico: clienteUpdate.historico as TimelineItem[] } : {}),
+          ...(clienteUpdate.fotos_evolucao ? { fotosEvolucao: clienteUpdate.fotos_evolucao as EvolutionPhoto[] } : {})
+        });
+      }
+
+      const sessaoPayload = mapPlanoTratamentoSessaoToBackend({
+        itemId: item.id,
+        planoId: plano.id,
+        clienteId: plano.clienteId,
+        numeroSessao,
+        dataSessao: dados.dataSessao || undefined,
+        descricao: dados.descricao || undefined,
+        fotos: fotosEvolucao,
+        realizadoPor: dados.realizadoPor || undefined
+      });
+      const { data: sessaoInserida, error: sessaoError } = await supabase
+        .from('planos_tratamento_sessoes')
+        .insert([sessaoPayload])
+        .select()
+        .single();
+      if (sessaoError) throw sessaoError;
+
+      const novaSessao = mapPlanoTratamentoSessaoToFrontend(sessaoInserida);
+      const itensComSessao = plano.itens.map(i =>
+        i.id === item.id ? { ...i, sessoes: [...(i.sessoes || []), novaSessao] } : i
+      );
+      const planoComSessao = { ...plano, itens: itensComSessao };
+      setPlanoAtivo(planoComSessao);
+      setPlanos(prev => prev.map(p => p.id === plano.id ? planoComSessao : p));
+      setItemParaRegistrarSessao(null);
+      showAlert('Sessão registrada com sucesso!');
+
+      // A ultima sessao contratada completa o item automaticamente.
+      if (numeroSessao >= item.quantidade && item.status !== 'Concluido') {
+        await handleMudarStatusItem(planoComSessao, { ...item, sessoes: itensComSessao.find(i => i.id === item.id)?.sessoes }, 'Concluido');
+      }
+    } catch (error: any) {
+      console.error('Erro ao registrar sessão:', error);
+      showAlert(`Erro ao registrar sessão: ${error.message}`);
     }
   };
 
@@ -330,9 +593,21 @@ export default function PlanoTratamentoModule({
             onMudarStatusItem={(item, status) => handleMudarStatusItem(planoAtivo, item, status)}
             onExportarPdf={() => handleExportarPdf(planoAtivo)}
             onExcluir={() => handleExcluirPlano(planoAtivo)}
+            onRegistrarSessao={(item) => setItemParaRegistrarSessao(item)}
           />
         )}
       </div>
+
+      <RegistrarSessaoModal
+        item={itemParaRegistrarSessao}
+        numeroSessao={(itemParaRegistrarSessao?.sessoes?.length || 0) + 1}
+        nomeProfissionalPadrao={nomeProfissionalPadrao || ''}
+        onClose={() => setItemParaRegistrarSessao(null)}
+        onSalvar={(dados) => {
+          if (!planoAtivo || !itemParaRegistrarSessao) return;
+          return handleRegistrarSessao(planoAtivo, itemParaRegistrarSessao, dados);
+        }}
+      />
     </section>
   );
 }
@@ -650,12 +925,20 @@ interface DetalhePlanoProps {
   onMudarStatusItem: (item: PlanoTratamentoItem, status: StatusItemPlanoTratamento) => void;
   onExportarPdf: () => void;
   onExcluir: () => void;
+  onRegistrarSessao: (item: PlanoTratamentoItem) => void;
 }
 
-function DetalhePlano({ plano, cliente, onVoltar, onEditar, onMudarStatusPlano, onMudarStatusItem, onExportarPdf, onExcluir }: DetalhePlanoProps) {
-  const totalItens = plano.itens.length;
-  const concluidos = plano.itens.filter(i => i.status === 'Concluido').length;
-  const progresso = totalItens > 0 ? Math.round((concluidos / totalItens) * 100) : 0;
+/** Sessoes feitas de um item. Item legado marcado Concluido sem sessao registrada conta como feito por completo, so na exibicao. */
+function sessoesFeitas(item: PlanoTratamentoItem): number {
+  if (item.sessoes && item.sessoes.length > 0) return Math.min(item.sessoes.length, item.quantidade);
+  return item.status === 'Concluido' ? item.quantidade : 0;
+}
+
+function DetalhePlano({ plano, cliente, onVoltar, onEditar, onMudarStatusPlano, onMudarStatusItem, onExportarPdf, onExcluir, onRegistrarSessao }: DetalhePlanoProps) {
+  const quantidadeTotal = plano.itens.reduce((acc, i) => acc + i.quantidade, 0);
+  const sessoesTotaisFeitas = plano.itens.reduce((acc, i) => acc + sessoesFeitas(i), 0);
+  const progresso = quantidadeTotal > 0 ? Math.round((sessoesTotaisFeitas / quantidadeTotal) * 100) : 0;
+  const planoExecutavel = plano.status === 'Aprovado' || plano.status === 'Em tratamento';
 
   return (
     <div className="space-y-6">
@@ -716,30 +999,119 @@ function DetalhePlano({ plano, cliente, onVoltar, onEditar, onMudarStatusPlano, 
       <div className="bg-white-pure rounded-3xl p-6 border border-outline-variant shadow-sm space-y-4">
         <div className="flex justify-between items-center">
           <label className="text-[13px] font-bold text-on-surface-variant uppercase tracking-wider">Progresso do Tratamento</label>
-          <span className="text-[13px] font-bold text-primary">{concluidos}/{totalItens} itens ({progresso}%)</span>
+          <span className="text-[13px] font-bold text-primary">{sessoesTotaisFeitas}/{quantidadeTotal} sessões ({progresso}%)</span>
         </div>
         <div className="w-full h-2.5 bg-surface rounded-full overflow-hidden">
           <div className="h-full bg-primary transition-all" style={{ width: `${progresso}%` }} />
         </div>
 
+        {!planoExecutavel && (
+          <p className="text-[12px] text-amber-700 bg-amber-50 border border-amber-200 rounded-xl px-4 py-2.5">
+            Aprove e inicie o tratamento para poder registrar sessões executadas.
+          </p>
+        )}
+
         <div className="divide-y divide-outline-variant/30">
           {plano.itens.map(item => (
-            <div key={item.id} className="py-3 flex flex-wrap items-center justify-between gap-3">
-              <div>
-                <p className="font-bold text-[13px] text-on-surface">{item.servicoNome}</p>
-                <p className="text-[12px] text-on-surface-variant">Qtde: {item.quantidade} · R$ {item.subtotal.toFixed(2)}</p>
-              </div>
-              <select
-                value={item.status}
-                onChange={(e) => onMudarStatusItem(item, e.target.value as StatusItemPlanoTratamento)}
-                className="p-2 bg-surface rounded-lg border border-outline-variant/60 text-[12px] font-bold"
-              >
-                {STATUS_ITEM_OPTIONS.map(s => <option key={s} value={s}>{s}</option>)}
-              </select>
-            </div>
+            <ItemDoPlano
+              key={item.id}
+              item={item}
+              podeRegistrarSessao={planoExecutavel && item.status !== 'Concluido' && item.status !== 'Cancelado'}
+              onMudarStatus={(status) => onMudarStatusItem(item, status)}
+              onRegistrarSessao={() => onRegistrarSessao(item)}
+            />
           ))}
         </div>
       </div>
+    </div>
+  );
+}
+
+// ---------- Sub-tela: linha de um item do plano, com sessoes ----------
+
+interface ItemDoPlanoProps {
+  item: PlanoTratamentoItem;
+  podeRegistrarSessao: boolean;
+  onMudarStatus: (status: StatusItemPlanoTratamento) => void;
+  onRegistrarSessao: () => void;
+}
+
+function ItemDoPlano({ item, podeRegistrarSessao, onMudarStatus, onRegistrarSessao }: ItemDoPlanoProps) {
+  const [sessoesVisiveis, setSessoesVisiveis] = useState(false);
+  const feitas = sessoesFeitas(item);
+  const temSessoesRegistradas = (item.sessoes || []).length > 0;
+
+  return (
+    <div className="py-3">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <p className="font-bold text-[13px] text-on-surface">{item.servicoNome}</p>
+          <p className="text-[12px] text-on-surface-variant">
+            {feitas}/{item.quantidade} sessões · R$ {item.subtotal.toFixed(2)}
+          </p>
+        </div>
+        <div className="flex items-center gap-2 flex-wrap">
+          {temSessoesRegistradas && (
+            <button
+              type="button"
+              onClick={() => setSessoesVisiveis(v => !v)}
+              className="p-2 rounded-lg border border-outline-variant/60 text-on-surface-variant hover:text-primary hover:border-primary text-[12px] font-bold flex items-center gap-1"
+            >
+              <span className="material-symbols-outlined text-[16px]">{sessoesVisiveis ? 'expand_less' : 'expand_more'}</span>
+              Histórico
+            </button>
+          )}
+          {podeRegistrarSessao && (
+            <button
+              type="button"
+              onClick={onRegistrarSessao}
+              className="px-3 py-2 rounded-lg bg-primary/10 text-primary hover:bg-primary hover:text-white-pure text-[12px] font-bold flex items-center gap-1 transition-colors"
+            >
+              <span className="material-symbols-outlined text-[16px]">add_a_photo</span>
+              Registrar Sessão
+            </button>
+          )}
+          <select
+            value={item.status}
+            onChange={(e) => onMudarStatus(e.target.value as StatusItemPlanoTratamento)}
+            className="p-2 bg-surface rounded-lg border border-outline-variant/60 text-[12px] font-bold"
+          >
+            {STATUS_ITEM_OPTIONS.map(s => <option key={s} value={s}>{s}</option>)}
+          </select>
+        </div>
+      </div>
+
+      {sessoesVisiveis && temSessoesRegistradas && (
+        <div className="mt-3 ml-1 pl-4 border-l-2 border-outline-variant/40 space-y-3">
+          {(item.sessoes || []).map(sessao => (
+            <div key={sessao.id} className="text-[12px]">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="font-bold text-on-surface">Sessão {sessao.numeroSessao}</span>
+                <span className="text-on-surface-variant">
+                  {sessao.dataSessao ? new Date(sessao.dataSessao + 'T00:00:00').toLocaleDateString('pt-BR') : '—'}
+                </span>
+                {sessao.realizadoPor && <span className="text-on-surface-variant">· {sessao.realizadoPor}</span>}
+              </div>
+              {sessao.descricao && <p className="text-on-surface-variant mt-0.5">{sessao.descricao}</p>}
+              {sessao.fotos.length > 0 && (
+                <div className="flex gap-1.5 mt-1.5">
+                  {sessao.fotos.map(foto => (
+                    <Image
+                      key={foto.id}
+                      width={48}
+                      height={48}
+                      unoptimized
+                      src={foto.url}
+                      alt="Foto da sessão"
+                      className="w-12 h-12 rounded-lg object-cover border border-outline-variant/60"
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

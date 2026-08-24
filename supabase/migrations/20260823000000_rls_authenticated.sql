@@ -38,7 +38,8 @@ DECLARE
     'configuracoes_empresa',
     'mensagens_predefinidas',
     'planos_tratamento',
-    'planos_tratamento_itens'
+    'planos_tratamento_itens',
+    'planos_tratamento_sessoes'
   ];
 BEGIN
   FOREACH tabela IN ARRAY tabelas LOOP

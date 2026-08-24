@@ -1747,7 +1747,7 @@ export default function SystemPage() {
               <span>Acesso seguro. Todos os dados são criptografados.</span>
             </div>
             <span>© 2026 Gabi Almeida Estética.</span>
-            <span>Desenvolvido: caduhelp-dev | Ver. 3.15.0</span>
+            <span>Desenvolvido: caduhelp-dev | Ver. 3.16.0</span>
           </div>
         </div>
       </div>
@@ -4547,6 +4547,8 @@ export default function SystemPage() {
                         companyData={companyData}
                         filterClienteId={selectedPatient.id}
                         initialPatientId={selectedPatient.id}
+                        nomeProfissionalPadrao={currentUser?.name}
+                        onClienteAtualizado={(id, patch) => setPatients(prev => prev.map(p => p.id === id ? { ...p, ...patch } : p))}
                       />
                     </div>
                   )}
@@ -5219,6 +5221,8 @@ export default function SystemPage() {
               setCurrentTab('clientes');
               setActivePatientSubTab('planos');
             }}
+            nomeProfissionalPadrao={currentUser?.name}
+            onClienteAtualizado={(id, patch) => setPatients(prev => prev.map(p => p.id === id ? { ...p, ...patch } : p))}
           />
         )}
 
@@ -6542,12 +6546,25 @@ export default function SystemPage() {
                   </div>
                   <div>
                     <h2 className="text-[18px] font-bold text-on-surface">Gabi Almeida Estética Sistema</h2>
-                    <p className="text-[13px] text-on-surface-variant font-bold">Versão atual: 3.15.0</p>
+                    <p className="text-[13px] text-on-surface-variant font-bold">Versão atual: 3.16.0</p>
                   </div>
                 </div>
 
                 <div className="space-y-4">
                   <h3 className="text-[14px] font-bold text-primary border-b border-outline-variant/30 pb-2">Histórico de Versões (Changelog)</h3>
+
+                  <div className="bg-surface-container-lowest rounded-2xl p-4 border border-outline-variant/50 mb-4">
+                    <div className="flex justify-between items-center mb-2">
+                      <span className="font-bold text-[14px] text-on-surface">Versão 3.16.0</span>
+                      <span className="text-[11px] font-bold text-on-surface-variant px-2 py-1 bg-surface-container rounded-lg">24 Agosto 2026</span>
+                    </div>
+                    <ul className="list-disc pl-5 space-y-1.5 text-[13px] text-on-surface-variant mt-3">
+                      <li><strong className="text-on-surface">Acompanhamento de Sessões:</strong> agora dá para registrar cada sessão executada de um plano de tratamento — com data, descrição do atendimento e fotos. A contagem de progresso passa a mostrar sessões feitas de verdade (ex: "3/5"), não apenas se o item foi marcado como concluído.</li>
+                      <li><strong className="text-on-surface">Prontuário Sempre Atualizado:</strong> toda sessão registrada em um plano de tratamento entra automaticamente nos Protocolos e na Galeria de Acompanhamento do cliente — o histórico do atendimento se monta sozinho.</li>
+                      <li><strong className="text-on-surface">Correção:</strong> criar um plano de tratamento sem preencher a validade do orçamento estava falhando silenciosamente. Corrigido.</li>
+                      <li><strong className="text-on-surface">Correção:</strong> editar um plano de tratamento existente apagava e recriava todos os itens; agora as informações são preservadas corretamente durante a edição.</li>
+                    </ul>
+                  </div>
 
                   <div className="bg-surface-container-lowest rounded-2xl p-4 border border-outline-variant/50 mb-4">
                     <div className="flex justify-between items-center mb-2">

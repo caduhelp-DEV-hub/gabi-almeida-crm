@@ -8,6 +8,8 @@ import {
   mapAgendamentoToBackend,
   mapInventoryToFrontend,
   mapInventoryToBackend,
+  mapPlanoTratamentoSessaoToFrontend,
+  mapPlanoTratamentoSessaoToBackend,
   getAppointmentColorClass
 } from '../lib/mappers';
 
@@ -158,5 +160,69 @@ describe('mapAgendamentoToFrontend', () => {
     const r = mapAgendamentoToFrontend({ id: 'a1', cliente_nome: 'Antigo', clientes: { nome: 'Novo', avatar: 'x' } });
     expect(r.clienteNome).toBe('Novo');
     expect(r.clienteAvatar).toBe('x');
+  });
+});
+
+describe('mapPlanoTratamentoSessaoToFrontend', () => {
+  it('converte snake_case para camelCase', () => {
+    const r = mapPlanoTratamentoSessaoToFrontend({
+      id: 's1',
+      item_id: 'i1',
+      plano_id: 'p1',
+      cliente_id: 'c1',
+      numero_sessao: 3,
+      data_sessao: '2026-08-24',
+      descricao: 'Aplicação de botox',
+      fotos: [{ id: 'f1', url: 'x.jpg', date: '24/08/2026', type: 'Evolução' }],
+      realizado_por: 'Dra. Gabi',
+      criado_em: '2026-08-24T10:00:00Z'
+    });
+    expect(r).toEqual({
+      id: 's1',
+      itemId: 'i1',
+      planoId: 'p1',
+      clienteId: 'c1',
+      numeroSessao: 3,
+      dataSessao: '2026-08-24',
+      descricao: 'Aplicação de botox',
+      fotos: [{ id: 'f1', url: 'x.jpg', date: '24/08/2026', type: 'Evolução' }],
+      realizadoPor: 'Dra. Gabi',
+      criadoEm: '2026-08-24T10:00:00Z'
+    });
+  });
+
+  it('usa array vazio quando fotos vem nulo', () => {
+    expect(mapPlanoTratamentoSessaoToFrontend({ id: 's1', numero_sessao: 1 }).fotos).toEqual([]);
+  });
+});
+
+describe('mapPlanoTratamentoSessaoToBackend', () => {
+  it('converte camelCase para snake_case', () => {
+    const res = mapPlanoTratamentoSessaoToBackend({
+      itemId: 'i1',
+      planoId: 'p1',
+      clienteId: 'c1',
+      numeroSessao: 2,
+      dataSessao: '2026-08-24',
+      realizadoPor: 'Dra. Gabi'
+    });
+    expect(res).toEqual({
+      item_id: 'i1',
+      plano_id: 'p1',
+      cliente_id: 'c1',
+      numero_sessao: 2,
+      data_sessao: '2026-08-24',
+      realizado_por: 'Dra. Gabi'
+    });
+  });
+
+  it('omite campos nao informados', () => {
+    expect(mapPlanoTratamentoSessaoToBackend({ numeroSessao: 1 })).toEqual({ numero_sessao: 1 });
+  });
+
+  it('preserva numeroSessao igual a zero', () => {
+    // numeroSessao nunca deveria ser 0 na pratica (CHECK > 0 no banco), mas o
+    // mapper nao deve descartar valores falsy por engano.
+    expect(mapPlanoTratamentoSessaoToBackend({ numeroSessao: 0 })).toEqual({ numero_sessao: 0 });
   });
 });

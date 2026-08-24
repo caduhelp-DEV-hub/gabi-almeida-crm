@@ -1,6 +1,6 @@
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
-const BUCKETS = ['signatures', 'avatars'];
+const BUCKETS = ['signatures', 'avatars', 'patient-photos'];
 
 if (!SUPABASE_URL || !SERVICE_ROLE_KEY) {
   console.error('Erro: defina NEXT_PUBLIC_SUPABASE_URL e SUPABASE_SERVICE_ROLE_KEY no .env');

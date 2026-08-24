@@ -1,4 +1,4 @@
-import type { AppUser, Cliente, Agendamento, InventoryItem, Servico, Cobranca, PlanoTratamento, PlanoTratamentoItem } from './types';
+import type { AppUser, Cliente, Agendamento, InventoryItem, Servico, Cobranca, PlanoTratamento, PlanoTratamentoItem, PlanoTratamentoSessao } from './types';
 import { dataLocalISO } from './utils';
 
 /**
@@ -227,7 +227,10 @@ export const mapPlanoTratamentoToBackend = (p: Partial<PlanoTratamento>): Record
   if (p.status !== undefined) res.status = p.status;
   if (p.valorTotal !== undefined) res.valor_total = p.valorTotal;
   if (p.descontoTotal !== undefined) res.desconto_total = p.descontoTotal;
-  if (p.validadeOrcamento !== undefined) res.validade_orcamento = p.validadeOrcamento;
+  // Coluna date no banco: string vazia (input de data deixado em branco) e
+  // invalida para o Postgres ("invalid input syntax for type date"). NULL
+  // representa corretamente "sem validade definida".
+  if (p.validadeOrcamento !== undefined) res.validade_orcamento = p.validadeOrcamento || null;
   if (p.observacoes !== undefined) res.observacoes = p.observacoes;
   if (p.aprovadoEm !== undefined) res.aprovado_em = p.aprovadoEm;
   if (p.iniciadoEm !== undefined) res.iniciado_em = p.iniciadoEm;
@@ -263,6 +266,33 @@ export const mapPlanoTratamentoItemToBackend = (i: Partial<PlanoTratamentoItem>)
   if (i.status !== undefined) res.status = i.status;
   if (i.ordem !== undefined) res.ordem = i.ordem;
   if (i.concluidoEm !== undefined) res.concluido_em = i.concluidoEm;
+  return res;
+};
+
+export const mapPlanoTratamentoSessaoToFrontend = (s: any): PlanoTratamentoSessao => ({
+  id: s.id,
+  itemId: s.item_id,
+  planoId: s.plano_id,
+  clienteId: s.cliente_id,
+  numeroSessao: Number(s.numero_sessao || 0),
+  dataSessao: s.data_sessao,
+  descricao: s.descricao,
+  fotos: s.fotos || [],
+  realizadoPor: s.realizado_por,
+  criadoEm: s.criado_em
+});
+
+export const mapPlanoTratamentoSessaoToBackend = (s: Partial<PlanoTratamentoSessao>): Record<string, unknown> => {
+  const res: Record<string, unknown> = {};
+  if (s.id !== undefined) res.id = s.id;
+  if (s.itemId !== undefined) res.item_id = s.itemId;
+  if (s.planoId !== undefined) res.plano_id = s.planoId;
+  if (s.clienteId !== undefined) res.cliente_id = s.clienteId;
+  if (s.numeroSessao !== undefined) res.numero_sessao = s.numeroSessao;
+  if (s.dataSessao !== undefined) res.data_sessao = s.dataSessao;
+  if (s.descricao !== undefined) res.descricao = s.descricao;
+  if (s.fotos !== undefined) res.fotos = s.fotos;
+  if (s.realizadoPor !== undefined) res.realizado_por = s.realizadoPor;
   return res;
 };
 

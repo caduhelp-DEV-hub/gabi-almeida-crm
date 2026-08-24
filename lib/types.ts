@@ -154,6 +154,20 @@ export type StatusItemPlanoTratamento =
   | 'Concluido'
   | 'Cancelado';
 
+/** Uma sessao de fato executada de um item do plano (ex: a 3a de 5 sessoes de Botox). */
+export interface PlanoTratamentoSessao {
+  id: string;
+  itemId: string;
+  planoId: string;
+  clienteId: string;
+  numeroSessao: number;
+  dataSessao: string;
+  descricao?: string;
+  fotos: EvolutionPhoto[];
+  realizadoPor?: string;
+  criadoEm?: string;
+}
+
 export interface PlanoTratamentoItem {
   id: string;
   planoId: string;
@@ -166,6 +180,8 @@ export interface PlanoTratamentoItem {
   status: StatusItemPlanoTratamento;
   ordem: number;
   concluidoEm?: string;
+  /** So vem preenchido no detalhe do plano; a listagem nao busca sessoes. */
+  sessoes?: PlanoTratamentoSessao[];
 }
 
 export interface PlanoTratamento {

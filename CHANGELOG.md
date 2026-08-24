@@ -2,6 +2,23 @@
 
 Todas as mudanças notáveis neste projeto serão documentadas neste arquivo.
 
+## [3.16.0] - 2026-08-24
+### Adicionado
+- **Registro de sessões no Plano de Tratamento.** Novo `planos_tratamento_sessoes`: cada sessão de fato executada de um item (ex.: a 3ª de 5 sessões de Botox) agora tem sua própria data, descrição opcional e fotos opcionais, em vez do item inteiro depender de um único status/data de conclusão. O progresso do plano passa a ser calculado por sessão feita/contratada (`sessoesFeitas/quantidade`), não por item marcado concluído — item legado sem sessão registrada continua contando como feito na exibição, sem gravação retroativa.
+- **Vínculo automático com o prontuário.** Ao registrar uma sessão: se houver descrição, ela vira um Protocolo (`historico`) do cliente (`"{serviço} — Sessão N/Total"`); se houver fotos, elas entram na Galeria de Acompanhamento (`fotos_evolucao`, tipo Evolução). A última sessão contratada de um item o marca `Concluido` automaticamente, reaproveitando a lógica que já fecha o plano quando todos os itens terminam.
+- Fotos de sessão sobem para um bucket dedicado do Supabase Storage (`patient-photos`), não mais como base64 inline — com fallback silencioso se o upload falhar, mesmo padrão já usado nas assinaturas de anamnese.
+- Novo modal `RegistrarSessaoModal` (data, descrição, múltiplas fotos, "realizado por" pré-preenchido com o usuário logado).
+
+### Corrigido
+- **Editar um plano de tratamento apagava e recriava todos os itens** com IDs novos, mesmo para uma mudança trivial de título — o que teria apagado em cascata o histórico de sessões. Trocado por diff (atualiza item existente, insere novo, remove só o que foi de fato retirado).
+- **Criar um plano sem preencher a validade do orçamento falhava** (`invalid input syntax for type date: ""`) — bug pré-existente, descoberto durante a verificação de ponta a ponta desta entrega. O campo em branco agora vira `NULL` corretamente.
+- Plano concluído/cancelado manualmente não atualizava o status dos itens ainda pendentes, o que podia mostrar o plano como "Concluído" com a barra de progresso incompleta na mesma tela.
+- Um plano com algum item cancelado nunca completava sozinho, mesmo com todo o resto concluído.
+- Desconto de um item podia exceder o valor do próprio item sem aviso.
+
+### Testes
+- 22 novos testes (mappers da sessão, componente do modal, teste E2E completo simulando criar → aprovar → iniciar tratamento → registrar 2 sessões → conferir Protocolo/Galeria/auto-conclusão, com dado descartável).
+
 ## [3.15.0] - 2026-08-24
 ### Segurança
 - **Escalonamento de privilégio corrigido.** `POST /api/auth/users/update` verificava se o usuário podia editar o alvo (admin ou o próprio perfil), mas aceitava `role`, `status`, `permissions` e `commission_rate` sem checar se o valor havia mudado. Um usuário `staff`/`prestador` editando o próprio perfil podia enviar `role: "admin"` diretamente na requisição (fora do que a interface envia) e se promover. A UI nunca oferecia essa opção, mas a API precisa se defender por conta própria — o cliente não é confiável. Agora, uma edição do próprio perfil que tente mudar qualquer um desses quatro campos é recusada com 403; edições de admin sobre outra conta continuam funcionando normalmente. Coberto por 7 testes que reproduzem o ataque e confirmam que a versão anterior falhava 4 deles.
