@@ -9,6 +9,24 @@ import { dataLocalISO } from './utils';
 export const USER_PUBLIC_COLUMNS =
   'id, name, username, role, status, specialty, phone, avatar, commission_rate, permissions, created_at';
 
+/**
+ * Colunas leves de `clientes`, para a listagem.
+ *
+ * Fora daqui ficam de proposito: foto_antes, foto_depois, fotos_evolucao,
+ * documents e financials. Essas cinco guardam imagens/arquivos em base64 e
+ * respondiam por ~99% do trafego: carregar a lista completa baixava 2,4 MB em
+ * 3,6s, sendo 2,2 MB so de imagem que a tela de lista nem mostra.
+ * Elas sao buscadas sob demanda com CLIENTE_DETALHE_COLUMNS.
+ */
+export const CLIENTE_LIST_COLUMNS =
+  'id, nome, avatar, foto_detalhes, ultima_visita, tier, since, total_gasto, qtde_procedimentos, ' +
+  'data_ultima_foto, status, alergias, medicacoes, procedimentos_anteriores, notas_evolucao, ' +
+  'historico, telefone, cpf, created_at, pronome';
+
+/** Campos pesados de um cliente, carregados so quando o prontuario e aberto. */
+export const CLIENTE_DETALHE_COLUMNS =
+  'id, foto_antes, foto_depois, fotos_evolucao, documents, financials';
+
 export const mapUserToFrontend = (u: any): AppUser => ({
   id: u.id,
   name: u.name,

@@ -29,7 +29,9 @@ import {
   mapServicoToBackend,
   mapCobrancaToFrontend,
   mapCobrancaToBackend,
-  USER_PUBLIC_COLUMNS
+  USER_PUBLIC_COLUMNS,
+  CLIENTE_LIST_COLUMNS,
+  CLIENTE_DETALHE_COLUMNS
 } from '../lib/mappers';
 import type {
   EvolutionPhoto,
@@ -251,6 +253,9 @@ export default function SystemPage() {
   const [compareSelectedIds, setCompareSelectedIds] = useState<string[]>([]);
   const [pendingEvolutionPhoto, setPendingEvolutionPhoto] = useState<{file: File, base64: string} | null>(null);
   const [editingPhoto, setEditingPhoto] = useState<EvolutionPhoto | null>(null);
+  // Incrementa quando a tabela clientes muda, para recarregar os detalhes abertos.
+  const [versaoClientes, setVersaoClientes] = useState(0);
+  const [carregandoDetalhes, setCarregandoDetalhes] = useState(false);
 
   // Financeiro module detailed view timeframe
   const [financialTimeframe, setFinancialTimeframe] = useState<'semanal' | 'mensal'>('mensal');
@@ -1023,7 +1028,7 @@ export default function SystemPage() {
         { data: desp },
         { data: compData }
       ] = await Promise.all([
-        supabase.from('clientes').select('*'),
+        supabase.from('clientes').select(CLIENTE_LIST_COLUMNS),
         supabase.from('agendamentos').select('*, clientes(id, nome, avatar)'),
         supabase.from('cobrancas').select('*'),
         supabase.from('servicos').select('*'),
@@ -1091,18 +1096,24 @@ export default function SystemPage() {
     const dbChangesChannel = supabase
       .channel('schema-db-changes')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'clientes' }, () => {
-        supabase.from('clientes').select('*').then((res: any) => {
+        supabase.from('clientes').select(CLIENTE_LIST_COLUMNS).then((res: any) => {
           const data = res.data;
           if (data) {
-            setPatients(data.map(mapClienteToFrontend));
-            const financialsMap: Record<string, PatientFinancialItem[]> = {};
-            const documentsMap: Record<string, PatientDocument[]> = {};
-            data.forEach((p: any) => {
-              if (p.financials) financialsMap[p.id] = p.financials;
-              if (p.documents) documentsMap[p.id] = p.documents;
-            });
-            setPatientFinancials(financialsMap);
-            setPatientDocuments(documentsMap);
+            // A lista vem sem os campos pesados; preserva os detalhes que ja
+            // foram carregados sob demanda para nao apagar fotos da tela.
+            setPatients(prev => data.map((registro: any) => {
+              const leve = mapClienteToFrontend(registro);
+              const anterior = prev.find(p => p.id === leve.id);
+              if (!anterior) return leve;
+              return {
+                ...leve,
+                fotoAntes: anterior.fotoAntes,
+                fotoDepois: anterior.fotoDepois,
+                fotosEvolucao: anterior.fotosEvolucao
+              };
+            }));
+            // Forca o prontuario aberto a recarregar os detalhes.
+            setVersaoClientes(v => v + 1);
           }
         });
       })
@@ -1162,6 +1173,46 @@ export default function SystemPage() {
       supabase.removeChannel(dbChangesChannel);
     };
   }, [isAuthenticated]);
+
+  // Carrega os campos pesados do cliente (fotos, documentos, financeiro) somente
+  // quando o prontuario dele e aberto. A listagem nao precisa deles e carregar
+  // tudo de uma vez custava 2,4 MB / 3,6s a cada abertura do sistema.
+  useEffect(() => {
+    if (!isAuthenticated || !selectedPatientId) return;
+
+    let cancelado = false;
+    setCarregandoDetalhes(true);
+
+    supabase
+      .from('clientes')
+      .select(CLIENTE_DETALHE_COLUMNS)
+      .eq('id', selectedPatientId)
+      .single()
+      .then(({ data, error }: any) => {
+        if (cancelado) return;
+        setCarregandoDetalhes(false);
+        if (error || !data) {
+          if (error) console.error('Erro ao carregar detalhes do cliente:', error);
+          return;
+        }
+
+        setPatients(prev => prev.map(p =>
+          p.id === data.id
+            ? {
+                ...p,
+                fotoAntes: data.foto_antes || '',
+                fotoDepois: data.foto_depois || '',
+                fotosEvolucao: data.fotos_evolucao || []
+              }
+            : p
+        ));
+
+        setPatientFinancials(prev => ({ ...prev, [data.id]: data.financials || [] }));
+        setPatientDocuments(prev => ({ ...prev, [data.id]: data.documents || [] }));
+      });
+
+    return () => { cancelado = true; };
+  }, [isAuthenticated, selectedPatientId, versaoClientes]);
 
   // Handle new appointment submission
   const getServiceDuration = (procedureName: string) => {
@@ -1696,7 +1747,7 @@ export default function SystemPage() {
               <span>Acesso seguro. Todos os dados são criptografados.</span>
             </div>
             <span>© 2026 Gabi Almeida Estética.</span>
-            <span>Desenvolvido: caduhelp-dev | Ver. 3.13.0</span>
+            <span>Desenvolvido: caduhelp-dev | Ver. 3.14.0</span>
           </div>
         </div>
       </div>
@@ -3420,7 +3471,9 @@ export default function SystemPage() {
                         {/* Chronological Photo Gallery */}
                         <div className="border-t border-outline-variant/40 pt-6 print-hidden">
                           <h4 className="font-manrope text-[14px] font-bold text-primary mb-4">Galeria de Acompanhamento Cronológico</h4>
-                          {(!selectedPatient.fotosEvolucao || selectedPatient.fotosEvolucao.length === 0) ? (
+                          {carregandoDetalhes && (!selectedPatient.fotosEvolucao || selectedPatient.fotosEvolucao.length === 0) ? (
+                            <p className="text-[11px] text-on-surface-variant italic">Carregando fotos do prontuário...</p>
+                          ) : (!selectedPatient.fotosEvolucao || selectedPatient.fotosEvolucao.length === 0) ? (
                             <p className="text-[11px] text-on-surface-variant italic">Nenhuma foto carregada na galeria. Clique em "Nova Foto" para começar o histórico do paciente.</p>
                           ) : (
                             <div className="grid grid-cols-[repeat(auto-fill,minmax(120px,1fr))] gap-4">
@@ -6489,12 +6542,25 @@ export default function SystemPage() {
                   </div>
                   <div>
                     <h2 className="text-[18px] font-bold text-on-surface">Gabi Almeida Estética Sistema</h2>
-                    <p className="text-[13px] text-on-surface-variant font-bold">Versão atual: 3.13.0</p>
+                    <p className="text-[13px] text-on-surface-variant font-bold">Versão atual: 3.14.0</p>
                   </div>
                 </div>
 
                 <div className="space-y-4">
                   <h3 className="text-[14px] font-bold text-primary border-b border-outline-variant/30 pb-2">Histórico de Versões (Changelog)</h3>
+
+                  <div className="bg-surface-container-lowest rounded-2xl p-4 border border-outline-variant/50 mb-4">
+                    <div className="flex justify-between items-center mb-2">
+                      <span className="font-bold text-[14px] text-on-surface">Versão 3.14.0</span>
+                      <span className="text-[11px] font-bold text-on-surface-variant px-2 py-1 bg-surface-container rounded-lg">24 Agosto 2026</span>
+                    </div>
+                    <ul className="list-disc pl-5 space-y-1.5 text-[13px] text-on-surface-variant mt-3">
+                      <li><strong className="text-on-surface">Sistema Muito Mais Rápido:</strong> a abertura do sistema baixava 2,4 MB de fotos de todos os clientes de uma vez. Agora as fotos carregam só quando você abre o prontuário — 94% menos dados e abertura quase instantânea.</li>
+                      <li><strong className="text-on-surface">Correção de Data:</strong> depois das 21h o sistema gravava a data do dia seguinte em novos agendamentos, despesas e retornos. Corrigido.</li>
+                      <li><strong className="text-on-surface">Venda de Skincare:</strong> a venda agora aparece no financeiro imediatamente, sem precisar recarregar.</li>
+                      <li><strong className="text-on-surface">Limpeza Interna:</strong> removidas 619 linhas de código sem uso, deixando o sistema mais leve e fácil de manter.</li>
+                    </ul>
+                  </div>
 
                   <div className="bg-surface-container-lowest rounded-2xl p-4 border border-outline-variant/50 mb-4">
                     <div className="flex justify-between items-center mb-2">

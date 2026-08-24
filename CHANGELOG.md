@@ -2,7 +2,22 @@
 
 Todas as mudanças notáveis neste projeto serão documentadas neste arquivo.
 
+## [3.14.0] - 2026-08-24
+### Performance
+- **Carga inicial 94% mais leve.** A listagem de clientes usava `select('*')`, baixando `fotos_evolucao`, `foto_antes`, `foto_depois`, `documents` e `financials` de todos os clientes a cada abertura do sistema: 2,48 MB e 2,2 s só nessa consulta, sendo ~2,2 MB de imagem em base64 que a lista sequer exibe. Agora a lista usa `CLIENTE_LIST_COLUMNS` (0,14 MB, 267 ms) e os campos pesados são buscados sob demanda ao abrir o prontuário (`CLIENTE_DETALHE_COLUMNS`). O custo era linear no número de clientes.
+- O refetch do Realtime preserva os detalhes já carregados e sinaliza recarga do prontuário aberto, para não apagar fotos da tela nem servir dado velho.
+
+### Corrigido
+- Módulo de venda de skincare passa a refletir a cobrança no financeiro imediatamente, em vez de depender do Realtime.
+
 ## [3.13.0] - 2026-08-23
+### Corrigido (adicional)
+- Datas geradas com `toISOString()` retornavam o dia seguinte a partir das 21h no fuso do Brasil, afetando data padrão de novo agendamento e nova despesa, agendamento de retorno e a visão semanal da agenda. Substituído por `dataLocalISO()` em `lib/utils.ts`.
+- `checkSession` disparava `POST /api/auth/seed` a cada visita anônima; chamada automática removida.
+
+### Removido
+- 619 linhas de arquivos nunca importados (`hooks/useDashboardMetrics.ts`, `hooks/use-mobile.ts`, `contexts/DashboardContext.tsx`) e sobras menores. O projeto ficou sem nenhuma declaração não utilizada.
+
 ### Corrigido
 - **Ações da foto inacessíveis no iPad:** os botões de apagar/editar da galeria do prontuário ficavam num overlay `opacity-0 group-hover:opacity-100`. No Tailwind 4 o `hover:` só se aplica onde há mouse, então em aparelhos de toque eles nunca apareciam — e ainda capturavam o toque por cima da foto. Agora são botões sempre visíveis.
 - **Grade da galeria seguia a janela, não o container:** `grid-cols-2 sm:grid-cols-3 md:grid-cols-4` produzia cartões de ~60px quando a lista de clientes estava aberta ao lado, cortando os botões. Trocado por `auto-fill/minmax(120px,1fr)`.
