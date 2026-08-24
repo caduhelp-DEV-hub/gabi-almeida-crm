@@ -25,7 +25,7 @@ export async function POST() {
     const passwordHash = await bcrypt.hash('admin123', SALT_ROUNDS);
 
     // Criar admin padrão
-    const { data: newAdmin, error } = await supabaseAdmin
+    const { error } = await supabaseAdmin
       .from('users')
       .insert([{
         name: 'Dra. Gabi Almeida',

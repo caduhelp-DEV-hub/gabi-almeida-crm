@@ -38,7 +38,6 @@ export default function AnamneseLimpeza({ patientName, patientPhone = '(11) 9743
   const [selectedSkinProblems, setSelectedSkinProblems] = useState<string[]>([]);
   const [consentGiven, setConsentGiven] = useState(false);
 
-  const toggleHealth = (key: string) => setHealthToggles(prev => ({ ...prev, [key]: !prev[key] }));
 
   const questions = [
     "Utiliza lentes de contato?", "Tem epilepsia / convulsões?",

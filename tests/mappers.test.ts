@@ -103,3 +103,60 @@ describe('getAppointmentColorClass', () => {
     expect(getAppointmentColorClass('Outro')).toContain('slate');
   });
 });
+
+describe('mapClienteToBackend', () => {
+  it('converte camelCase para snake_case', () => {
+    const res = mapClienteToBackend({ nome: 'Ana', totalGasto: 250.5, fotoAntes: 'a.png' });
+    expect(res).toEqual({ nome: 'Ana', total_gasto: 250.5, foto_antes: 'a.png' });
+  });
+
+  it('omite campos nao informados, para nao sobrescrever com undefined', () => {
+    const res = mapClienteToBackend({ nome: 'Ana' });
+    expect(Object.keys(res)).toEqual(['nome']);
+  });
+
+  it('preserva valor zero (nao pode ser tratado como ausente)', () => {
+    const res = mapClienteToBackend({ totalGasto: 0, qtdeProcedimentos: 0 });
+    expect(res).toEqual({ total_gasto: 0, qtde_procedimentos: 0 });
+  });
+});
+
+describe('mapAgendamentoToBackend', () => {
+  it('converte os campos do agendamento', () => {
+    const res = mapAgendamentoToBackend({ clienteId: 'c1', hora: '09:00', data: '2026-08-23', valor: 180 });
+    expect(res).toEqual({ cliente_id: 'c1', hora: '09:00', data: '2026-08-23', valor: 180 });
+  });
+
+  it('preserva valor zero', () => {
+    expect(mapAgendamentoToBackend({ valor: 0 })).toEqual({ valor: 0 });
+  });
+
+  it('nao inventa campos quando recebe objeto vazio', () => {
+    expect(mapAgendamentoToBackend({})).toEqual({});
+  });
+});
+
+describe('mapInventoryToBackend', () => {
+  it('converte nomes de coluna do estoque', () => {
+    const res = mapInventoryToBackend({ name: 'Sérum', quantity: 5, minQuantity: 2, salePrice: 120, costPrice: 60, type: 'skincare' });
+    expect(res).toEqual({ name: 'Sérum', quantity: 5, min_quantity: 2, preco_venda: 120, preco_custo: 60, tipo_produto: 'skincare' });
+  });
+
+  it('preserva quantidade zero (produto esgotado)', () => {
+    expect(mapInventoryToBackend({ quantity: 0 })).toEqual({ quantity: 0 });
+  });
+});
+
+describe('mapAgendamentoToFrontend', () => {
+  it('usa a data local de hoje quando o registro nao tem data', () => {
+    const hoje = new Date();
+    const esperado = `${hoje.getFullYear()}-${String(hoje.getMonth() + 1).padStart(2, '0')}-${String(hoje.getDate()).padStart(2, '0')}`;
+    expect(mapAgendamentoToFrontend({ id: 'a1' }).data).toBe(esperado);
+  });
+
+  it('prefere o nome vindo do join de clientes', () => {
+    const r = mapAgendamentoToFrontend({ id: 'a1', cliente_nome: 'Antigo', clientes: { nome: 'Novo', avatar: 'x' } });
+    expect(r.clienteNome).toBe('Novo');
+    expect(r.clienteAvatar).toBe('x');
+  });
+});

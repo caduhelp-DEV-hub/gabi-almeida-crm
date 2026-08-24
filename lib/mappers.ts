@@ -1,4 +1,5 @@
-import type { AppUser, Cliente, Agendamento, InventoryItem, Servico, Cobranca, Despesa, PlanoTratamento, PlanoTratamentoItem } from './types';
+import type { AppUser, Cliente, Agendamento, InventoryItem, Servico, Cobranca, PlanoTratamento, PlanoTratamentoItem } from './types';
+import { dataLocalISO } from './utils';
 
 /**
  * Colunas de `users` que o frontend pode ler.
@@ -99,7 +100,7 @@ export const mapAgendamentoToFrontend = (a: any): Agendamento => ({
   profissional: a.profissional,
   categoria: a.categoria,
   notas: a.notas,
-  data: a.data || new Date().toISOString().split('T')[0],
+  data: a.data || dataLocalISO(),
   valor: a.valor !== undefined && a.valor !== null ? Number(a.valor) : undefined
 });
 

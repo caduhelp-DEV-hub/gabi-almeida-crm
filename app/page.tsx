@@ -16,6 +16,7 @@ import ServicePieChart from '../components/dashboard/ServicePieChart';
 import DespesaModal from '../components/modals/DespesaModal';
 import Sidebar from '../components/layout/Sidebar';
 import { supabase, refreshDbAuth, clearDbToken } from '../lib/supabase';
+import { dataLocalISO } from '../lib/utils';
 import {
   mapUserToFrontend,
   mapClienteToFrontend,
@@ -112,11 +113,10 @@ export default function SystemPage() {
   
   const [despesas, setDespesas] = useState<{id: string, descricao: string, valor: number, data: string, categoria: string, status: string}[]>([]);
   const [isDespesaModalOpen, setIsDespesaModalOpen] = useState(false);
-  const [newDespesa, setNewDespesa] = useState({ descricao: '', valor: '', data: new Date().toISOString().split('T')[0], categoria: 'Outros', status: 'Pago' });
+  const [newDespesa, setNewDespesa] = useState({ descricao: '', valor: '', data: dataLocalISO(), categoria: 'Outros', status: 'Pago' });
 
   const [editingTimelineItemId, setEditingTimelineItemId] = useState<string | null>(null);
   const [editingTimelineText, setEditingTimelineText] = useState('');
-  const [clearedNotifications, setClearedNotifications] = useState(false);
   const [mensagensPredefinidas, setMensagensPredefinidas] = useState<any[]>([]);
   const [isMsgModalOpen, setIsMsgModalOpen] = useState(false);
   const [editingMsg, setEditingMsg] = useState<any | null>(null);
@@ -238,7 +238,7 @@ export default function SystemPage() {
   const [newApptProcedure, setNewApptProcedure] = useState('');
   const [newApptProfessional, setNewApptProfessional] = useState('Gabi Almeida');
   const [newApptTime, setNewApptTime] = useState('09:00');
-  const [newApptDate, setNewApptDate] = useState(new Date().toISOString().split('T')[0]);
+  const [newApptDate, setNewApptDate] = useState(dataLocalISO());
   const [newApptCategory, setNewApptCategory] = useState<'Estética' | 'Consulta'>('Estética');
   const [newApptValor, setNewApptValor] = useState('');
 
@@ -490,7 +490,7 @@ export default function SystemPage() {
   
   transactions.forEach(t => {
     const dVal = parseAnyDate(t.data);
-    const dayKey = dVal.toISOString().split('T')[0];
+    const dayKey = dataLocalISO(dVal);
     if (!cashFlowMap[dayKey]) {
       cashFlowMap[dayKey] = { date: dVal, dateStr: dayKey, receita: 0, despesa: 0, items: [] };
     }
@@ -503,7 +503,7 @@ export default function SystemPage() {
   appointments.forEach(a => {
     if (a.status !== 'Finalizado' && a.status !== 'Confirmado') return;
     const dVal = parseAnyDate(a.data);
-    const dayKey = dVal.toISOString().split('T')[0];
+    const dayKey = dataLocalISO(dVal);
     if (!cashFlowMap[dayKey]) {
       cashFlowMap[dayKey] = { date: dVal, dateStr: dayKey, receita: 0, despesa: 0, items: [] };
     }
@@ -523,7 +523,7 @@ export default function SystemPage() {
 
   despesas.forEach(d => {
     const dVal = parseAnyDate(d.data);
-    const dayKey = dVal.toISOString().split('T')[0];
+    const dayKey = dataLocalISO(dVal);
     if (!cashFlowMap[dayKey]) {
       cashFlowMap[dayKey] = { date: dVal, dateStr: dayKey, receita: 0, despesa: 0, items: [] };
     }
@@ -726,7 +726,7 @@ export default function SystemPage() {
       days.push({
         label: labels[i],
         date: d.toLocaleDateString('pt-BR', { day: 'numeric', month: 'short' }).replace('.', ''),
-        dateString: d.toISOString().split('T')[0],
+        dateString: dataLocalISO(d),
         active: d.toDateString() === today.toDateString()
       });
     }
@@ -829,7 +829,7 @@ export default function SystemPage() {
   const currentDateStr = new Date().toLocaleDateString('en-CA'); // local YYYY-MM-DD
   const todaysAppointments = appointments.filter(a => a.data === currentDateStr && a.status !== 'Finalizado');
   
-  const criticalAlerts = clearedNotifications ? [] : [
+  const criticalAlerts = [
     ...inventory.filter(i => i.quantity <= i.minQuantity).map(i => ({
       id: `inv-${i.id}`,
       type: 'inventory',
@@ -889,7 +889,7 @@ export default function SystemPage() {
       date.setDate(date.getDate() + 1);
     }
     
-    const formattedDate = date.toISOString().split('T')[0];
+    const formattedDate = dataLocalISO(date);
     
     const patientName = patients.find(p => p.id === selectedPatientId)?.nome || 'Paciente';
     const patientAvatar = patients.find(p => p.id === selectedPatientId)?.avatar || '';
@@ -989,12 +989,9 @@ export default function SystemPage() {
           setCurrentUser(mapUserToFrontend(data.user));
           setIsAuthenticated(true);
         } else {
-          // If no session exists, try to automatically seed the admin if it doesn't exist
-          try {
-            await fetch('/api/auth/seed', { method: 'POST' });
-          } catch (e) {
-            console.error('Auto-seed check failed:', e);
-          }
+          // O seed NAO e mais disparado daqui: era um POST publico executado a
+          // cada visita anonima. Para criar o admin inicial, chame
+          // POST /api/auth/seed manualmente uma unica vez.
           setCurrentUser(null);
           setIsAuthenticated(false);
         }
@@ -1722,7 +1719,7 @@ export default function SystemPage() {
     } else if (data) {
       setDespesas([data[0], ...despesas]);
       setIsDespesaModalOpen(false);
-      setNewDespesa({ descricao: '', valor: '', data: new Date().toISOString().split('T')[0], categoria: 'Outros', status: 'Pago' });
+      setNewDespesa({ descricao: '', valor: '', data: dataLocalISO(), categoria: 'Outros', status: 'Pago' });
       showAlert('Despesa cadastrada com sucesso!');
     }
   };
@@ -1788,7 +1785,7 @@ export default function SystemPage() {
           setNewApptPatient('');
           setNewApptProcedure('');
           setNewApptTime('09:00');
-          setNewApptDate(new Date().toISOString().split('T')[0]);
+          setNewApptDate(dataLocalISO());
           setNewApptValor('');
           setIsNewAppointmentOpen(true);
           setIsMobileMenuOpen(false);

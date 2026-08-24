@@ -3,7 +3,8 @@
 import React, { useState, useMemo } from 'react';
 import { supabase } from '../lib/supabase';
 import { Cliente, InventoryItem, TimelineItem, Cobranca } from '../lib/types';
-import { mapInventoryToBackend, mapCobrancaToBackend } from '../lib/mappers';
+import { mapCobrancaToBackend, mapCobrancaToFrontend } from '../lib/mappers';
+import { dataLocalISO } from '../lib/utils';
 
 interface VendaSkincareModuleProps {
   patients: Cliente[];
@@ -95,7 +96,7 @@ export default function VendaSkincareModule({
       // 2. Adicionar cobrança no financeiro
       const cobranca = {
         descricao: `Venda Skincare (${cart.length} itens)`,
-        data: new Date().toISOString().split('T')[0],
+        data: dataLocalISO(),
         categoria: 'Venda de Produto',
         status: 'Pago' as const,
         valor: cartTotal
@@ -139,9 +140,12 @@ export default function VendaSkincareModule({
 
       setPatients(prev => prev.map(p => p.id === patient.id ? { ...p, historico: updatedHistory, totalGasto: novoGasto } : p));
       
+      // Reflete a venda no financeiro na hora, sem depender do Realtime chegar.
       if (cobrancaResult && cobrancaResult[0]) {
-         // Não tem como injetar mapCobrancaToFrontend diretamente aqui facilmente, mas a lista de transações recarrega ao abrir a aba
-         // Apenas como placeholder, omitindo update da view local de cobrancas
+        const novaCobranca = mapCobrancaToFrontend(cobrancaResult[0]);
+        setTransactions(prev =>
+          prev.some(t => t.id === novaCobranca.id) ? prev : [novaCobranca, ...prev]
+        );
       }
 
       showAlert('Venda finalizada com sucesso! Estoque e financeiro atualizados.');

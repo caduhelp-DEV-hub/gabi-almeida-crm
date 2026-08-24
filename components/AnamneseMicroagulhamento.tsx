@@ -38,7 +38,6 @@ export default function AnamneseMicroagulhamento({ patientName, patientPhone = '
   const [selectedSkinProblems, setSelectedSkinProblems] = useState<string[]>([]);
   const [consentGiven, setConsentGiven] = useState(false);
 
-  const toggleHealth = (key: string) => setHealthToggles(prev => ({ ...prev, [key]: !prev[key] }));
 
   const questions = [
     "Utiliza isotretinoína (Roacutan) ou derivados de vitamina A?", "Possui histórico de quelóides ou cicatrização hipertrófica?",

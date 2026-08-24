@@ -1,4 +1,5 @@
 import React, { useRef, useState, useEffect, useCallback } from 'react';
+import { dataLocalISO } from '../lib/utils';
 
 interface Props {
   patientName: string;
@@ -85,7 +86,7 @@ export default function AnamneseMicroagulhamentoCompleto({
   // Seção 1 – Dados pessoais
   const [dataNascimento, setDataNascimento] = useState('');
   const [profissao, setProfissao] = useState('');
-  const [dataAvaliacao, setDataAvaliacao] = useState(new Date().toISOString().split('T')[0]);
+  const [dataAvaliacao, setDataAvaliacao] = useState(dataLocalISO());
 
   // Seção 2 – Áreas
   const [areasTratadas, setAreasTratadas] = useState<string[]>([]);
