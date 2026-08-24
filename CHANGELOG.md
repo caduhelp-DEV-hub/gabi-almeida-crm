@@ -2,6 +2,14 @@
 
 Todas as mudanças notáveis neste projeto serão documentadas neste arquivo.
 
+## [3.18.0] - 2026-08-24
+### Adicionado
+- **Assinatura vinculada ao Histórico do prontuário.** A assinatura de cada sessão (v3.17.0) ficava salva no banco mas invisível na consulta — só aparecia a assinatura da primeira ficha de anamnese. Agora, toda sessão registrada vira um Protocolo no Histórico com um link "Ver assinatura" (abre a imagem ampliada) ou, quando dispensada, o motivo registrado visível diretamente no card — mesmo sessões sem descrição (antes, uma sessão só com assinatura e sem descrição não gerava Protocolo nenhum).
+- **Assinatura na exportação em PDF.** O PDF do plano de tratamento (Exportar PDF) ganhou uma seção "Sessões Realizadas": data, descrição, profissional responsável e a imagem da assinatura do cliente (ou o motivo da dispensa) de cada sessão, para consulta fora do sistema. A exportação agora busca as sessões sob demanda quando necessário, garantindo que o PDF sempre saia completo mesmo exportando direto da listagem.
+
+### Corrigido
+- Uma sessão registrada sem descrição (só com foto e/ou assinatura) não deixava nenhum rastro no Histórico do cliente. Agora todo fechamento de sessão gera um Protocolo, auditável com ou sem texto.
+
 ## [3.17.0] - 2026-08-24
 ### Adicionado
 - **Assinatura do cliente vinculada à sessão do tratamento.** Ao registrar uma sessão, um segundo passo obrigatório pede a assinatura antes de salvar: novo `SignaturePad` com Pointer Events (mouse, dedo e caneta, com sensibilidade de pressão), redimensionamento por `devicePixelRatio`/`ResizeObserver` — testado e responsivo em iPad (retrato e paisagem). A assinatura desenhada, o horário exato do aceite e o texto do termo apresentado ficam gravados em `planos_tratamento_sessoes` (colunas novas: `assinatura_url`, `assinatura_aceite_em`, `assinatura_termo`), com upload para o bucket `signatures` do Storage. Quando o cliente já foi embora, é possível registrar a sessão dispensando a assinatura, mas só informando um motivo (`assinatura_dispensada_motivo`) — nunca some em silêncio.

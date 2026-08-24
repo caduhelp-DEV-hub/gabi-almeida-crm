@@ -1605,7 +1605,7 @@ export default function SystemPage() {
               <span>Acesso seguro. Todos os dados são criptografados.</span>
             </div>
             <span>© 2026 Gabi Almeida Estética.</span>
-            <span>Desenvolvido: caduhelp-dev | Ver. 3.17.0</span>
+            <span>Desenvolvido: caduhelp-dev | Ver. 3.18.0</span>
           </div>
         </div>
       </div>
@@ -3582,14 +3582,34 @@ export default function SystemPage() {
                                 ) : (
                                   <p className="text-[12px] text-on-surface-variant leading-relaxed mt-1">{item.description}</p>
                                 )}
-                                <div className="flex gap-2 mt-3">
+                                <div className="flex flex-wrap gap-2 mt-3">
                                   <span className="bg-[#fed65b] text-[#745c00] px-2.5 py-0.5 rounded-full text-[9px] font-bold uppercase">
                                     {item.category}
                                   </span>
                                   <span className="bg-tertiary-fixed text-on-tertiary-fixed-variant px-2.5 py-0.5 rounded-full text-[9px] font-bold uppercase">
                                     {item.status}
                                   </span>
+                                  {item.assinaturaUrl ? (
+                                    <button
+                                      onClick={() => setActiveLightboxImage(item.assinaturaUrl!)}
+                                      className="flex items-center gap-1 bg-emerald-50 text-emerald-700 border border-emerald-200 px-2.5 py-0.5 rounded-full text-[9px] font-bold uppercase hover:bg-emerald-100 transition-colors cursor-pointer"
+                                    >
+                                      <span className="material-symbols-outlined text-[12px]">draw</span>Ver assinatura
+                                    </button>
+                                  ) : item.assinaturaDispensadaMotivo ? (
+                                    <span
+                                      className="bg-amber-50 text-amber-700 border border-amber-200 px-2.5 py-0.5 rounded-full text-[9px] font-bold uppercase"
+                                      title={item.assinaturaDispensadaMotivo}
+                                    >
+                                      Sem assinatura
+                                    </span>
+                                  ) : null}
                                 </div>
+                                {item.assinaturaAceiteEm && (
+                                  <p className="text-[10px] text-on-surface-variant/70 mt-1.5">
+                                    Assinatura aceita eletronicamente em {new Date(item.assinaturaAceiteEm).toLocaleString('pt-BR')}
+                                  </p>
+                                )}
                               </div>
                             </div>
                           ))}
@@ -6337,12 +6357,24 @@ export default function SystemPage() {
                   </div>
                   <div>
                     <h2 className="text-[18px] font-bold text-on-surface">Gabi Almeida Estética Sistema</h2>
-                    <p className="text-[13px] text-on-surface-variant font-bold">Versão atual: 3.17.0</p>
+                    <p className="text-[13px] text-on-surface-variant font-bold">Versão atual: 3.18.0</p>
                   </div>
                 </div>
 
                 <div className="space-y-4">
                   <h3 className="text-[14px] font-bold text-primary border-b border-outline-variant/30 pb-2">Histórico de Versões (Changelog)</h3>
+
+                  <div className="bg-surface-container-lowest rounded-2xl p-4 border border-outline-variant/50 mb-4">
+                    <div className="flex justify-between items-center mb-2">
+                      <span className="font-bold text-[14px] text-on-surface">Versão 3.18.0</span>
+                      <span className="text-[11px] font-bold text-on-surface-variant px-2 py-1 bg-surface-container rounded-lg">24 Agosto 2026</span>
+                    </div>
+                    <ul className="list-disc pl-5 space-y-1.5 text-[13px] text-on-surface-variant mt-3">
+                      <li><strong className="text-on-surface">Assinatura visível no Histórico:</strong> cada sessão registrada agora aparece no Histórico do cliente com um link para ver a assinatura do cliente (ou o motivo, quando ela foi dispensada) — antes ficava só salva no banco, sem aparecer na consulta.</li>
+                      <li><strong className="text-on-surface">Assinatura na exportação em PDF:</strong> o PDF do plano de tratamento agora traz cada sessão realizada junto com a imagem da assinatura do cliente.</li>
+                      <li><strong className="text-on-surface">Correção:</strong> uma sessão registrada só com foto/assinatura, sem descrição, não aparecia no Histórico. Corrigido.</li>
+                    </ul>
+                  </div>
 
                   <div className="bg-surface-container-lowest rounded-2xl p-4 border border-outline-variant/50 mb-4">
                     <div className="flex justify-between items-center mb-2">

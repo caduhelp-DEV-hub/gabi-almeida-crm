@@ -158,33 +158,32 @@ export default function PlanoTratamentoModule({
     setViewMode('novo');
   };
 
+  /** A listagem nao busca sessoes (pesaria a query de todos os planos); carrega sob demanda quando precisa do detalhe completo (abrir plano, exportar PDF). */
+  const buscarPlanoComSessoes = async (plano: PlanoTratamento): Promise<PlanoTratamento> => {
+    if (plano.itens.length === 0) return plano;
+    const { data, error } = await supabase
+      .from('planos_tratamento_sessoes')
+      .select('*')
+      .in('item_id', plano.itens.map(i => i.id))
+      .order('numero_sessao', { ascending: true });
+    if (error) throw error;
+
+    const sessoesPorItem = new Map<string, PlanoTratamentoSessao[]>();
+    (data || []).forEach((registro: any) => {
+      const s = mapPlanoTratamentoSessaoToFrontend(registro);
+      const lista = sessoesPorItem.get(s.itemId) || [];
+      lista.push(s);
+      sessoesPorItem.set(s.itemId, lista);
+    });
+
+    return { ...plano, itens: plano.itens.map(i => ({ ...i, sessoes: sessoesPorItem.get(i.id) || [] })) };
+  };
+
   const abrirDetalhe = async (plano: PlanoTratamento) => {
-    // A listagem nao busca sessoes (pesaria a query de todos os planos), entao
-    // carrega aqui, so quando o detalhe de um plano especifico e aberto.
     setPlanoAtivo(plano);
     setViewMode('detalhe');
-
-    if (plano.itens.length === 0) return;
     try {
-      const { data, error } = await supabase
-        .from('planos_tratamento_sessoes')
-        .select('*')
-        .in('item_id', plano.itens.map(i => i.id))
-        .order('numero_sessao', { ascending: true });
-      if (error) throw error;
-
-      const sessoesPorItem = new Map<string, PlanoTratamentoSessao[]>();
-      (data || []).forEach((registro: any) => {
-        const s = mapPlanoTratamentoSessaoToFrontend(registro);
-        const lista = sessoesPorItem.get(s.itemId) || [];
-        lista.push(s);
-        sessoesPorItem.set(s.itemId, lista);
-      });
-
-      const planoComSessoes: PlanoTratamento = {
-        ...plano,
-        itens: plano.itens.map(i => ({ ...i, sessoes: sessoesPorItem.get(i.id) || [] }))
-      };
+      const planoComSessoes = await buscarPlanoComSessoes(plano);
       setPlanoAtivo(planoComSessoes);
       setPlanos(prev => prev.map(p => p.id === plano.id ? planoComSessoes : p));
     } catch (error: any) {
@@ -470,6 +469,7 @@ export default function PlanoTratamentoModule({
       const assinaturaUrl = dados.assinaturaBase64
         ? await uploadAssinaturaSessao(plano.clienteId, item.id, dados.assinaturaBase64)
         : undefined;
+      const assinaturaAceiteEm = assinaturaUrl ? new Date().toISOString() : undefined;
 
       const fotosEvolucao: EvolutionPhoto[] = urlsFotos.map(url => ({
         id: 'foto_sessao_' + crypto.randomUUID(),
@@ -481,17 +481,22 @@ export default function PlanoTratamentoModule({
 
       const clienteUpdate: Record<string, unknown> = {};
 
-      if (dados.descricao) {
-        const novoProtocolo: TimelineItem = {
-          id: 'tl_sessao_' + crypto.randomUUID(),
-          title: `${item.servicoNome} — Sessão ${numeroSessao}/${item.quantidade}`,
-          date: dataSessaoBr,
-          description: dados.descricao,
-          category: 'Procedimento',
-          status: 'Concluído'
-        };
-        clienteUpdate.historico = [novoProtocolo, ...(clienteAtual.historico || [])];
-      }
+      // Todo fechamento de sessao (mesmo sem descricao) e um evento clinico
+      // auditavel: a assinatura -- ou o motivo explicito de nao ter uma --
+      // precisa ficar visivel no Protocolo do prontuario, para consulta e
+      // exportacao, nao so na tabela de sessoes.
+      const novoProtocolo: TimelineItem = {
+        id: 'tl_sessao_' + crypto.randomUUID(),
+        title: `${item.servicoNome} — Sessão ${numeroSessao}/${item.quantidade}`,
+        date: dataSessaoBr,
+        description: dados.descricao || '',
+        category: 'Procedimento',
+        status: 'Concluído',
+        assinaturaUrl,
+        assinaturaAceiteEm,
+        assinaturaDispensadaMotivo: dados.assinaturaDispensadaMotivo || undefined
+      };
+      clienteUpdate.historico = [novoProtocolo, ...(clienteAtual.historico || [])];
 
       if (fotosEvolucao.length > 0) {
         clienteUpdate.fotos_evolucao = [...(clienteAtual.fotos_evolucao || []), ...fotosEvolucao];
@@ -516,7 +521,7 @@ export default function PlanoTratamentoModule({
         fotos: fotosEvolucao,
         realizadoPor: dados.realizadoPor || undefined,
         assinaturaUrl,
-        assinaturaAceiteEm: assinaturaUrl ? new Date().toISOString() : undefined,
+        assinaturaAceiteEm,
         assinaturaTermo: assinaturaUrl ? dados.assinaturaTermo : undefined,
         assinaturaDispensadaMotivo: dados.assinaturaDispensadaMotivo || undefined
       });
@@ -548,9 +553,20 @@ export default function PlanoTratamentoModule({
     }
   };
 
-  const handleExportarPdf = (plano: PlanoTratamento) => {
+  const handleExportarPdf = async (plano: PlanoTratamento) => {
     const cliente = patients.find(p => p.id === plano.clienteId);
-    gerarPdfPlano(plano, cliente, companyData);
+    // Exportar da listagem (sem sessoes carregadas) nao pode gerar um PDF
+    // incompleto -- busca de novo se necessario, para as sessoes e
+    // assinaturas sempre saírem no documento.
+    let planoParaExportar = plano;
+    if (plano.itens.some(i => i.sessoes === undefined)) {
+      try {
+        planoParaExportar = await buscarPlanoComSessoes(plano);
+      } catch (error: any) {
+        console.error('Erro ao carregar sessões para exportação:', error);
+      }
+    }
+    await gerarPdfPlano(planoParaExportar, cliente, companyData);
   };
 
   const handleExcluirPlano = async (plano: PlanoTratamento) => {

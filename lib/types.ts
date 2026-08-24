@@ -5,6 +5,12 @@ export interface TimelineItem {
   description: string;
   category: string;
   status: string;
+  /** URL da assinatura do cliente que fechou este atendimento (bucket 'signatures'). */
+  assinaturaUrl?: string;
+  /** Quando o aceite foi dado -- validacao eletronica real do consentimento. */
+  assinaturaAceiteEm?: string;
+  /** Preenchido so quando a assinatura foi conscientemente dispensada. */
+  assinaturaDispensadaMotivo?: string;
 }
 
 export interface EvolutionPhoto {

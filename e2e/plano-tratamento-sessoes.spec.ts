@@ -11,6 +11,9 @@ import jwt from 'jsonwebtoken';
  *  - a assinatura desenhada foi salva (url + timestamp + termo), sem selo
  *    de seguranca falso
  *  - dispensar a assinatura grava o motivo, sem assinatura_url
+ *  - toda sessao (com ou sem assinatura) vira Protocolo no Historico, com a
+ *    assinatura visivel para consulta (link "Ver assinatura" abrindo a
+ *    imagem) ou o motivo da dispensa, nao so gravada na tabela de sessoes
  *  - a 2a sessao (ultima contratada) auto-completa o item e o plano
  *  - a barra de estatisticas do prontuario reflete os dados reais
  *
@@ -166,7 +169,10 @@ test('sessao registrada vira Protocolo e foto na Galeria, e auto-completa o item
   // falso (o card antigo "ICP-Brasil / IP fixo" foi removido).
   const check1 = await fetch(`${base()}/rest/v1/clientes?id=eq.${clienteId}&select=historico,fotos_evolucao`, { headers: cabecalhos() });
   const [reg1] = await check1.json();
-  expect(reg1.historico?.some((h: any) => h.description === 'Primeira sessão de teste automatizado.')).toBe(true);
+  const protocoloSessao1 = reg1.historico?.find((h: any) => h.description === 'Primeira sessão de teste automatizado.');
+  expect(protocoloSessao1, 'a sessao registrada deveria ter virado um Protocolo').toBeTruthy();
+  expect(protocoloSessao1?.assinaturaUrl, 'o protocolo do historico deveria estar vinculado a assinatura').toBeTruthy();
+  expect(protocoloSessao1?.assinaturaAceiteEm).toBeTruthy();
   expect(reg1.fotos_evolucao?.length).toBeGreaterThan(0);
 
   const itemResp = await fetch(
@@ -211,6 +217,41 @@ test('sessao registrada vira Protocolo e foto na Galeria, e auto-completa o item
   const [sessao2] = await sessao2Check.json();
   expect(sessao2.assinatura_url).toBeNull();
   expect(sessao2.assinatura_dispensada_motivo).toContain('teste automatizado');
+
+  const check2 = await fetch(`${base()}/rest/v1/clientes?id=eq.${clienteId}&select=historico`, { headers: cabecalhos() });
+  const [reg2] = await check2.json();
+  const protocoloSessao2 = reg2.historico?.find((h: any) => h.title === `${servicoNome} — Sessão 2/2`);
+  expect(protocoloSessao2, 'sessao registrada sem descricao ainda assim deveria virar Protocolo (auditavel)').toBeTruthy();
+  expect(protocoloSessao2?.assinaturaUrl).toBeFalsy();
+  expect(protocoloSessao2?.assinaturaDispensadaMotivo).toContain('teste automatizado');
+
+  // 7b. Historico: cada sessao aparece como Protocolo vinculado a assinatura
+  // real (com link pra visualizar) ou ao motivo de dispensa -- nao so no
+  // banco, tambem na consulta visual do prontuario.
+  await page.getByRole('button', { name: 'Histórico & Evolução' }).click();
+
+  const cardSessao1 = page.locator('#protocolos-section div.relative.flex.gap-6.items-start')
+    .filter({ hasText: 'Primeira sessão de teste automatizado.' }).first();
+  await expect(cardSessao1.getByRole('button', { name: /Ver assinatura/i })).toBeVisible({ timeout: 10_000 });
+  await cardSessao1.getByRole('button', { name: /Ver assinatura/i }).click();
+  await expect(page.getByAltText('Visualização ampliada')).toBeVisible({ timeout: 10_000 });
+  await page.mouse.click(5, 5); // fora da imagem, fecha o lightbox pelo backdrop
+  await expect(page.getByAltText('Visualização ampliada')).toBeHidden();
+
+  const cardSessao2 = page.locator('#protocolos-section div.relative.flex.gap-6.items-start')
+    .filter({ hasText: `${servicoNome} — Sessão 2/2` }).first();
+  await expect(cardSessao2.getByText('Sem assinatura', { exact: true })).toBeVisible();
+
+  // 7c. Exportar PDF: reabre o detalhe do plano (busca as sessoes de novo,
+  // mesmo fluxo real) e confere que a exportacao -- que agora busca a
+  // imagem da assinatura de forma assincrona -- completa sem travar.
+  await page.getByRole('button', { name: 'Planos de Tratamento', exact: true }).click();
+  await page.locator('table tbody tr').first().locator('button[title="Visualizar"]').click();
+  await expect(page.getByRole('heading', { name: /Plano de Tratamento/i })).toBeVisible({ timeout: 10_000 });
+  const downloadPromise = page.waitForEvent('download', { timeout: 20_000 });
+  await page.getByRole('button', { name: 'Exportar PDF' }).click();
+  const download = await downloadPromise;
+  expect(download.suggestedFilename()).toMatch(/\.pdf$/);
 
   // 8. Barra de estatisticas do prontuario: abre o cliente e confere que os
   // 4 valores refletem o que acabou de acontecer (2 sessoes reais, plano
