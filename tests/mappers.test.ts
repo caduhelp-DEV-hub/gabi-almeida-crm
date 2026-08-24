@@ -194,6 +194,21 @@ describe('mapPlanoTratamentoSessaoToFrontend', () => {
   it('usa array vazio quando fotos vem nulo', () => {
     expect(mapPlanoTratamentoSessaoToFrontend({ id: 's1', numero_sessao: 1 }).fotos).toEqual([]);
   });
+
+  it('converte os campos de assinatura', () => {
+    const r = mapPlanoTratamentoSessaoToFrontend({
+      id: 's1',
+      numero_sessao: 1,
+      assinatura_url: 'https://exemplo.com/assinatura.png',
+      assinatura_aceite_em: '2026-08-24T10:00:00Z',
+      assinatura_termo: 'Declaro estar ciente...',
+      assinatura_dispensada_motivo: null
+    });
+    expect(r.assinaturaUrl).toBe('https://exemplo.com/assinatura.png');
+    expect(r.assinaturaAceiteEm).toBe('2026-08-24T10:00:00Z');
+    expect(r.assinaturaTermo).toBe('Declaro estar ciente...');
+    expect(r.assinaturaDispensadaMotivo).toBeNull();
+  });
 });
 
 describe('mapPlanoTratamentoSessaoToBackend', () => {
@@ -224,5 +239,20 @@ describe('mapPlanoTratamentoSessaoToBackend', () => {
     // numeroSessao nunca deveria ser 0 na pratica (CHECK > 0 no banco), mas o
     // mapper nao deve descartar valores falsy por engano.
     expect(mapPlanoTratamentoSessaoToBackend({ numeroSessao: 0 })).toEqual({ numero_sessao: 0 });
+  });
+
+  it('converte os campos de assinatura', () => {
+    const res = mapPlanoTratamentoSessaoToBackend({
+      assinaturaUrl: 'https://exemplo.com/assinatura.png',
+      assinaturaAceiteEm: '2026-08-24T10:00:00Z',
+      assinaturaTermo: 'Declaro estar ciente e de acordo...',
+      assinaturaDispensadaMotivo: 'Cliente já foi embora'
+    });
+    expect(res).toEqual({
+      assinatura_url: 'https://exemplo.com/assinatura.png',
+      assinatura_aceite_em: '2026-08-24T10:00:00Z',
+      assinatura_termo: 'Declaro estar ciente e de acordo...',
+      assinatura_dispensada_motivo: 'Cliente já foi embora'
+    });
   });
 });

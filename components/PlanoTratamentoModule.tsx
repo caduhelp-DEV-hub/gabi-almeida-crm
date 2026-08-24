@@ -43,6 +43,8 @@ interface PlanoTratamentoModuleProps {
   nomeProfissionalPadrao?: string;
   /** Sincroniza historico/fotos_evolucao do cliente com a tela de prontuario aberta. */
   onClienteAtualizado?: (clienteId: string, patch: Partial<Cliente>) => void;
+  /** Avisa a tela de prontuario que status/sessoes de algum plano mudaram, para atualizar a barra de estatisticas. */
+  onPlanosAlterados?: () => void;
 }
 
 type ViewMode = 'lista' | 'novo' | 'editar' | 'detalhe';
@@ -89,7 +91,8 @@ export default function PlanoTratamentoModule({
   initialPatientId,
   onPlanoCriado,
   nomeProfissionalPadrao,
-  onClienteAtualizado
+  onClienteAtualizado,
+  onPlanosAlterados
 }: PlanoTratamentoModuleProps) {
   const [planos, setPlanos] = useState<PlanoTratamento[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -317,6 +320,7 @@ export default function PlanoTratamentoModule({
       await fetchPlanos();
       setViewMode('lista');
       setPlanoAtivo(null);
+      onPlanosAlterados?.();
     } catch (error: any) {
       console.error('Erro ao salvar plano de tratamento:', error);
       showAlert(`Erro ao salvar plano de tratamento: ${error.message}`);
@@ -372,6 +376,7 @@ export default function PlanoTratamentoModule({
       setPlanoAtivo(planoAtualizado);
       setPlanos(prev => prev.map(p => p.id === plano.id ? planoAtualizado : p));
       showAlert(`Plano marcado como "${novoStatus}".`);
+      onPlanosAlterados?.();
     } catch (error: any) {
       console.error('Erro ao mudar status do plano:', error);
       showAlert(`Erro ao mudar status do plano: ${error.message}`);
@@ -391,6 +396,7 @@ export default function PlanoTratamentoModule({
       const planoAtualizado = { ...plano, itens: itensAtualizados };
       setPlanoAtivo(planoAtualizado);
       setPlanos(prev => prev.map(p => p.id === plano.id ? planoAtualizado : p));
+      onPlanosAlterados?.();
 
       // Um plano so completa sozinho quando todo item chegou a um estado
       // final (Concluido OU Cancelado) e pelo menos um foi de fato concluido
@@ -406,17 +412,22 @@ export default function PlanoTratamentoModule({
     }
   };
 
-  /** Sobe uma foto redimensionada para o Storage; se falhar, mantem o base64 inline. */
-  const uploadFotoSessao = async (clienteId: string, itemId: string, base64: string): Promise<string> => {
+  /** Sobe um arquivo (foto ou assinatura) da sessao para o Storage; se falhar, mantem o base64 inline. */
+  const uploadArquivoSessao = async (
+    clienteId: string,
+    itemId: string,
+    base64: string,
+    opcoes: { bucket: string; pasta: string; extensao: string; contentType: string }
+  ): Promise<string> => {
     try {
       const res = await fetch('/api/storage/upload', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          bucket: 'patient-photos',
-          path: `planos/${clienteId}/${itemId}/${crypto.randomUUID()}.jpg`,
+          bucket: opcoes.bucket,
+          path: `${opcoes.pasta}/${clienteId}/${itemId}/${crypto.randomUUID()}.${opcoes.extensao}`,
           base64,
-          contentType: 'image/jpeg'
+          contentType: opcoes.contentType
         })
       });
       if (res.ok) {
@@ -424,10 +435,16 @@ export default function PlanoTratamentoModule({
         return data.url;
       }
     } catch (err) {
-      console.warn('Falha no upload da foto da sessão, mantendo inline:', err);
+      console.warn('Falha no upload de arquivo da sessão, mantendo inline:', err);
     }
     return base64;
   };
+
+  const uploadFotoSessao = (clienteId: string, itemId: string, base64: string) =>
+    uploadArquivoSessao(clienteId, itemId, base64, { bucket: 'patient-photos', pasta: 'planos', extensao: 'jpg', contentType: 'image/jpeg' });
+
+  const uploadAssinaturaSessao = (clienteId: string, itemId: string, base64: string) =>
+    uploadArquivoSessao(clienteId, itemId, base64, { bucket: 'signatures', pasta: 'sessoes', extensao: 'png', contentType: 'image/png' });
 
   const handleRegistrarSessao = async (plano: PlanoTratamento, item: PlanoTratamentoItem, dados: DadosNovaSessao) => {
     const numeroSessao = (item.sessoes?.length || 0) + 1;
@@ -449,6 +466,10 @@ export default function PlanoTratamentoModule({
       const urlsFotos = await Promise.all(
         dados.fotos.map(base64 => uploadFotoSessao(plano.clienteId, item.id, base64))
       );
+
+      const assinaturaUrl = dados.assinaturaBase64
+        ? await uploadAssinaturaSessao(plano.clienteId, item.id, dados.assinaturaBase64)
+        : undefined;
 
       const fotosEvolucao: EvolutionPhoto[] = urlsFotos.map(url => ({
         id: 'foto_sessao_' + crypto.randomUUID(),
@@ -493,7 +514,11 @@ export default function PlanoTratamentoModule({
         dataSessao: dados.dataSessao || undefined,
         descricao: dados.descricao || undefined,
         fotos: fotosEvolucao,
-        realizadoPor: dados.realizadoPor || undefined
+        realizadoPor: dados.realizadoPor || undefined,
+        assinaturaUrl,
+        assinaturaAceiteEm: assinaturaUrl ? new Date().toISOString() : undefined,
+        assinaturaTermo: assinaturaUrl ? dados.assinaturaTermo : undefined,
+        assinaturaDispensadaMotivo: dados.assinaturaDispensadaMotivo || undefined
       });
       const { data: sessaoInserida, error: sessaoError } = await supabase
         .from('planos_tratamento_sessoes')
@@ -511,6 +536,7 @@ export default function PlanoTratamentoModule({
       setPlanos(prev => prev.map(p => p.id === plano.id ? planoComSessao : p));
       setItemParaRegistrarSessao(null);
       showAlert('Sessão registrada com sucesso!');
+      onPlanosAlterados?.();
 
       // A ultima sessao contratada completa o item automaticamente.
       if (numeroSessao >= item.quantidade && item.status !== 'Concluido') {
@@ -539,6 +565,7 @@ export default function PlanoTratamentoModule({
         setPlanoAtivo(null);
       }
       showAlert('Plano de tratamento excluído com sucesso!');
+      onPlanosAlterados?.();
     } catch (error: any) {
       console.error('Erro ao excluir plano de tratamento:', error);
       showAlert(`Erro ao excluir plano de tratamento: ${error.message}`);

@@ -279,7 +279,11 @@ export const mapPlanoTratamentoSessaoToFrontend = (s: any): PlanoTratamentoSessa
   descricao: s.descricao,
   fotos: s.fotos || [],
   realizadoPor: s.realizado_por,
-  criadoEm: s.criado_em
+  criadoEm: s.criado_em,
+  assinaturaUrl: s.assinatura_url,
+  assinaturaAceiteEm: s.assinatura_aceite_em,
+  assinaturaTermo: s.assinatura_termo,
+  assinaturaDispensadaMotivo: s.assinatura_dispensada_motivo
 });
 
 export const mapPlanoTratamentoSessaoToBackend = (s: Partial<PlanoTratamentoSessao>): Record<string, unknown> => {
@@ -293,6 +297,10 @@ export const mapPlanoTratamentoSessaoToBackend = (s: Partial<PlanoTratamentoSess
   if (s.descricao !== undefined) res.descricao = s.descricao;
   if (s.fotos !== undefined) res.fotos = s.fotos;
   if (s.realizadoPor !== undefined) res.realizado_por = s.realizadoPor;
+  if (s.assinaturaUrl !== undefined) res.assinatura_url = s.assinaturaUrl;
+  if (s.assinaturaAceiteEm !== undefined) res.assinatura_aceite_em = s.assinaturaAceiteEm;
+  if (s.assinaturaTermo !== undefined) res.assinatura_termo = s.assinaturaTermo;
+  if (s.assinaturaDispensadaMotivo !== undefined) res.assinatura_dispensada_motivo = s.assinaturaDispensadaMotivo;
   return res;
 };
 

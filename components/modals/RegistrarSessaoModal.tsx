@@ -1,8 +1,9 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
 import type { PlanoTratamentoItem } from '../../lib/types';
+import SignaturePad, { type SignaturePadHandle } from '../ui/SignaturePad';
 
 export interface DadosNovaSessao {
   dataSessao: string;
@@ -10,6 +11,12 @@ export interface DadosNovaSessao {
   /** Fotos ja redimensionadas, em base64 (data URI), prontas para upload. */
   fotos: string[];
   realizadoPor: string;
+  /** PNG em base64 da assinatura, se o cliente assinou. */
+  assinaturaBase64?: string;
+  /** Texto exato do termo apresentado no momento do aceite. */
+  assinaturaTermo?: string;
+  /** Preenchido só quando a assinatura foi conscientemente dispensada. */
+  assinaturaDispensadaMotivo?: string;
 }
 
 interface RegistrarSessaoModalProps {
@@ -20,6 +27,8 @@ interface RegistrarSessaoModalProps {
   onClose: () => void;
   onSalvar: (dados: DadosNovaSessao) => Promise<void> | void;
 }
+
+type Passo = 'dados' | 'assinatura';
 
 const MAX_LADO_PX = 1200;
 const QUALIDADE_JPEG = 0.6;
@@ -60,6 +69,11 @@ function hojeISO(): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
+function paraFormatoBR(iso: string): string {
+  const m = iso.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  return m ? `${m[3]}/${m[2]}/${m[1]}` : iso;
+}
+
 export default function RegistrarSessaoModal({
   item,
   numeroSessao,
@@ -67,21 +81,31 @@ export default function RegistrarSessaoModal({
   onClose,
   onSalvar,
 }: RegistrarSessaoModalProps) {
+  const [passo, setPasso] = useState<Passo>('dados');
   const [dataSessao, setDataSessao] = useState(hojeISO());
   const [descricao, setDescricao] = useState('');
   const [realizadoPor, setRealizadoPor] = useState(nomeProfissionalPadrao);
   const [fotos, setFotos] = useState<string[]>([]);
   const [processandoFotos, setProcessandoFotos] = useState(false);
   const [salvando, setSalvando] = useState(false);
+  const [temAssinatura, setTemAssinatura] = useState(false);
+  const [dispensandoAssinatura, setDispensandoAssinatura] = useState(false);
+  const [motivoDispensa, setMotivoDispensa] = useState('');
+
+  const assinaturaRef = useRef<SignaturePadHandle>(null);
 
   // Recarrega os campos sempre que outro item/sessao e aberto.
   useEffect(() => {
     if (!item) return;
+    setPasso('dados');
     setDataSessao(hojeISO());
     setDescricao('');
     setRealizadoPor(nomeProfissionalPadrao);
     setFotos([]);
     setSalvando(false);
+    setTemAssinatura(false);
+    setDispensandoAssinatura(false);
+    setMotivoDispensa('');
   }, [item, nomeProfissionalPadrao]);
 
   if (!item) return null;
@@ -103,15 +127,44 @@ export default function RegistrarSessaoModal({
     setFotos((prev) => prev.filter((_, i) => i !== index));
   };
 
-  const submeter = async (e: React.FormEvent) => {
+  const termoConsentimento =
+    `Declaro estar ciente e de acordo com o atendimento "${item.servicoNome}" ` +
+    `(sessão ${numeroSessao} de ${item.quantidade}), realizado em ${paraFormatoBR(dataSessao)}` +
+    (realizadoPor ? ` por ${realizadoPor}` : '') + '.';
+
+  const avancarParaAssinatura = (e: React.FormEvent) => {
     e.preventDefault();
+    setPasso('assinatura');
+  };
+
+  const finalizar = async (assinaturaBase64?: string, dispensaMotivo?: string) => {
     if (salvando) return;
     setSalvando(true);
     try {
-      await onSalvar({ dataSessao, descricao: descricao.trim(), fotos, realizadoPor: realizadoPor.trim() });
+      await onSalvar({
+        dataSessao,
+        descricao: descricao.trim(),
+        fotos,
+        realizadoPor: realizadoPor.trim(),
+        assinaturaBase64,
+        assinaturaTermo: assinaturaBase64 ? termoConsentimento : undefined,
+        assinaturaDispensadaMotivo: dispensaMotivo,
+      });
     } finally {
       setSalvando(false);
     }
+  };
+
+  const confirmarComAssinatura = () => {
+    const base64 = assinaturaRef.current?.toDataURL();
+    if (!base64) return;
+    finalizar(base64, undefined);
+  };
+
+  const confirmarSemAssinatura = () => {
+    const motivo = motivoDispensa.trim();
+    if (!motivo) return;
+    finalizar(undefined, motivo);
   };
 
   return (
@@ -120,7 +173,9 @@ export default function RegistrarSessaoModal({
         <div className="p-6 lg:p-8">
           <div className="flex justify-between items-start mb-5">
             <div>
-              <h3 className="font-manrope text-[20px] font-extrabold text-on-surface">Registrar Sessão</h3>
+              <h3 className="font-manrope text-[20px] font-extrabold text-on-surface">
+                {passo === 'dados' ? 'Registrar Sessão' : 'Assinatura do Cliente'}
+              </h3>
               <p className="text-[13px] text-on-surface-variant mt-1">
                 {item.servicoNome} — Sessão {numeroSessao}/{item.quantidade}
               </p>
@@ -135,110 +190,192 @@ export default function RegistrarSessaoModal({
             </button>
           </div>
 
-          <form onSubmit={submeter} className="space-y-4">
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label htmlFor="sessao-data" className="block text-[11px] font-bold text-on-surface-variant mb-1">
-                  Data do atendimento
-                </label>
-                <input
-                  id="sessao-data"
-                  type="date"
-                  required
-                  value={dataSessao}
-                  onChange={(e) => setDataSessao(e.target.value)}
-                  className="w-full bg-surface-container-lowest border border-outline-variant rounded-xl px-4 py-3 text-[13px] text-primary focus:outline-none focus:border-primary transition-colors"
-                />
+          {passo === 'dados' && (
+            <form onSubmit={avancarParaAssinatura} className="space-y-4">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label htmlFor="sessao-data" className="block text-[11px] font-bold text-on-surface-variant mb-1">
+                    Data do atendimento
+                  </label>
+                  <input
+                    id="sessao-data"
+                    type="date"
+                    required
+                    value={dataSessao}
+                    onChange={(e) => setDataSessao(e.target.value)}
+                    className="w-full bg-surface-container-lowest border border-outline-variant rounded-xl px-4 py-3 text-[13px] text-primary focus:outline-none focus:border-primary transition-colors"
+                  />
+                </div>
+                <div>
+                  <label htmlFor="sessao-profissional" className="block text-[11px] font-bold text-on-surface-variant mb-1">
+                    Realizado por
+                  </label>
+                  <input
+                    id="sessao-profissional"
+                    type="text"
+                    value={realizadoPor}
+                    onChange={(e) => setRealizadoPor(e.target.value)}
+                    placeholder="Nome do profissional"
+                    className="w-full bg-surface-container-lowest border border-outline-variant rounded-xl px-4 py-3 text-[13px] text-primary focus:outline-none focus:border-primary transition-colors"
+                  />
+                </div>
               </div>
+
               <div>
-                <label htmlFor="sessao-profissional" className="block text-[11px] font-bold text-on-surface-variant mb-1">
-                  Realizado por
+                <label htmlFor="sessao-descricao" className="block text-[11px] font-bold text-on-surface-variant mb-1">
+                  Descrição do atendimento <span className="font-normal text-outline">(opcional — vira um Protocolo no prontuário)</span>
                 </label>
-                <input
-                  id="sessao-profissional"
-                  type="text"
-                  value={realizadoPor}
-                  onChange={(e) => setRealizadoPor(e.target.value)}
-                  placeholder="Nome do profissional"
-                  className="w-full bg-surface-container-lowest border border-outline-variant rounded-xl px-4 py-3 text-[13px] text-primary focus:outline-none focus:border-primary transition-colors"
+                <textarea
+                  id="sessao-descricao"
+                  value={descricao}
+                  onChange={(e) => setDescricao(e.target.value)}
+                  rows={3}
+                  maxLength={500}
+                  placeholder="Ex: Aplicação de toxina botulínica, região frontal, 20 unidades. Cliente relatou..."
+                  className="w-full bg-surface-container-lowest border border-outline-variant rounded-xl px-4 py-3 text-[13px] text-primary focus:outline-none focus:border-primary transition-colors resize-none placeholder:text-outline"
                 />
+                <p className="text-[10px] text-on-surface-variant mt-1 text-right">{descricao.length}/500</p>
               </div>
-            </div>
 
-            <div>
-              <label htmlFor="sessao-descricao" className="block text-[11px] font-bold text-on-surface-variant mb-1">
-                Descrição do atendimento <span className="font-normal text-outline">(opcional — vira um Protocolo no prontuário)</span>
-              </label>
-              <textarea
-                id="sessao-descricao"
-                value={descricao}
-                onChange={(e) => setDescricao(e.target.value)}
-                rows={3}
-                maxLength={500}
-                placeholder="Ex: Aplicação de toxina botulínica, região frontal, 20 unidades. Cliente relatou..."
-                className="w-full bg-surface-container-lowest border border-outline-variant rounded-xl px-4 py-3 text-[13px] text-primary focus:outline-none focus:border-primary transition-colors resize-none placeholder:text-outline"
-              />
-              <p className="text-[10px] text-on-surface-variant mt-1 text-right">{descricao.length}/500</p>
-            </div>
+              <div>
+                <span className="block text-[11px] font-bold text-on-surface-variant mb-1">
+                  Fotos do atendimento <span className="font-normal text-outline">(opcional — vão para a Galeria de Acompanhamento)</span>
+                </span>
 
-            <div>
-              <span className="block text-[11px] font-bold text-on-surface-variant mb-1">
-                Fotos do atendimento <span className="font-normal text-outline">(opcional — vão para a Galeria de Acompanhamento)</span>
-              </span>
+                {fotos.length > 0 && (
+                  <div className="grid grid-cols-4 gap-2 mb-2">
+                    {fotos.map((foto, i) => (
+                      <div key={i} className="relative rounded-lg overflow-hidden border border-outline-variant/60 aspect-square">
+                        <Image width={200} height={200} unoptimized src={foto} alt={`Foto ${i + 1}`} className="w-full h-full object-cover" sizes="120px" />
+                        <button
+                          type="button"
+                          onClick={() => removerFoto(i)}
+                          className="absolute top-1 right-1 w-6 h-6 rounded-full bg-black/60 hover:bg-error/90 flex items-center justify-center"
+                          aria-label={`Remover foto ${i + 1}`}
+                        >
+                          <span className="material-symbols-outlined text-[14px] text-white-pure">close</span>
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
 
-              {fotos.length > 0 && (
-                <div className="grid grid-cols-4 gap-2 mb-2">
-                  {fotos.map((foto, i) => (
-                    <div key={i} className="relative rounded-lg overflow-hidden border border-outline-variant/60 aspect-square">
-                      <Image width={200} height={200} unoptimized src={foto} alt={`Foto ${i + 1}`} className="w-full h-full object-cover" sizes="120px" />
+                <label className="touch-target flex items-center justify-center gap-2 p-3 rounded-xl border border-dashed border-outline-variant text-on-surface-variant hover:border-primary hover:text-primary transition-colors cursor-pointer text-[12px] font-bold">
+                  <span className="material-symbols-outlined text-[18px]">add_a_photo</span>
+                  {processandoFotos ? 'Processando...' : 'Adicionar foto(s)'}
+                  <input
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    disabled={processandoFotos}
+                    className="hidden"
+                    onChange={(e) => {
+                      adicionarFotos(e.target.files);
+                      e.target.value = '';
+                    }}
+                  />
+                </label>
+              </div>
+
+              <div className="flex gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="touch-target flex-1 py-3 rounded-xl border border-outline-variant text-on-surface-variant font-bold text-[13px] hover:bg-surface-container transition-colors"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={processandoFotos}
+                  className="touch-target flex-1 bg-primary text-white-pure font-bold text-[13px] py-3 rounded-xl hover:opacity-90 transition-opacity flex justify-center items-center gap-2 disabled:opacity-60"
+                >
+                  Avançar para Assinatura
+                  <span className="material-symbols-outlined text-[18px]">arrow_forward</span>
+                </button>
+              </div>
+            </form>
+          )}
+
+          {passo === 'assinatura' && (
+            <div className="space-y-4">
+              <p className="text-[12px] text-on-surface-variant bg-surface-container-lowest rounded-xl p-3 leading-relaxed">
+                {termoConsentimento}
+              </p>
+
+              <SignaturePad ref={assinaturaRef} onDrawnChange={setTemAssinatura} />
+
+              <div className="flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => assinaturaRef.current?.clear()}
+                  className="touch-target py-2.5 px-4 rounded-xl border border-outline-variant text-on-surface-variant font-bold text-[12px] hover:bg-surface-container transition-colors"
+                >
+                  Limpar
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPasso('dados')}
+                  className="touch-target py-2.5 px-4 rounded-xl border border-outline-variant text-on-surface-variant font-bold text-[12px] hover:bg-surface-container transition-colors"
+                >
+                  Voltar
+                </button>
+                <button
+                  type="button"
+                  onClick={confirmarComAssinatura}
+                  disabled={!temAssinatura || salvando}
+                  className="touch-target flex-1 bg-primary text-white-pure font-bold text-[13px] py-2.5 rounded-xl hover:opacity-90 transition-opacity flex justify-center items-center gap-2 disabled:opacity-60"
+                >
+                  <span className="material-symbols-outlined text-[18px]">check</span>
+                  {salvando ? 'Salvando...' : 'Confirmar Assinatura'}
+                </button>
+              </div>
+
+              <div className="pt-2 border-t border-outline-variant/50">
+                {!dispensandoAssinatura ? (
+                  <button
+                    type="button"
+                    onClick={() => setDispensandoAssinatura(true)}
+                    className="text-[12px] text-on-surface-variant underline hover:text-primary transition-colors"
+                  >
+                    Cliente não está presente para assinar
+                  </button>
+                ) : (
+                  <div className="space-y-2 pt-1">
+                    <label htmlFor="motivo-dispensa" className="block text-[11px] font-bold text-on-surface-variant">
+                      Motivo (obrigatório para registrar sem assinatura)
+                    </label>
+                    <input
+                      id="motivo-dispensa"
+                      type="text"
+                      required
+                      value={motivoDispensa}
+                      onChange={(e) => setMotivoDispensa(e.target.value)}
+                      placeholder="Ex: cliente já foi embora, atendimento sendo registrado depois."
+                      className="w-full bg-surface-container-lowest border border-outline-variant rounded-xl px-4 py-2.5 text-[13px] text-primary focus:outline-none focus:border-primary transition-colors"
+                    />
+                    <div className="flex gap-2">
                       <button
                         type="button"
-                        onClick={() => removerFoto(i)}
-                        className="absolute top-1 right-1 w-6 h-6 rounded-full bg-black/60 hover:bg-error/90 flex items-center justify-center"
-                        aria-label={`Remover foto ${i + 1}`}
+                        onClick={() => { setDispensandoAssinatura(false); setMotivoDispensa(''); }}
+                        className="touch-target py-2 px-3 rounded-xl border border-outline-variant text-on-surface-variant font-bold text-[12px] hover:bg-surface-container transition-colors"
                       >
-                        <span className="material-symbols-outlined text-[14px] text-white-pure">close</span>
+                        Cancelar
+                      </button>
+                      <button
+                        type="button"
+                        onClick={confirmarSemAssinatura}
+                        disabled={!motivoDispensa.trim() || salvando}
+                        className="touch-target flex-1 py-2 px-3 rounded-xl border border-error text-error font-bold text-[12px] hover:bg-error/10 transition-colors disabled:opacity-50"
+                      >
+                        {salvando ? 'Salvando...' : 'Registrar sem Assinatura'}
                       </button>
                     </div>
-                  ))}
-                </div>
-              )}
-
-              <label className="touch-target flex items-center justify-center gap-2 p-3 rounded-xl border border-dashed border-outline-variant text-on-surface-variant hover:border-primary hover:text-primary transition-colors cursor-pointer text-[12px] font-bold">
-                <span className="material-symbols-outlined text-[18px]">add_a_photo</span>
-                {processandoFotos ? 'Processando...' : 'Adicionar foto(s)'}
-                <input
-                  type="file"
-                  accept="image/*"
-                  multiple
-                  disabled={processandoFotos}
-                  className="hidden"
-                  onChange={(e) => {
-                    adicionarFotos(e.target.files);
-                    e.target.value = '';
-                  }}
-                />
-              </label>
+                  </div>
+                )}
+              </div>
             </div>
-
-            <div className="flex gap-3 pt-2">
-              <button
-                type="button"
-                onClick={onClose}
-                className="touch-target flex-1 py-3 rounded-xl border border-outline-variant text-on-surface-variant font-bold text-[13px] hover:bg-surface-container transition-colors"
-              >
-                Cancelar
-              </button>
-              <button
-                type="submit"
-                disabled={salvando || processandoFotos}
-                className="touch-target flex-1 bg-primary text-white-pure font-bold text-[13px] py-3 rounded-xl hover:opacity-90 transition-opacity flex justify-center items-center gap-2 disabled:opacity-60"
-              >
-                <span className="material-symbols-outlined text-[18px]">check</span>
-                {salvando ? 'Salvando...' : 'Registrar Sessão'}
-              </button>
-            </div>
-          </form>
+          )}
         </div>
       </div>
     </div>

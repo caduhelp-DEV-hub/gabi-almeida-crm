@@ -166,6 +166,14 @@ export interface PlanoTratamentoSessao {
   fotos: EvolutionPhoto[];
   realizadoPor?: string;
   criadoEm?: string;
+  /** URL no bucket 'signatures' (ou base64 inline, se o upload falhar). */
+  assinaturaUrl?: string;
+  /** Quando o aceite foi dado -- validacao eletronica real do consentimento. */
+  assinaturaAceiteEm?: string;
+  /** Texto exato do termo apresentado no momento do aceite. */
+  assinaturaTermo?: string;
+  /** Preenchido so quando a assinatura foi conscientemente dispensada. */
+  assinaturaDispensadaMotivo?: string;
 }
 
 export interface PlanoTratamentoItem {

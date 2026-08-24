@@ -1,7 +1,7 @@
 'use client';
 import dynamic from 'next/dynamic';
 
-import React, {useState, useEffect, useRef, useCallback} from 'react';
+import React, {useState, useEffect} from 'react';
 import Image from 'next/image';
 const AnamneseLimpezaDePele = dynamic(() => import('../components/AnamneseLimpezaDePele'), { ssr: false });
 const AnamneseMicroagulhamento = dynamic(() => import('../components/AnamneseMicroagulhamento'), { ssr: false });
@@ -17,6 +17,8 @@ import DespesaModal from '../components/modals/DespesaModal';
 import Sidebar from '../components/layout/Sidebar';
 import { supabase, refreshDbAuth, clearDbToken } from '../lib/supabase';
 import { dataLocalISO } from '../lib/utils';
+import { calcularEstatisticasProntuario } from '../lib/patientStats';
+import { usePlanosResumoCliente } from '../hooks/usePlanosResumoCliente';
 import {
   mapUserToFrontend,
   mapClienteToFrontend,
@@ -222,13 +224,6 @@ export default function SystemPage() {
   const [selectedCategoryFilter, setSelectedCategoryFilter] = useState<string>('todos');
   const [selectedStatusFilter, setSelectedStatusFilter] = useState<string>('todos');
 
-  // Drawing signature pad states
-  const canvasRef = useRef<HTMLCanvasElement | null>(null);
-  const signatureContainerRef = useRef<HTMLDivElement | null>(null);
-  const [isDrawing, setIsDrawing] = useState(false);
-  const isDrawingRef = useRef(false);
-  const [signatureSaved, setSignatureSaved] = useState<boolean>(false);
-
   // New appointment dialog options
   const [isNewAppointmentOpen, setIsNewAppointmentOpen] = useState(false);
   const [isConflictModalOpen, setIsConflictModalOpen] = useState(false);
@@ -255,6 +250,8 @@ export default function SystemPage() {
   const [editingPhoto, setEditingPhoto] = useState<EvolutionPhoto | null>(null);
   // Incrementa quando a tabela clientes muda, para recarregar os detalhes abertos.
   const [versaoClientes, setVersaoClientes] = useState(0);
+  // Incrementa quando algum plano de tratamento e alterado, para recarregar a barra de estatisticas do prontuario.
+  const [versaoPlanosResumo, setVersaoPlanosResumo] = useState(0);
   const [carregandoDetalhes, setCarregandoDetalhes] = useState(false);
 
   // Financeiro module detailed view timeframe
@@ -287,6 +284,11 @@ export default function SystemPage() {
     fotosEvolucao: [],
     timeline: []
   };
+
+  // Barra de estatisticas do prontuario, calculada ao vivo (nao depende de
+  // contadores salvos em clientes -- ver lib/patientStats.ts).
+  const { planos: planosDoCliente, totalSessoes: sessoesDoCliente } = usePlanosResumoCliente(selectedPatient.id || undefined, versaoPlanosResumo);
+  const estatisticasProntuario = calcularEstatisticasProntuario(selectedPatient, planosDoCliente, sessoesDoCliente);
 
   // Agendamento states
   const [appointments, setAppointments] = useState<Agendamento[]>([]);
@@ -1366,150 +1368,6 @@ export default function SystemPage() {
     }
   };
 
-  // Canvas drawing handler for signature pad
-  // ========== Resize canvas to match container, accounting for devicePixelRatio ==========
-  const resizeSignatureCanvas = useCallback(() => {
-    const canvas = canvasRef.current;
-    const container = signatureContainerRef.current;
-    if (!canvas || !container) return;
-
-    const tempCanvas = document.createElement('canvas');
-    tempCanvas.width = canvas.width;
-    tempCanvas.height = canvas.height;
-    const tempCtx = tempCanvas.getContext('2d');
-    if (tempCtx) tempCtx.drawImage(canvas, 0, 0);
-
-    const dpr = window.devicePixelRatio || 1;
-    const displayWidth = container.clientWidth;
-    const displayHeight = container.clientHeight;
-
-    canvas.width = Math.round(displayWidth * dpr);
-    canvas.height = Math.round(displayHeight * dpr);
-
-    const ctx = canvas.getContext('2d');
-    if (ctx) {
-      ctx.scale(dpr, dpr);
-      ctx.drawImage(tempCanvas, 0, 0, tempCanvas.width, tempCanvas.height, 0, 0, displayWidth, displayHeight);
-    }
-  }, []);
-
-  useEffect(() => {
-    resizeSignatureCanvas();
-    const container = signatureContainerRef.current;
-    if (!container) return;
-    const observer = new ResizeObserver(() => resizeSignatureCanvas());
-    observer.observe(container);
-    const handleOrientation = () => setTimeout(resizeSignatureCanvas, 150);
-    window.addEventListener('orientationchange', handleOrientation);
-    return () => { observer.disconnect(); window.removeEventListener('orientationchange', handleOrientation); };
-  }, [resizeSignatureCanvas]);
-
-  const getCoordinates = (e: React.PointerEvent) => {
-    if (!canvasRef.current) return {x: 0, y: 0};
-    const canvas = canvasRef.current;
-    const rect = canvas.getBoundingClientRect();
-    
-    return {
-      x: e.clientX - rect.left,
-      y: e.clientY - rect.top
-    };
-  };
-
-  const startSignatureDrawing = (e: React.PointerEvent) => {
-    e.preventDefault();
-    const coords = getCoordinates(e);
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-
-    canvas.setPointerCapture(e.pointerId);
-
-    ctx.strokeStyle = '#7B2FBE';
-    ctx.lineWidth = e.pointerType === 'pen' ? 2.5 : 2.5;
-    ctx.lineCap = 'round';
-    ctx.lineJoin = 'round';
-    ctx.beginPath();
-    ctx.moveTo(coords.x, coords.y);
-    isDrawingRef.current = true;
-    setIsDrawing(true);
-    setSignatureSaved(false);
-  };
-
-  const drawSignature = (e: React.PointerEvent) => {
-    if (!isDrawingRef.current) return;
-    e.preventDefault();
-    const coords = getCoordinates(e);
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-
-    if (e.pointerType === 'pen' && e.pressure > 0) {
-      ctx.lineWidth = 1 + e.pressure * 3;
-    }
-
-    ctx.lineTo(coords.x, coords.y);
-    ctx.stroke();
-  };
-
-  const stopSignatureDrawing = (e: React.PointerEvent) => {
-    if (isDrawingRef.current) {
-      isDrawingRef.current = false;
-      setIsDrawing(false);
-      const canvas = canvasRef.current;
-      if (canvas) {
-        try { canvas.releasePointerCapture(e.pointerId); } catch (_) {}
-      }
-    }
-  };
-
-  const clearSignatureCanvas = () => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-    const dpr = window.devicePixelRatio || 1;
-    ctx.clearRect(0, 0, canvas.width / dpr, canvas.height / dpr);
-    setSignatureSaved(false);
-  };
-
-  const confirmSignature = async () => {
-    if (!selectedPatient.id) {
-      showAlert('Selecione um paciente para assinar o termo.');
-      return;
-    }
-    setSignatureSaved(true);
-    
-    const newTimelineItem = {
-      id: Date.now().toString(),
-      date: new Date().toLocaleDateString('pt-BR'),
-      title: 'Validação de Protocolo',
-      description: 'Protocolo de atendimento clínico assinado e validado com sucesso pelo cliente.',
-      category: 'Validação',
-      status: 'Concluído'
-    };
-
-    const updatedTimeline = [newTimelineItem, ...(selectedPatient.historico || [])];
-
-    try {
-      const { error } = await supabase
-        .from('clientes')
-        .update({ historico: updatedTimeline })
-        .eq('id', selectedPatient.id);
-      if (error) throw error;
-      setPatients(prev => prev.map(p => p.id === selectedPatient.id ? { ...p, historico: updatedTimeline } : p));
-    } catch (err: any) {
-      console.error('Error updating patient timeline:', err);
-      showAlert(`Erro ao salvar assinatura: ${err.message || err}`);
-    }
-
-    // Scroll down to Protocols to show it was added
-    setTimeout(() => {
-       document.getElementById('protocolos-section')?.scrollIntoView({ behavior: 'smooth' });
-    }, 100);
-  };
-
   // Search state (unified search experience across views)
   const [searchQuery, setSearchQuery] = useState('');
   
@@ -1747,7 +1605,7 @@ export default function SystemPage() {
               <span>Acesso seguro. Todos os dados são criptografados.</span>
             </div>
             <span>© 2026 Gabi Almeida Estética.</span>
-            <span>Desenvolvido: caduhelp-dev | Ver. 3.16.0</span>
+            <span>Desenvolvido: caduhelp-dev | Ver. 3.17.0</span>
           </div>
         </div>
       </div>
@@ -3058,7 +2916,7 @@ export default function SystemPage() {
                 {clientesTabPatients.map(patient => (
                   <div 
                     key={patient.id}
-                    onClick={() => { setSelectedPatientId(patient.id); setSignatureSaved(false); }}
+                    onClick={() => setSelectedPatientId(patient.id)}
                     className={`p-5 border-b border-outline-variant/40 flex items-center gap-4 cursor-pointer hover:bg-[#f7f3f0]/40 transition-colors relative ${selectedPatientId === patient.id ? 'bg-[#f7f3f0]/80' : ''}`}
                   >
                     {selectedPatientId === patient.id && (
@@ -3251,21 +3109,21 @@ export default function SystemPage() {
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6">
                       <div className="bg-surface rounded-xl p-3 border border-outline-variant/30">
                         <p className="text-[10px] text-outline mb-0.5 uppercase tracking-wider font-semibold">Total Investido</p>
-                        <p className="font-manrope text-[16px] font-black text-primary">R$ {selectedPatient.totalGasto.toLocaleString('pt-BR')}</p>
+                        <p className="font-manrope text-[16px] font-black text-primary">R$ {estatisticasProntuario.totalInvestido.toLocaleString('pt-BR')}</p>
                       </div>
                       <div className="bg-surface rounded-xl p-3 border border-outline-variant/30">
                         <p className="text-[10px] text-outline mb-0.5 uppercase tracking-wider font-semibold">Procedimentos</p>
-                        <p className="font-manrope text-[16px] font-black text-on-surface">{(selectedPatient.qtdeProcedimentos).toString().padStart(2, '0')}</p>
+                        <p className="font-manrope text-[16px] font-black text-on-surface">{estatisticasProntuario.procedimentos.toString().padStart(2, '0')}</p>
                       </div>
                       <div className="bg-surface rounded-xl p-3 border border-outline-variant/30">
                         <p className="text-[10px] text-outline mb-0.5 uppercase tracking-wider font-semibold">Última Foto</p>
-                        <p className="font-manrope text-[16px] font-black text-on-surface">{selectedPatient.dataUltimaFoto}</p>
+                        <p className="font-manrope text-[16px] font-black text-on-surface">{estatisticasProntuario.ultimaFoto}</p>
                       </div>
                       <div className="bg-surface rounded-xl p-3 border border-outline-variant/30">
-                        <p className="text-[10px] text-outline mb-0.5 uppercase tracking-wider font-semibold">Status do Studio</p>
+                        <p className="text-[10px] text-outline mb-0.5 uppercase tracking-wider font-semibold">Status</p>
                         <div className="flex items-center gap-1.5 mt-1">
                           <span className="w-2.5 h-2.5 rounded-full bg-tertiary"></span>
-                          <p className="font-manrope text-[12px] font-bold text-tertiary">{selectedPatient.status}</p>
+                          <p className="font-manrope text-[12px] font-bold text-tertiary">{estatisticasProntuario.status}</p>
                         </div>
                       </div>
                     </div>
@@ -3429,12 +3287,6 @@ export default function SystemPage() {
                                   <span className="material-symbols-outlined">zoom_in</span> Abrir / Visualizar
                                 </button>
                               )}
-                              {selectedPatient.fotoDepois && (
-                                /* Pista visual no iPad/iPhone, onde nao existe hover. */
-                                <span className="touch-only absolute top-3 right-3 items-center justify-center w-9 h-9 rounded-full bg-black/55 text-white-pure pointer-events-none print-hidden">
-                                  <span className="material-symbols-outlined text-[20px]">zoom_in</span>
-                                </span>
-                              )}
                               {selectedPatient.fotoAntes && (
                                 /* Pista visual no iPad/iPhone, onde nao existe hover. */
                                 <span className="touch-only absolute top-3 right-3 items-center justify-center w-9 h-9 rounded-full bg-black/55 text-white-pure pointer-events-none print-hidden">
@@ -3463,6 +3315,12 @@ export default function SystemPage() {
                                 >
                                   <span className="material-symbols-outlined">zoom_in</span> Abrir / Visualizar
                                 </button>
+                              )}
+                              {selectedPatient.fotoDepois && (
+                                /* Pista visual no iPad/iPhone, onde nao existe hover. */
+                                <span className="touch-only absolute top-3 right-3 items-center justify-center w-9 h-9 rounded-full bg-black/55 text-white-pure pointer-events-none print-hidden">
+                                  <span className="material-symbols-outlined text-[20px]">zoom_in</span>
+                                </span>
                               )}
                             </div>
                           </div>
@@ -3630,61 +3488,6 @@ export default function SystemPage() {
                             </div>
                           </div>
                         </div>
-                      </div>
-
-                      {/* Digital signature simulation drawing card */}
-                      <div className="bg-white-pure rounded-3xl p-6 border border-outline-variant shadow-sm relative">
-                        <h4 className="font-manrope text-[15px] font-bold text-on-surface mb-3 flex items-center gap-1">
-                          <span className="material-symbols-outlined text-primary text-[16px]">draw</span>
-                          Validação de Sessão
-                        </h4>
-                        
-                        {/* Interactive HTML5 drawing board */}
-                        <div 
-                          ref={signatureContainerRef}
-                          className="relative border-2 border-dashed border-outline-variant rounded-2xl bg-surface overflow-hidden group"
-                          style={{ height: '144px', touchAction: 'none' }}
-                        >
-                          <canvas 
-                            ref={canvasRef}
-                            onPointerDown={startSignatureDrawing}
-                            onPointerMove={drawSignature}
-                            onPointerUp={stopSignatureDrawing}
-                            onPointerLeave={stopSignatureDrawing}
-                            className="absolute inset-0 w-full h-full cursor-crosshair"
-                            style={{ touchAction: 'none' }}
-                          />
-                          {!isDrawing && !signatureSaved && (
-                            <div className="absolute inset-0 flex flex-col items-center justify-center p-3 text-center text-[10px] text-outline pointer-events-none select-none">
-                              <span className="material-symbols-outlined text-3xl opacity-40">draw</span>
-                              <p className="mt-1">Assine na área acima com mouse ou toque para validar o procedimento</p>
-                            </div>
-                          )}
-                          {signatureSaved && (
-                            <div className="absolute inset-0 bg-primary/10 flex flex-col items-center justify-center text-center p-3 text-primary pointer-events-none select-none z-20">
-                              <span className="material-symbols-outlined text-2xl animate-bounce">verified</span>
-                              <p className="text-[11px] font-bold">Assinatura Certificada e Vinculada!</p>
-                            </div>
-                          )}
-                        </div>
-
-                        <div className="mt-3 flex gap-2">
-                          <button 
-                            onClick={clearSignatureCanvas}
-                            className="flex-1 py-1.5 text-[11px] border border-outline-variant rounded-lg hover:bg-surface text-center font-bold"
-                          >
-                            Limpar
-                          </button>
-                          <button 
-                            onClick={confirmSignature}
-                            className="flex-1 py-1.5 text-[11px] bg-primary text-white-pure rounded-lg text-center font-bold"
-                          >
-                            Confirmar
-                          </button>
-                        </div>
-                        <p className="text-[9px] text-on-surface-variant mt-2 text-center italic opacity-75">
-                          Segurança ICP-Brasil • IP: 192.168.1.45
-                        </p>
                       </div>
 
                     </div>
@@ -4267,11 +4070,7 @@ export default function SystemPage() {
                               try {
                                 const { error: patErr } = await supabase
                                   .from('clientes')
-                                  .update({
-                                    total_spent: (selectedPatient.totalGasto || 0) + val,
-                                    procedures_count: (selectedPatient.qtdeProcedimentos || 0) + 1,
-                                    financials: updatedFinancials
-                                  })
+                                  .update({ financials: updatedFinancials })
                                   .eq('id', selectedPatient.id);
                                 if (patErr) throw patErr;
 
@@ -4290,16 +4089,6 @@ export default function SystemPage() {
                                 setPatientFinancials(prev => ({
                                   ...prev,
                                   [selectedPatient.id]: updatedFinancials
-                                }));
-                                setPatients(prev => prev.map(p => {
-                                  if (p.id === selectedPatient.id) {
-                                    return {
-                                      ...p,
-                                      totalSpent: (p.totalGasto || 0) + val,
-                                      proceduresCount: (p.qtdeProcedimentos || 0) + 1
-                                    };
-                                  }
-                                  return p;
                                 }));
                                 const newTx: Cobranca = {
                                   id: Math.random().toString(),
@@ -4549,6 +4338,7 @@ export default function SystemPage() {
                         initialPatientId={selectedPatient.id}
                         nomeProfissionalPadrao={currentUser?.name}
                         onClienteAtualizado={(id, patch) => setPatients(prev => prev.map(p => p.id === id ? { ...p, ...patch } : p))}
+                        onPlanosAlterados={() => setVersaoPlanosResumo(v => v + 1)}
                       />
                     </div>
                   )}
@@ -5223,6 +5013,7 @@ export default function SystemPage() {
             }}
             nomeProfissionalPadrao={currentUser?.name}
             onClienteAtualizado={(id, patch) => setPatients(prev => prev.map(p => p.id === id ? { ...p, ...patch } : p))}
+            onPlanosAlterados={() => setVersaoPlanosResumo(v => v + 1)}
           />
         )}
 
@@ -6546,12 +6337,25 @@ export default function SystemPage() {
                   </div>
                   <div>
                     <h2 className="text-[18px] font-bold text-on-surface">Gabi Almeida Estética Sistema</h2>
-                    <p className="text-[13px] text-on-surface-variant font-bold">Versão atual: 3.16.0</p>
+                    <p className="text-[13px] text-on-surface-variant font-bold">Versão atual: 3.17.0</p>
                   </div>
                 </div>
 
                 <div className="space-y-4">
                   <h3 className="text-[14px] font-bold text-primary border-b border-outline-variant/30 pb-2">Histórico de Versões (Changelog)</h3>
+
+                  <div className="bg-surface-container-lowest rounded-2xl p-4 border border-outline-variant/50 mb-4">
+                    <div className="flex justify-between items-center mb-2">
+                      <span className="font-bold text-[14px] text-on-surface">Versão 3.17.0</span>
+                      <span className="text-[11px] font-bold text-on-surface-variant px-2 py-1 bg-surface-container rounded-lg">24 Agosto 2026</span>
+                    </div>
+                    <ul className="list-disc pl-5 space-y-1.5 text-[13px] text-on-surface-variant mt-3">
+                      <li><strong className="text-on-surface">Assinatura do Cliente na Sessão:</strong> ao registrar uma sessão do plano de tratamento, agora aparece uma tela pedindo a assinatura do cliente (funciona com dedo, mouse ou caneta — testado no iPad). A assinatura fica guardada no prontuário com data, hora e o termo aceito. Se o cliente já foi embora, dá para registrar informando o motivo, sem travar o atendimento.</li>
+                      <li><strong className="text-on-surface">Removido selo de segurança falso:</strong> a tela antiga de assinatura mostrava um aviso de "segurança" que não correspondia à realidade. Removido.</li>
+                      <li><strong className="text-on-surface">Barra do Prontuário Corrigida:</strong> Total Investido, Procedimentos, Última Foto e Status (antes "Status do Studio") não atualizavam corretamente. Agora refletem os dados reais do cliente na hora.</li>
+                      <li><strong className="text-on-surface">Correção:</strong> o botão "Lançar Procedimento" estava dando erro ao tentar salvar. Corrigido.</li>
+                    </ul>
+                  </div>
 
                   <div className="bg-surface-container-lowest rounded-2xl p-4 border border-outline-variant/50 mb-4">
                     <div className="flex justify-between items-center mb-2">

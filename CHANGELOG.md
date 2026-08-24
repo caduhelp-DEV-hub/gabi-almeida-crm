@@ -2,6 +2,21 @@
 
 Todas as mudanças notáveis neste projeto serão documentadas neste arquivo.
 
+## [3.17.0] - 2026-08-24
+### Adicionado
+- **Assinatura do cliente vinculada à sessão do tratamento.** Ao registrar uma sessão, um segundo passo obrigatório pede a assinatura antes de salvar: novo `SignaturePad` com Pointer Events (mouse, dedo e caneta, com sensibilidade de pressão), redimensionamento por `devicePixelRatio`/`ResizeObserver` — testado e responsivo em iPad (retrato e paisagem). A assinatura desenhada, o horário exato do aceite e o texto do termo apresentado ficam gravados em `planos_tratamento_sessoes` (colunas novas: `assinatura_url`, `assinatura_aceite_em`, `assinatura_termo`), com upload para o bucket `signatures` do Storage. Quando o cliente já foi embora, é possível registrar a sessão dispensando a assinatura, mas só informando um motivo (`assinatura_dispensada_motivo`) — nunca some em silêncio.
+- **Removido o selo de segurança falso.** O card antigo de assinatura ("Validação de Sessão") exibia um texto fixo "Segurança ICP-Brasil • IP: 192.168.1.45" — IP hardcoded, certificação inexistente — e na prática nunca salvava a imagem desenhada. Removido por completo (JSX, estado e funções órfãs) junto com todo o código morto que ele deixava em `app/page.tsx`.
+
+### Corrigido
+- **Barra de estatísticas do prontuário (Total Investido, Procedimentos, Última Foto, Status) estava inoperante.** O botão "Lançar Procedimento" tentava gravar em colunas inexistentes (`total_spent`/`procedures_count` em vez de `total_gasto`/`qtde_procedimentos`), recebia erro 400 a cada uso e nunca incrementava nada; "Última Foto" e o rótulo "Status do Studio" (texto fixo `'Standard'` desde o cadastro, sem uso funcional) nunca eram atualizados. Os 4 valores passam a ser calculados ao vivo (`lib/patientStats.ts`): Total Investido soma Skincare + Planos de Tratamento aprovados/em andamento/concluídos; Procedimentos conta sessões de fato executadas; Última Foto usa a data mais recente da Galeria; e "Status" (rótulo simplificado) mostra o status do plano de tratamento mais recente do cliente.
+- A barra ficava com dado desatualizado durante o mesmo uso do sistema: o hook que busca os planos do cliente só recarregava quando o cliente selecionado mudava, não quando o próprio plano era aprovado, iniciado ou ganhava sessões novas — descoberto ao testar de ponta a ponta. Agora todo ponto que altera um plano (criar, aprovar, mudar status de item, registrar sessão, excluir) avisa o prontuário para atualizar a barra.
+- Botão "Lançar Procedimento" simplificado para o que ele sempre foi de fato: lançamento financeiro avulso (mantém a gravação em `financials` e o insert em `cobrancas`, sem as colunas quebradas).
+- Badge de zoom duplicado no card "Antes" da Galeria de Acompanhamento (cópia colada do card "Depois", faltando no card certo).
+
+### Testes
+- 3 arquivos novos (`patientStats`, `SignaturePad`, mappers de assinatura) e ajuste completo do teste do `RegistrarSessaoModal` para o fluxo de 2 passos — 91 testes unitários no total.
+- Teste E2E estendido: desenha uma assinatura de verdade em canvas real (Playwright/Chromium), confere gravação no banco, dispensa a 2ª assinatura com motivo, e confere os 4 valores da barra de estatísticas — passando em desktop, iPad retrato e iPad paisagem.
+
 ## [3.16.0] - 2026-08-24
 ### Adicionado
 - **Registro de sessões no Plano de Tratamento.** Novo `planos_tratamento_sessoes`: cada sessão de fato executada de um item (ex.: a 3ª de 5 sessões de Botox) agora tem sua própria data, descrição opcional e fotos opcionais, em vez do item inteiro depender de um único status/data de conclusão. O progresso do plano passa a ser calculado por sessão feita/contratada (`sessoesFeitas/quantidade`), não por item marcado concluído — item legado sem sessão registrada continua contando como feito na exibição, sem gravação retroativa.
