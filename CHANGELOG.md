@@ -2,6 +2,12 @@
 
 Todas as mudanças notáveis neste projeto serão documentadas neste arquivo.
 
+## [3.20.0] - 2026-09-15
+### Segurança
+- **CRÍTICO: fechado o acesso público ao banco de dados.** A migration `20260823000000_rls_authenticated.sql` (preparada desde a v3.12.0, nunca aplicada) ficava pendente de um pré-requisito que nunca foi feito: configurar `SUPABASE_JWT_SECRET` em produção. Até aqui, qualquer pessoa na internet com a chave anônima (pública, embutida no site) conseguia ler e gravar em todas as 11 tabelas do banco, incluindo `password_hash` da tabela `users` — exposição real de dados de cliente/paciente. Configurados em produção `SUPABASE_JWT_SECRET` e `SUPABASE_SERVICE_ROLE_KEY` (esta última também obrigatória: sem ela o login inteiro dependia do fallback para a chave anônima) e aplicada a migration. Acesso ao banco agora exige o token assinado pelo servidor para quem tem sessão válida.
+- **Corrigido bug que reabria a exposição mesmo após a migration acima.** Um `GRANT` de tabela inteira sempre vence um `REVOKE` de coluna feito depois no Postgres — por isso o `REVOKE` de `password_hash` da migration anterior nunca teve efeito de verdade. Nova migration `20260915000000_fix_users_password_hash_grant.sql` revoga tudo e regarante só as colunas seguras (mesma lista de `USER_PUBLIC_COLUMNS`). De caminho, restringe o `UPDATE` direto via REST às colunas que o app de fato usa (`status`, `commission_rate`), fechando uma via de auto-promoção a admin que reabriria o escalonamento de privilégio já corrigido na API pela v3.15.0.
+- `POST /api/auth/seed` agora exige o header `x-setup-token` (comparado com `timingSafeEqual`, variável `SETUP_TOKEN`) e gera uma senha aleatória forte em vez da senha fixa `admin123`, devolvida uma única vez na resposta.
+
 ## [3.19.0] - 2026-08-24
 ### Adicionado
 - **Motor genérico de Anamnese, expandido de 3 para 10 modelos.** Além de Limpeza de Pele e Microagulhamento (agora com listas de perguntas revisadas e ampliadas), entram Design de Sobrancelha com Henna, Acne, Clareamento de Manchas, Rejuvenescimento Facial, Depilação, Maquiagem, Manicure e Pedicure, e Reconstrução de Sobrancelhas. As 3 fichas antigas (cada uma um componente inteiro quase duplicado, cada uma reimplementando sua própria captura de assinatura) foram substituídas por um único formulário guiado por um registro central de modelos (`lib/anamneseTemplates.ts`) — inclusive a ficha "Microagulhamento Completo", retirada e substituída pela nova lista simples de Microagulhamento.

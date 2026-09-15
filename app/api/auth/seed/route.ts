@@ -1,11 +1,31 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
+import crypto from 'crypto';
 import { supabaseAdmin } from '../../../../lib/supabase';
 
 const SALT_ROUNDS = 10;
 
-export async function POST() {
+function isSetupTokenValid(request: NextRequest): boolean {
+  const expected = process.env.SETUP_TOKEN;
+  if (!expected) return false;
+
+  const provided = request.headers.get('x-setup-token') || '';
+  const expectedBuf = Buffer.from(expected);
+  const providedBuf = Buffer.from(provided);
+
+  if (expectedBuf.length !== providedBuf.length) return false;
+  return crypto.timingSafeEqual(expectedBuf, providedBuf);
+}
+
+export async function POST(request: NextRequest) {
   try {
+    if (!isSetupTokenValid(request)) {
+      return NextResponse.json(
+        { error: 'Não autorizado.' },
+        { status: 403 }
+      );
+    }
+
     // Verificar se já existe algum admin
     const { data: existingAdmin } = await supabaseAdmin
       .from('users')
@@ -21,8 +41,9 @@ export async function POST() {
       );
     }
 
-    // Hash da senha padrão
-    const passwordHash = await bcrypt.hash('admin123', SALT_ROUNDS);
+    // Gerar senha aleatória forte (retornada uma única vez na resposta)
+    const generatedPassword = crypto.randomBytes(24).toString('base64url');
+    const passwordHash = await bcrypt.hash(generatedPassword, SALT_ROUNDS);
 
     // Criar admin padrão
     const { error } = await supabaseAdmin
@@ -57,7 +78,12 @@ export async function POST() {
     }
 
     return NextResponse.json(
-      { message: 'Administrador padrão criado com sucesso!', seeded: true, username: 'admin' },
+      {
+        message: 'Administrador padrão criado com sucesso! Copie a senha agora, ela não será exibida novamente.',
+        seeded: true,
+        username: 'admin',
+        password: generatedPassword
+      },
       { status: 201 }
     );
   } catch (err: any) {
