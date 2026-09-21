@@ -2,6 +2,13 @@
 
 Todas as mudanças notáveis neste projeto serão documentadas neste arquivo.
 
+## [3.21.0] - 2026-09-20
+### Adicionado
+- **Bloqueio de horários na Agenda.** Agora dá para marcar um período em que a profissional não está disponível (folga, workshop, consulta médica) — parcial ou dia inteiro. O bloqueio aparece na timeline diária com um visual hachurado distinto dos agendamentos e some qualquer tentativa de marcar cliente em cima dele, tanto pelo clique no horário quanto editando a data/hora manualmente no formulário. Duas novas tabelas no banco (`bloqueios_agenda`, já nascendo com o mesmo acesso restrito a usuário autenticado adotado desde a v3.20.0).
+- **Lista de Espera.** Novo painel para guardar clientes que não encontraram horário disponível (nome, telefone, procedimento e profissional desejados, observações). Cada entrada pode virar agendamento com um toque (pré-preenche o formulário de Novo Agendamento) ou ser removida da lista.
+- **Menu de ações rápidas na Agenda (FAB).** No celular, o botão flutuante da Agenda agora expande em 3 ações — Novo Agendamento, Novo Bloqueio e Lista de Espera — em vez de abrir direto o formulário de agendamento. No computador, as mesmas três ações ganharam botões próprios ao lado do cabeçalho da Agenda.
+- Preparado o layout da Agenda para respeitar a área segura do iPhone (notch/Dynamic Island e barra de gestos), para o novo menu de ações não ficar colado na borda da tela.
+
 ## [3.20.0] - 2026-09-15
 ### Segurança
 - **CRÍTICO: fechado o acesso público ao banco de dados.** A migration `20260823000000_rls_authenticated.sql` (preparada desde a v3.12.0, nunca aplicada) ficava pendente de um pré-requisito que nunca foi feito: configurar `SUPABASE_JWT_SECRET` em produção. Até aqui, qualquer pessoa na internet com a chave anônima (pública, embutida no site) conseguia ler e gravar em todas as 11 tabelas do banco, incluindo `password_hash` da tabela `users` — exposição real de dados de cliente/paciente. Configurados em produção `SUPABASE_JWT_SECRET` e `SUPABASE_SERVICE_ROLE_KEY` (esta última também obrigatória: sem ela o login inteiro dependia do fallback para a chave anônima) e aplicada a migration. Acesso ao banco agora exige o token assinado pelo servidor para quem tem sessão válida.

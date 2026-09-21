@@ -98,6 +98,29 @@ export interface Agendamento {
   valor?: number;
 }
 
+export interface BloqueioAgenda {
+  id: string;
+  profissional: string;
+  data: string;
+  horaInicio: string;
+  horaFim: string;
+  diaInteiro: boolean;
+  descricao: string;
+}
+
+export type ListaEsperaStatus = 'Aguardando' | 'Cancelado';
+
+export interface ListaEsperaItem {
+  id: string;
+  clienteNome: string;
+  telefone?: string;
+  procedimentoDesejado?: string;
+  profissionalPreferido?: string;
+  observacoes?: string;
+  status: ListaEsperaStatus;
+  criadoEm: string;
+}
+
 export interface Servico {
   id: string;
   nome: string;

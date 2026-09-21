@@ -1,4 +1,4 @@
-import type { AppUser, Cliente, Agendamento, InventoryItem, Servico, Cobranca, PlanoTratamento, PlanoTratamentoItem, PlanoTratamentoSessao } from './types';
+import type { AppUser, Cliente, Agendamento, BloqueioAgenda, ListaEsperaItem, InventoryItem, Servico, Cobranca, PlanoTratamento, PlanoTratamentoItem, PlanoTratamentoSessao } from './types';
 import { dataLocalISO } from './utils';
 
 /**
@@ -136,6 +136,51 @@ export const mapAgendamentoToBackend = (a: Partial<Agendamento>): Record<string,
   if (a.notas !== undefined) res.notas = a.notas;
   if (a.data !== undefined) res.data = a.data;
   if (a.valor !== undefined) res.valor = a.valor;
+  return res;
+};
+
+export const mapBloqueioToFrontend = (b: any): BloqueioAgenda => ({
+  id: b.id,
+  profissional: b.profissional,
+  data: b.data,
+  horaInicio: b.hora_inicio,
+  horaFim: b.hora_fim,
+  diaInteiro: !!b.dia_inteiro,
+  descricao: b.descricao
+});
+
+export const mapBloqueioToBackend = (b: Partial<BloqueioAgenda>): Record<string, unknown> => {
+  const res: Record<string, unknown> = {};
+  if (b.id !== undefined) res.id = b.id;
+  if (b.profissional !== undefined) res.profissional = b.profissional;
+  if (b.data !== undefined) res.data = b.data;
+  if (b.horaInicio !== undefined) res.hora_inicio = b.horaInicio;
+  if (b.horaFim !== undefined) res.hora_fim = b.horaFim;
+  if (b.diaInteiro !== undefined) res.dia_inteiro = b.diaInteiro;
+  if (b.descricao !== undefined) res.descricao = b.descricao;
+  return res;
+};
+
+export const mapListaEsperaToFrontend = (l: any): ListaEsperaItem => ({
+  id: l.id,
+  clienteNome: l.cliente_nome,
+  telefone: l.telefone,
+  procedimentoDesejado: l.procedimento_desejado,
+  profissionalPreferido: l.profissional_preferido,
+  observacoes: l.observacoes,
+  status: l.status,
+  criadoEm: l.criado_em
+});
+
+export const mapListaEsperaToBackend = (l: Partial<ListaEsperaItem>): Record<string, unknown> => {
+  const res: Record<string, unknown> = {};
+  if (l.id !== undefined) res.id = l.id;
+  if (l.clienteNome !== undefined) res.cliente_nome = l.clienteNome;
+  if (l.telefone !== undefined) res.telefone = l.telefone;
+  if (l.procedimentoDesejado !== undefined) res.procedimento_desejado = l.procedimentoDesejado;
+  if (l.profissionalPreferido !== undefined) res.profissional_preferido = l.profissionalPreferido;
+  if (l.observacoes !== undefined) res.observacoes = l.observacoes;
+  if (l.status !== undefined) res.status = l.status;
   return res;
 };
 

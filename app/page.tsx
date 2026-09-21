@@ -26,6 +26,10 @@ import {
   mapClienteToBackend,
   mapAgendamentoToFrontend,
   mapAgendamentoToBackend,
+  mapBloqueioToFrontend,
+  mapBloqueioToBackend,
+  mapListaEsperaToFrontend,
+  mapListaEsperaToBackend,
   mapInventoryToFrontend,
   mapInventoryToBackend,
   mapServicoToFrontend,
@@ -40,6 +44,8 @@ import type {
   EvolutionPhoto,
   Cliente,
   Agendamento,
+  BloqueioAgenda,
+  ListaEsperaItem,
   Servico,
   InventoryItem,
   Cobranca,
@@ -231,6 +237,28 @@ export default function SystemPage() {
   const [newApptDate, setNewApptDate] = useState(dataLocalISO());
   const [newApptCategory, setNewApptCategory] = useState<'Estética' | 'Consulta'>('Estética');
   const [newApptValor, setNewApptValor] = useState('');
+
+  // Bloqueio de agenda (folga, workshop, indisponibilidade)
+  const [blocks, setBlocks] = useState<BloqueioAgenda[]>([]);
+  const [isNewBlockOpen, setIsNewBlockOpen] = useState(false);
+  const [blockProfessional, setBlockProfessional] = useState('Gabi Almeida');
+  const [blockDate, setBlockDate] = useState(dataLocalISO());
+  const [blockStartTime, setBlockStartTime] = useState('08:00');
+  const [blockEndTime, setBlockEndTime] = useState('19:00');
+  const [blockAllDay, setBlockAllDay] = useState(false);
+  const [blockDescription, setBlockDescription] = useState('');
+
+  // Lista de espera
+  const [waitlist, setWaitlist] = useState<ListaEsperaItem[]>([]);
+  const [isWaitlistOpen, setIsWaitlistOpen] = useState(false);
+  const [waitlistName, setWaitlistName] = useState('');
+  const [waitlistPhone, setWaitlistPhone] = useState('');
+  const [waitlistProcedure, setWaitlistProcedure] = useState('');
+  const [waitlistProfessional, setWaitlistProfessional] = useState('');
+  const [waitlistNotes, setWaitlistNotes] = useState('');
+
+  // FAB speed-dial (mobile)
+  const [isFabMenuOpen, setIsFabMenuOpen] = useState(false);
 
   // Clientes Module Detail Tab
   const [activePatientSubTab, setActivePatientSubTab] = useState<'evolution' | 'anamnese' | 'financeiro' | 'documentos' | 'retorno' | 'planos'>('evolution');
@@ -1101,7 +1129,9 @@ export default function SystemPage() {
         { data: usrs },
         { data: msgs },
         { data: desp },
-        { data: compData }
+        { data: compData },
+        { data: blks },
+        { data: waits }
       ] = await Promise.all([
         supabase.from('clientes').select(CLIENTE_LIST_COLUMNS),
         supabase.from('agendamentos').select('*, clientes(id, nome, avatar)'),
@@ -1111,7 +1141,9 @@ export default function SystemPage() {
         supabase.from('users').select(USER_PUBLIC_COLUMNS),
         supabase.from('mensagens_predefinidas').select('*').order('created_at', { ascending: false }),
         supabase.from('despesas').select('*').order('data', { ascending: false }),
-        supabase.from('configuracoes_empresa').select('*').limit(1)
+        supabase.from('configuracoes_empresa').select('*').limit(1),
+        supabase.from('bloqueios_agenda').select('*'),
+        supabase.from('lista_espera').select('*').eq('status', 'Aguardando')
       ]);
 
       if (pats) {
@@ -1163,7 +1195,9 @@ export default function SystemPage() {
       if (msgs) setMensagensPredefinidas(msgs);
       if (desp) setDespesas(desp);
       if (compData && compData.length > 0) setCompanyData(prev => ({ ...prev, ...compData[0] }));
-      
+      if (blks) setBlocks(blks.map(mapBloqueioToFrontend));
+      if (waits) setWaitlist(waits.map(mapListaEsperaToFrontend));
+
       setIsInitialLoading(false);
     };
 
@@ -1223,6 +1257,12 @@ export default function SystemPage() {
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'servicos' }, () => {
         supabase.from('servicos').select('*').then((res: any) => { const data = res.data; if (data) setServices(data.map(mapServicoToFrontend)); });
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'bloqueios_agenda' }, () => {
+        supabase.from('bloqueios_agenda').select('*').then((res: any) => { const data = res.data; if (data) setBlocks(data.map(mapBloqueioToFrontend)); });
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'lista_espera' }, () => {
+        supabase.from('lista_espera').select('*').eq('status', 'Aguardando').then((res: any) => { const data = res.data; if (data) setWaitlist(data.map(mapListaEsperaToFrontend)); });
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'inventory' }, () => {
         supabase.from('inventory').select('*').then((res: any) => { const data = res.data; if (data) setInventory(data.map(mapInventoryToFrontend)); });
@@ -1313,6 +1353,19 @@ export default function SystemPage() {
     return totalDur > 0 ? totalDur : 30;
   };
 
+  // Bloqueio que cobre um horario: retorna o bloqueio (para exibir a descricao) ou undefined.
+  const findBlockingBlock = (date: string, timeHHMM: string, durMin: number) => {
+    return blocks.find(b => {
+      if (b.data !== date) return false;
+      const durB = b.diaInteiro
+        ? 24 * 60
+        : (parseInt(b.horaFim.split(':')[0]) * 60 + parseInt(b.horaFim.split(':')[1]))
+          - (parseInt(b.horaInicio.split(':')[0]) * 60 + parseInt(b.horaInicio.split(':')[1]));
+      const inicio = b.diaInteiro ? '00:00' : b.horaInicio;
+      return checkTimeOverlap(inicio.slice(0, 5), durB, timeHHMM, durMin);
+    });
+  };
+
   const handleAddNewAgendamento = async (e: React.FormEvent) => {
     e.preventDefault();
     const selectedPat = patients.find(p => p.nome === newApptPatient);
@@ -1328,8 +1381,15 @@ export default function SystemPage() {
       data: newApptDate,
       valor: newApptValor && newApptValor.trim() !== '' ? parseFloat(newApptValor) : undefined
     };
-    
+
     const newDur = getServiceDuration(newApptProcedure);
+
+    const blockingBlock = findBlockingBlock(newApptDate, newApptTime.slice(0, 5), newDur);
+    if (blockingBlock) {
+      showAlert(`Este horário está bloqueado: ${blockingBlock.descricao}`);
+      return;
+    }
+
     const hasConflict = appointments.some(a => {
       if (a.data !== newApptDate) return false;
       if (editingAppointment && a.id === editingAppointment.id) return false;
@@ -1342,7 +1402,7 @@ export default function SystemPage() {
       setIsConflictModalOpen(true);
       return;
     }
-    
+
     try {
       if (editingAppointment) {
         const { error } = await supabase
@@ -1439,6 +1499,112 @@ export default function SystemPage() {
     } finally {
       setIsValidatingConflict(false);
     }
+  };
+
+  const resetBlockForm = () => {
+    setBlockProfessional('Gabi Almeida');
+    setBlockDate(dataLocalISO());
+    setBlockStartTime('08:00');
+    setBlockEndTime('19:00');
+    setBlockAllDay(false);
+    setBlockDescription('');
+  };
+
+  const handleAddBloqueio = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const blockData = {
+      profissional: blockProfessional,
+      data: blockDate,
+      horaInicio: blockAllDay ? '00:00' : blockStartTime,
+      horaFim: blockAllDay ? '23:59' : blockEndTime,
+      diaInteiro: blockAllDay,
+      descricao: blockDescription
+    };
+    try {
+      const { data, error } = await supabase
+        .from('bloqueios_agenda')
+        .insert([mapBloqueioToBackend(blockData)])
+        .select('*');
+      if (error) throw error;
+      if (data && data[0]) {
+        setBlocks(prev => [...prev, mapBloqueioToFrontend(data[0])]);
+      }
+      setIsNewBlockOpen(false);
+      resetBlockForm();
+    } catch (err: any) {
+      console.error('Error saving bloqueio:', err);
+      showAlert(`Erro ao bloquear horário: ${err.message || err}`);
+    }
+  };
+
+  const handleDeleteBloqueio = (block: BloqueioAgenda) => {
+    showConfirm(`Remover o bloqueio "${block.descricao}"?`, async () => {
+      try {
+        const { error } = await supabase.from('bloqueios_agenda').delete().eq('id', block.id);
+        if (error) throw error;
+        setBlocks(prev => prev.filter(b => b.id !== block.id));
+      } catch (err: any) {
+        showAlert(`Erro ao excluir bloqueio: ${err.message || err}`);
+      }
+    });
+  };
+
+  const resetWaitlistForm = () => {
+    setWaitlistName('');
+    setWaitlistPhone('');
+    setWaitlistProcedure('');
+    setWaitlistProfessional('');
+    setWaitlistNotes('');
+  };
+
+  const handleAddWaitlistEntry = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const entryData = {
+      clienteNome: waitlistName,
+      telefone: waitlistPhone || undefined,
+      procedimentoDesejado: waitlistProcedure || undefined,
+      profissionalPreferido: waitlistProfessional || undefined,
+      observacoes: waitlistNotes || undefined,
+      status: 'Aguardando' as const
+    };
+    try {
+      const { data, error } = await supabase
+        .from('lista_espera')
+        .insert([mapListaEsperaToBackend(entryData)])
+        .select('*');
+      if (error) throw error;
+      if (data && data[0]) {
+        setWaitlist(prev => [...prev, mapListaEsperaToFrontend(data[0])]);
+      }
+      resetWaitlistForm();
+    } catch (err: any) {
+      console.error('Error saving lista de espera:', err);
+      showAlert(`Erro ao adicionar à lista de espera: ${err.message || err}`);
+    }
+  };
+
+  const handleRemoveWaitlistEntry = (entry: ListaEsperaItem) => {
+    showConfirm(`Remover ${entry.clienteNome} da lista de espera?`, async () => {
+      try {
+        const { error } = await supabase.from('lista_espera').delete().eq('id', entry.id);
+        if (error) throw error;
+        setWaitlist(prev => prev.filter(w => w.id !== entry.id));
+      } catch (err: any) {
+        showAlert(`Erro ao remover da lista de espera: ${err.message || err}`);
+      }
+    });
+  };
+
+  const handleConvertWaitlistToAppointment = (entry: ListaEsperaItem) => {
+    setIsWaitlistOpen(false);
+    setEditingAppointment(null);
+    setNewApptPatient(entry.clienteNome);
+    setNewApptProcedure(entry.procedimentoDesejado || '');
+    setNewApptProfessional(entry.profissionalPreferido || 'Gabi Almeida');
+    setNewApptTime('09:00');
+    setNewApptDate(dataLocalISO());
+    setNewApptValor('');
+    setIsNewAppointmentOpen(true);
   };
 
   // Search state (unified search experience across views)
@@ -1678,7 +1844,7 @@ export default function SystemPage() {
               <span>Acesso seguro. Todos os dados são criptografados.</span>
             </div>
             <span>© 2026 Gabi Almeida Estética.</span>
-            <span>Desenvolvido: caduhelp-dev | Ver. 3.20.0</span>
+            <span>Desenvolvido: caduhelp-dev | Ver. 3.21.0</span>
           </div>
         </div>
       </div>
@@ -2400,6 +2566,41 @@ export default function SystemPage() {
                           return `${isToday ? 'Hoje, ' : ''}${day} de ${month.charAt(0).toUpperCase() + month.slice(1)}, ${year}`;
                         })()}
                       </p>
+                      <div className="hidden lg:flex items-center gap-2">
+                        <button
+                          onClick={() => { resetWaitlistForm(); setIsWaitlistOpen(true); }}
+                          className="flex items-center gap-2 bg-cyan-500/10 text-cyan-700 px-4 py-2 rounded-xl font-bold text-[13px] hover:bg-cyan-500/20 transition-colors border border-cyan-500/20 min-h-[36px]"
+                        >
+                          <span className="material-symbols-outlined text-[18px]">pending_actions</span>
+                          Lista de Espera
+                        </button>
+                        <button
+                          onClick={() => {
+                            resetBlockForm();
+                            setBlockDate(`${agendaNavDate.getFullYear()}-${String(agendaNavDate.getMonth() + 1).padStart(2, '0')}-${String(agendaNavDate.getDate()).padStart(2, '0')}`);
+                            setIsNewBlockOpen(true);
+                          }}
+                          className="flex items-center gap-2 bg-slate-500/10 text-slate-700 px-4 py-2 rounded-xl font-bold text-[13px] hover:bg-slate-500/20 transition-colors border border-slate-500/20 min-h-[36px]"
+                        >
+                          <span className="material-symbols-outlined text-[18px]">lock</span>
+                          Novo Bloqueio
+                        </button>
+                        <button
+                          onClick={() => {
+                            setEditingAppointment(null);
+                            setNewApptPatient('');
+                            setNewApptProcedure('');
+                            setNewApptTime('09:00');
+                            setNewApptDate(`${agendaNavDate.getFullYear()}-${String(agendaNavDate.getMonth() + 1).padStart(2, '0')}-${String(agendaNavDate.getDate()).padStart(2, '0')}`);
+                            setNewApptValor('');
+                            setIsNewAppointmentOpen(true);
+                          }}
+                          className="flex items-center gap-2 bg-primary text-white-pure px-4 py-2 rounded-xl font-bold text-[13px] hover:opacity-90 transition-opacity shadow-sm min-h-[36px]"
+                        >
+                          <span className="material-symbols-outlined text-[18px]">add</span>
+                          Novo agendamento
+                        </button>
+                      </div>
                       <button
                         onClick={() => {
                           setEditingAppointment(null);
@@ -2410,7 +2611,7 @@ export default function SystemPage() {
                           setNewApptValor('');
                           setIsNewAppointmentOpen(true);
                         }}
-                        className="self-center sm:self-auto flex items-center gap-2 bg-primary text-white-pure px-4 py-2 rounded-xl font-bold text-[13px] hover:opacity-90 transition-opacity shadow-sm min-h-[36px]"
+                        className="lg:hidden self-center sm:self-auto flex items-center gap-2 bg-primary text-white-pure px-4 py-2 rounded-xl font-bold text-[13px] hover:opacity-90 transition-opacity shadow-sm min-h-[36px]"
                       >
                         <span className="material-symbols-outlined text-[18px]">add</span>
                         Novo agendamento
@@ -2421,6 +2622,7 @@ export default function SystemPage() {
                       const formattedMonth = String(agendaNavDate.getMonth() + 1).padStart(2, '0');
                       const dateStr = `${agendaNavDate.getFullYear()}-${formattedMonth}-${formattedDay}`;
                       const dayAppts = appointments.filter(appt => appt.data === dateStr);
+                      const dayBlocks = blocks.filter(b => b.data === dateStr);
 
                       const SLOT_HEIGHT = 50; // 30min = 50px, 1 hour = 100px
                       const START_HOUR = 8;
@@ -2453,6 +2655,11 @@ export default function SystemPage() {
                                       <div
                                         className="absolute inset-0 cursor-pointer hover:bg-primary/[0.03] transition-colors"
                                         onClick={() => {
+                                          const blockHere = findBlockingBlock(dateStr, slot.label, 30);
+                                          if (blockHere) {
+                                            showAlert(`Este horário está bloqueado: ${blockHere.descricao}`);
+                                            return;
+                                          }
                                           setEditingAppointment(null);
                                           setNewApptPatient('');
                                           setNewApptProcedure('');
@@ -2544,6 +2751,47 @@ export default function SystemPage() {
                                       <span className="material-symbols-outlined text-[10px] opacity-70">{styles.icon}</span>
                                       <span className="opacity-90">{appt.procedimento}</span>
                                     </div>
+                                  </div>
+                                </div>
+                              );
+                            })}
+
+                            {/* Bloqueios - faixas hachuradas, nao clicaveis para criar agendamento */}
+                            {dayBlocks.map((block) => {
+                              const [siH, siM] = block.horaInicio.split(':').map(Number);
+                              const [sfH, sfM] = block.horaFim.split(':').map(Number);
+                              const rawStart = block.diaInteiro ? START_HOUR * 60 : siH * 60 + siM;
+                              const rawEnd = block.diaInteiro ? END_HOUR * 60 : sfH * 60 + sfM;
+                              const clampedStart = Math.max(rawStart, START_HOUR * 60);
+                              const clampedEnd = Math.min(rawEnd, END_HOUR * 60);
+                              if (clampedEnd <= clampedStart) return null;
+
+                              const topPx = ((clampedStart - START_HOUR * 60) / 60) * HOUR_HEIGHT;
+                              const heightPx = ((clampedEnd - clampedStart) / 60) * HOUR_HEIGHT;
+
+                              return (
+                                <div
+                                  key={block.id}
+                                  className="absolute rounded-md border-l-[3px] border-slate-500 cursor-pointer text-slate-700"
+                                  style={{
+                                    top: `${topPx}px`,
+                                    height: `${heightPx}px`,
+                                    left: '62px',
+                                    right: '4px',
+                                    backgroundColor: '#f1f5f9',
+                                    backgroundImage: 'repeating-linear-gradient(135deg, rgba(100,116,139,0.18) 0px, rgba(100,116,139,0.18) 6px, transparent 6px, transparent 12px)',
+                                    zIndex: 10,
+                                  }}
+                                  onClick={(e) => { e.stopPropagation(); handleDeleteBloqueio(block); }}
+                                  title="Toque para remover o bloqueio"
+                                >
+                                  <div className="flex items-center gap-1 h-full overflow-hidden px-2 py-0.5">
+                                    <span className="material-symbols-outlined text-[12px] opacity-80">lock</span>
+                                    <span className="font-bold text-[10px] leading-none">
+                                      {block.diaInteiro ? 'Dia inteiro' : `${block.horaInicio} - ${block.horaFim}`}
+                                    </span>
+                                    <span className="opacity-45">·</span>
+                                    <span className="text-[10px] leading-none truncate">{block.descricao}</span>
                                   </div>
                                 </div>
                               );
@@ -2923,26 +3171,79 @@ export default function SystemPage() {
 
             </div>
 
-            {/* FAB Floating action button for mobile */}
-            <button 
-              onClick={() => {
-                setEditingAppointment(null);
-                setNewApptPatient('');
-                setNewApptProcedure('');
-                setNewApptProfessional('');
-                setNewApptTime('08:00');
-                const formattedDay = String(agendaNavDate.getDate()).padStart(2, '0');
-                const formattedMonth = String(agendaNavDate.getMonth() + 1).padStart(2, '0');
-                setNewApptDate(`${agendaNavDate.getFullYear()}-${formattedMonth}-${formattedDay}`);
-                setNewApptCategory('Estética');
-                setNewApptStatus('Pendente');
-                setNewApptValor('');
-                setIsNewAppointmentOpen(true);
-              }}
-              className="lg:hidden fixed bottom-6 right-5 w-14 h-14 bg-[#7B2FBE] text-white-pure rounded-full shadow-2xl flex items-center justify-center z-40 active:scale-95 transition-transform cursor-pointer"
-            >
-              <span className="material-symbols-outlined text-[28px]">add</span>
-            </button>
+            {/* FAB speed-dial (mobile): Novo Agendamento / Novo Bloqueio / Lista de Espera */}
+            {isFabMenuOpen && (
+              <div
+                className="lg:hidden fixed inset-0 bg-black/30 z-30 animate-fade-in"
+                onClick={() => setIsFabMenuOpen(false)}
+              />
+            )}
+
+            <div className="lg:hidden fixed right-5 z-40" style={{ bottom: 'calc(1.5rem + env(safe-area-inset-bottom))' }}>
+              {/* Sub-ações */}
+              <div
+                className={`absolute bottom-[76px] right-0 flex flex-col items-end gap-3 transition-all duration-200 ${
+                  isFabMenuOpen ? 'opacity-100 translate-y-0 pointer-events-auto' : 'opacity-0 translate-y-3 pointer-events-none'
+                }`}
+              >
+                <div className="flex items-center gap-2">
+                  <span className="bg-white-pure text-on-surface text-[12px] font-bold px-3 py-1.5 rounded-lg shadow-md whitespace-nowrap">Lista de Espera</span>
+                  <button
+                    onClick={() => { setIsFabMenuOpen(false); resetWaitlistForm(); setIsWaitlistOpen(true); }}
+                    className="w-11 h-11 bg-cyan-500 text-white-pure rounded-full shadow-lg flex items-center justify-center active:scale-95 transition-transform"
+                  >
+                    <span className="material-symbols-outlined text-[20px]">pending_actions</span>
+                  </button>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="bg-white-pure text-on-surface text-[12px] font-bold px-3 py-1.5 rounded-lg shadow-md whitespace-nowrap">Novo Bloqueio</span>
+                  <button
+                    onClick={() => {
+                      setIsFabMenuOpen(false);
+                      resetBlockForm();
+                      const formattedDay = String(agendaNavDate.getDate()).padStart(2, '0');
+                      const formattedMonth = String(agendaNavDate.getMonth() + 1).padStart(2, '0');
+                      setBlockDate(`${agendaNavDate.getFullYear()}-${formattedMonth}-${formattedDay}`);
+                      setIsNewBlockOpen(true);
+                    }}
+                    className="w-11 h-11 bg-slate-600 text-white-pure rounded-full shadow-lg flex items-center justify-center active:scale-95 transition-transform"
+                  >
+                    <span className="material-symbols-outlined text-[20px]">lock</span>
+                  </button>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="bg-white-pure text-on-surface text-[12px] font-bold px-3 py-1.5 rounded-lg shadow-md whitespace-nowrap">Novo Agendamento</span>
+                  <button
+                    onClick={() => {
+                      setIsFabMenuOpen(false);
+                      setEditingAppointment(null);
+                      setNewApptPatient('');
+                      setNewApptProcedure('');
+                      setNewApptProfessional('');
+                      setNewApptTime('08:00');
+                      const formattedDay = String(agendaNavDate.getDate()).padStart(2, '0');
+                      const formattedMonth = String(agendaNavDate.getMonth() + 1).padStart(2, '0');
+                      setNewApptDate(`${agendaNavDate.getFullYear()}-${formattedMonth}-${formattedDay}`);
+                      setNewApptCategory('Estética');
+                      setNewApptStatus('Pendente');
+                      setNewApptValor('');
+                      setIsNewAppointmentOpen(true);
+                    }}
+                    className="w-11 h-11 bg-emerald-500 text-white-pure rounded-full shadow-lg flex items-center justify-center active:scale-95 transition-transform"
+                  >
+                    <span className="material-symbols-outlined text-[20px]">event_available</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Botao principal */}
+              <button
+                onClick={() => setIsFabMenuOpen(prev => !prev)}
+                className={`w-14 h-14 bg-[#7B2FBE] text-white-pure rounded-full shadow-2xl flex items-center justify-center active:scale-95 transition-transform cursor-pointer ${isFabMenuOpen ? 'rotate-45' : ''}`}
+              >
+                <span className="material-symbols-outlined text-[28px]">add</span>
+              </button>
+            </div>
 
           </section>
         )}
@@ -6128,12 +6429,25 @@ export default function SystemPage() {
                   </div>
                   <div>
                     <h2 className="text-[18px] font-bold text-on-surface">Gabi Almeida Estética Sistema</h2>
-                    <p className="text-[13px] text-on-surface-variant font-bold">Versão atual: 3.20.0</p>
+                    <p className="text-[13px] text-on-surface-variant font-bold">Versão atual: 3.21.0</p>
                   </div>
                 </div>
 
                 <div className="space-y-4">
                   <h3 className="text-[14px] font-bold text-primary border-b border-outline-variant/30 pb-2">Histórico de Versões (Changelog)</h3>
+
+                  <div className="bg-surface-container-lowest rounded-2xl p-4 border border-outline-variant/50 mb-4">
+                    <div className="flex justify-between items-center mb-2">
+                      <span className="font-bold text-[14px] text-on-surface">Versão 3.21.0</span>
+                      <span className="text-[11px] font-bold text-on-surface-variant px-2 py-1 bg-surface-container rounded-lg">20 Setembro 2026</span>
+                    </div>
+                    <ul className="list-disc pl-5 space-y-1.5 text-[13px] text-on-surface-variant mt-3">
+                      <li><strong className="text-on-surface">Bloqueio de horários na Agenda:</strong> agora dá para marcar um período em que a profissional não está disponível (folga, workshop, consulta médica), parcial ou o dia inteiro. O bloqueio aparece na agenda com visual listrado e impede marcar cliente em cima dele.</li>
+                      <li><strong className="text-on-surface">Lista de Espera:</strong> guarde clientes que não acharam horário disponível e, quando abrir uma vaga, transforme a entrada em agendamento com um toque.</li>
+                      <li><strong className="text-on-surface">Menu de ações rápidas:</strong> no celular, o botão flutuante da Agenda agora abre 3 opções (Novo Agendamento, Novo Bloqueio e Lista de Espera). No computador, as mesmas opções ganharam botões ao lado do cabeçalho.</li>
+                      <li><strong className="text-on-surface">Ajuste para iPhone:</strong> o novo menu respeita a área segura da tela (notch e barra de gestos), sem ficar colado na borda.</li>
+                    </ul>
+                  </div>
 
                   <div className="bg-surface-container-lowest rounded-2xl p-4 border border-outline-variant/50 mb-4">
                     <div className="flex justify-between items-center mb-2">
@@ -7680,6 +7994,248 @@ export default function SystemPage() {
               </div>
 
             </form>
+          </div>
+        </div>
+      )}
+
+      {isNewBlockOpen && (
+        <div className="fixed inset-0 bg-[#31302fd0] backdrop-blur-md flex items-center justify-center z-50 p-0 sm:p-4 animate-fade-in">
+          <div className="bg-white-pure sm:rounded-3xl border border-outline-variant w-full max-w-lg p-5 sm:p-8 shadow-2xl relative h-full sm:h-auto sm:max-h-[90vh] overflow-y-auto select-none">
+
+            <button
+              onClick={() => setIsNewBlockOpen(false)}
+              className="absolute top-6 right-6 text-on-surface-variant hover:text-primary transition-all p-2 font-black"
+            >
+              <span className="material-symbols-outlined">close</span>
+            </button>
+
+            <div className="flex items-center gap-2 mb-6">
+              <span className="material-symbols-outlined text-slate-600 text-3xl">lock</span>
+              <div>
+                <h3 className="font-manrope text-[20px] font-bold text-primary">Novo Bloqueio</h3>
+                <p className="text-[12px] text-on-surface-variant">Marque um período em que a profissional não está disponível</p>
+              </div>
+            </div>
+
+            <form onSubmit={handleAddBloqueio} className="space-y-4 font-sans text-[13px]">
+              <div className="space-y-1.5">
+                <label className="font-bold text-on-surface-variant">Profissional</label>
+                <input
+                  list="prof_list_bloqueio"
+                  value={blockProfessional}
+                  onChange={(e) => setBlockProfessional(e.target.value)}
+                  className="w-full p-2.5 bg-surface rounded-xl border border-outline-variant/60 focus:outline-none focus:ring-1 focus:ring-primary/40 font-medium font-sans text-[13px]"
+                  placeholder="Digite profissional..."
+                  required
+                />
+                <datalist id="prof_list_bloqueio">
+                  {appUsers.filter(u => u.status === 'active').map(u => (
+                    <option key={u.id} value={u.name} />
+                  ))}
+                </datalist>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label className="font-bold text-on-surface-variant">Data</label>
+                  <input
+                    type="date"
+                    value={blockDate}
+                    onChange={(e) => setBlockDate(e.target.value)}
+                    className="w-full p-2.5 bg-surface rounded-xl border border-outline-variant/60 focus:outline-none focus:ring-1 focus:ring-primary/40 font-medium font-sans text-[13px]"
+                    required
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="font-bold text-on-surface-variant">Dia inteiro</label>
+                  <button
+                    type="button"
+                    onClick={() => setBlockAllDay(prev => !prev)}
+                    className={`relative w-12 h-7 rounded-full transition-colors ${blockAllDay ? 'bg-emerald-500' : 'bg-outline-variant/60'}`}
+                  >
+                    <span className={`absolute top-0.5 left-0.5 w-6 h-6 bg-white-pure rounded-full shadow transition-transform ${blockAllDay ? 'translate-x-5' : 'translate-x-0'}`} />
+                  </button>
+                </div>
+              </div>
+
+              {!blockAllDay && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <label className="font-bold text-on-surface-variant">Hora Início</label>
+                    <input
+                      type="time"
+                      value={blockStartTime}
+                      onChange={(e) => setBlockStartTime(e.target.value)}
+                      className="w-full p-2.5 bg-surface rounded-xl border border-outline-variant/60 focus:outline-none font-sans text-[13px]"
+                      required
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="font-bold text-on-surface-variant">Hora Fim</label>
+                    <input
+                      type="time"
+                      value={blockEndTime}
+                      onChange={(e) => setBlockEndTime(e.target.value)}
+                      className="w-full p-2.5 bg-surface rounded-xl border border-outline-variant/60 focus:outline-none font-sans text-[13px]"
+                      required
+                    />
+                  </div>
+                </div>
+              )}
+
+              <div className="space-y-1.5">
+                <label className="font-bold text-on-surface-variant">Descrição</label>
+                <input
+                  type="text"
+                  value={blockDescription}
+                  onChange={(e) => setBlockDescription(e.target.value)}
+                  placeholder="Ex: Workshop, Folga, Consulta médica..."
+                  className="w-full p-2.5 bg-surface rounded-xl border border-outline-variant/60 focus:outline-none focus:ring-1 focus:ring-primary/40 font-medium font-sans text-[13px]"
+                  required
+                />
+              </div>
+
+              <div className="pt-4 flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => setIsNewBlockOpen(false)}
+                  className="flex-1 py-3 text-[12px] font-bold text-on-surface border border-outline-variant rounded-xl hover:bg-surface transition-all cursor-pointer"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 py-3 text-[12px] font-bold text-white-pure bg-slate-600 rounded-xl hover:opacity-95 transition-all cursor-pointer shadow-md"
+                >
+                  Bloquear Horário
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {isWaitlistOpen && (
+        <div className="fixed inset-0 bg-[#31302fd0] backdrop-blur-md flex items-center justify-center z-50 p-0 sm:p-4 animate-fade-in">
+          <div className="bg-white-pure sm:rounded-3xl border border-outline-variant w-full max-w-2xl p-5 sm:p-8 shadow-2xl relative h-full sm:h-auto sm:max-h-[90vh] overflow-y-auto select-none">
+
+            <button
+              onClick={() => setIsWaitlistOpen(false)}
+              className="absolute top-6 right-6 text-on-surface-variant hover:text-primary transition-all p-2 font-black"
+            >
+              <span className="material-symbols-outlined">close</span>
+            </button>
+
+            <div className="flex items-center gap-2 mb-6">
+              <span className="material-symbols-outlined text-cyan-600 text-3xl">pending_actions</span>
+              <div>
+                <h3 className="font-manrope text-[20px] font-bold text-primary">Lista de Espera</h3>
+                <p className="text-[12px] text-on-surface-variant">Clientes aguardando um horário disponível</p>
+              </div>
+            </div>
+
+            <form onSubmit={handleAddWaitlistEntry} className="space-y-4 font-sans text-[13px] pb-6 border-b border-outline-variant/40 mb-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label className="font-bold text-on-surface-variant">Cliente</label>
+                  <input
+                    type="text"
+                    value={waitlistName}
+                    onChange={(e) => setWaitlistName(e.target.value)}
+                    placeholder="Nome do cliente..."
+                    className="w-full p-2.5 bg-surface rounded-xl border border-outline-variant/60 focus:outline-none focus:ring-1 focus:ring-primary/40 font-medium font-sans text-[13px]"
+                    required
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="font-bold text-on-surface-variant">Telefone</label>
+                  <input
+                    type="text"
+                    value={waitlistPhone}
+                    onChange={(e) => setWaitlistPhone(e.target.value)}
+                    placeholder="(99) 99999-9999"
+                    className="w-full p-2.5 bg-surface rounded-xl border border-outline-variant/60 focus:outline-none focus:ring-1 focus:ring-primary/40 font-medium font-sans text-[13px]"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="font-bold text-on-surface-variant">Procedimento desejado</label>
+                <CustomSearchableSelect
+                  value={waitlistProcedure}
+                  onChange={(v) => setWaitlistProcedure(v)}
+                  placeholder="Busque ou selecione um procedimento..."
+                  options={services.slice().sort((a, b) => a.nome.localeCompare(b.nome)).map(s => ({ label: s.nome, value: s.nome }))}
+                />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label className="font-bold text-on-surface-variant">Profissional preferido</label>
+                  <input
+                    list="prof_list_waitlist"
+                    value={waitlistProfessional}
+                    onChange={(e) => setWaitlistProfessional(e.target.value)}
+                    placeholder="Qualquer uma..."
+                    className="w-full p-2.5 bg-surface rounded-xl border border-outline-variant/60 focus:outline-none focus:ring-1 focus:ring-primary/40 font-medium font-sans text-[13px]"
+                  />
+                  <datalist id="prof_list_waitlist">
+                    {appUsers.filter(u => u.status === 'active').map(u => (
+                      <option key={u.id} value={u.name} />
+                    ))}
+                  </datalist>
+                </div>
+                <div className="space-y-1.5">
+                  <label className="font-bold text-on-surface-variant">Observações</label>
+                  <input
+                    type="text"
+                    value={waitlistNotes}
+                    onChange={(e) => setWaitlistNotes(e.target.value)}
+                    placeholder="Ex: prefere manhãs..."
+                    className="w-full p-2.5 bg-surface rounded-xl border border-outline-variant/60 focus:outline-none focus:ring-1 focus:ring-primary/40 font-medium font-sans text-[13px]"
+                  />
+                </div>
+              </div>
+
+              <button
+                type="submit"
+                className="w-full py-3 text-[12px] font-bold text-white-pure bg-cyan-600 rounded-xl hover:opacity-95 transition-all cursor-pointer shadow-md flex items-center justify-center gap-2"
+              >
+                <span className="material-symbols-outlined text-[16px]">add</span>
+                Adicionar à lista
+              </button>
+            </form>
+
+            <div className="space-y-2">
+              <h4 className="font-bold text-on-surface-variant text-[12px] uppercase tracking-wide">Aguardando ({waitlist.length})</h4>
+              {waitlist.length === 0 ? (
+                <p className="text-[13px] text-on-surface-variant py-6 text-center">Nenhum cliente na lista de espera.</p>
+              ) : (
+                waitlist.map(entry => {
+                  const diffMs = Date.now() - new Date(entry.criadoEm).getTime();
+                  const diffDias = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+                  const tempoEspera = diffDias > 0 ? `${diffDias} dia${diffDias > 1 ? 's' : ''}` : 'Hoje';
+                  return (
+                    <div key={entry.id} className="flex items-center gap-3 p-3 rounded-xl border border-outline-variant/50 bg-surface">
+                      <div className="flex-1 min-w-0">
+                        <p className="font-bold text-[13px] text-on-surface truncate">{entry.clienteNome}</p>
+                        <p className="text-[11px] text-on-surface-variant truncate">
+                          {entry.procedimentoDesejado || 'Procedimento não especificado'}
+                          {entry.profissionalPreferido ? ` · ${entry.profissionalPreferido}` : ''}
+                          {' · '}Espera: {tempoEspera}
+                        </p>
+                      </div>
+                      <button type="button" onClick={() => handleConvertWaitlistToAppointment(entry)} className="p-2 bg-emerald-500/10 text-emerald-700 rounded-lg hover:bg-emerald-500/20 transition-colors" title="Agendar">
+                        <span className="material-symbols-outlined text-[18px]">event_available</span>
+                      </button>
+                      <button type="button" onClick={() => handleRemoveWaitlistEntry(entry)} className="p-2 bg-error/10 text-error rounded-lg hover:bg-error/20 transition-colors" title="Remover">
+                        <span className="material-symbols-outlined text-[18px]">delete</span>
+                      </button>
+                    </div>
+                  );
+                })
+              )}
+            </div>
           </div>
         </div>
       )}
