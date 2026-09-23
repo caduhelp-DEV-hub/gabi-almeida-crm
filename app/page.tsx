@@ -101,6 +101,17 @@ const getProcedureStyles = (procName: string) => {
   };
 };
 
+// Cor de identificacao por profissional (topo da coluna na grade da Agenda).
+// Mesma tecnica de hash de getProcedureStyles, so que sobre o nome da pessoa.
+const getProfessionalColor = (name: string) => {
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) {
+    hash = name.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  const hue = Math.abs(hash) % 360;
+  return `hsl(${hue}, 65%, 45%)`;
+};
+
 export default function SystemPage() {
   // Global Modal State
   const [dialogState, setDialogState] = useState<{isOpen: boolean, type: 'alert' | 'confirm', message: string, onConfirm?: () => void}>({isOpen: false, type: 'alert', message: ''});
@@ -232,7 +243,7 @@ export default function SystemPage() {
   const [isValidatingConflict, setIsValidatingConflict] = useState(false);
   const [newApptPatient, setNewApptPatient] = useState('');
   const [newApptProcedure, setNewApptProcedure] = useState('');
-  const [newApptProfessional, setNewApptProfessional] = useState('Gabi Almeida');
+  const [newApptProfessional, setNewApptProfessional] = useState('Gabriela Almeida');
   const [newApptTime, setNewApptTime] = useState('09:00');
   const [newApptDate, setNewApptDate] = useState(dataLocalISO());
   const [newApptCategory, setNewApptCategory] = useState<'Estética' | 'Consulta'>('Estética');
@@ -241,7 +252,7 @@ export default function SystemPage() {
   // Bloqueio de agenda (folga, workshop, indisponibilidade)
   const [blocks, setBlocks] = useState<BloqueioAgenda[]>([]);
   const [isNewBlockOpen, setIsNewBlockOpen] = useState(false);
-  const [blockProfessional, setBlockProfessional] = useState('Gabi Almeida');
+  const [blockProfessional, setBlockProfessional] = useState('Gabriela Almeida');
   const [blockDate, setBlockDate] = useState(dataLocalISO());
   const [blockStartTime, setBlockStartTime] = useState('08:00');
   const [blockEndTime, setBlockEndTime] = useState('19:00');
@@ -1354,9 +1365,10 @@ export default function SystemPage() {
   };
 
   // Bloqueio que cobre um horario: retorna o bloqueio (para exibir a descricao) ou undefined.
-  const findBlockingBlock = (date: string, timeHHMM: string, durMin: number) => {
+  const findBlockingBlock = (date: string, timeHHMM: string, durMin: number, profissional: string) => {
     return blocks.find(b => {
       if (b.data !== date) return false;
+      if (b.profissional !== profissional) return false;
       const durB = b.diaInteiro
         ? 24 * 60
         : (parseInt(b.horaFim.split(':')[0]) * 60 + parseInt(b.horaFim.split(':')[1]))
@@ -1384,7 +1396,7 @@ export default function SystemPage() {
 
     const newDur = getServiceDuration(newApptProcedure);
 
-    const blockingBlock = findBlockingBlock(newApptDate, newApptTime.slice(0, 5), newDur);
+    const blockingBlock = findBlockingBlock(newApptDate, newApptTime.slice(0, 5), newDur, newApptProfessional);
     if (blockingBlock) {
       showAlert(`Este horário está bloqueado: ${blockingBlock.descricao}`);
       return;
@@ -1392,6 +1404,7 @@ export default function SystemPage() {
 
     const hasConflict = appointments.some(a => {
       if (a.data !== newApptDate) return false;
+      if (a.profissional !== newApptProfessional) return false;
       if (editingAppointment && a.id === editingAppointment.id) return false;
       const durA = getServiceDuration(a.procedimento);
       return checkTimeOverlap(a.hora.slice(0, 5), durA, newApptTime.slice(0, 5), newDur);
@@ -1502,7 +1515,7 @@ export default function SystemPage() {
   };
 
   const resetBlockForm = () => {
-    setBlockProfessional('Gabi Almeida');
+    setBlockProfessional('Gabriela Almeida');
     setBlockDate(dataLocalISO());
     setBlockStartTime('08:00');
     setBlockEndTime('19:00');
@@ -1600,7 +1613,7 @@ export default function SystemPage() {
     setEditingAppointment(null);
     setNewApptPatient(entry.clienteNome);
     setNewApptProcedure(entry.procedimentoDesejado || '');
-    setNewApptProfessional(entry.profissionalPreferido || 'Gabi Almeida');
+    setNewApptProfessional(entry.profissionalPreferido || 'Gabriela Almeida');
     setNewApptTime('09:00');
     setNewApptDate(dataLocalISO());
     setNewApptValor('');
@@ -1844,7 +1857,7 @@ export default function SystemPage() {
               <span>Acesso seguro. Todos os dados são criptografados.</span>
             </div>
             <span>© 2026 Gabi Almeida Estética.</span>
-            <span>Desenvolvido: caduhelp-dev | Ver. 3.21.0</span>
+            <span>Desenvolvido: caduhelp-dev | Ver. 3.22.0</span>
           </div>
         </div>
       </div>
@@ -2636,167 +2649,205 @@ export default function SystemPage() {
                         return { label, hour: h, minute: m };
                       });
 
+                      const professionals = appUsers.filter(u => u.status === 'active');
+                      const COLUMN_WIDTH = 200;
+
+                      const openSlotFor = (profName: string, timeLabel: string) => {
+                        const blockHere = findBlockingBlock(dateStr, timeLabel, 30, profName);
+                        if (blockHere) {
+                          showAlert(`Este horário está bloqueado: ${blockHere.descricao}`);
+                          return;
+                        }
+                        setEditingAppointment(null);
+                        setNewApptPatient('');
+                        setNewApptProcedure('');
+                        setNewApptProfessional(profName);
+                        setNewApptTime(timeLabel);
+                        setNewApptDate(dateStr);
+                        setNewApptValor('');
+                        setIsNewAppointmentOpen(true);
+                      };
+
                       return (
-                        <div className={`relative mt-4 bg-white-pure rounded-2xl border border-outline-variant/50 shadow-sm overflow-hidden flex flex-col max-h-[65vh] overflow-y-auto custom-scrollbar ${agendaView === 'semanal' ? 'lg:hidden' : ''}`}>
-                          {/* Single continuous timeline container */}
-                          <div className="relative" style={{ height: `${TOTAL_SLOTS * SLOT_HEIGHT}px` }}>
-                            
-                            {/* 30-minute guide lines */}
-                            {slots.map((slot, idx) => {
-                              const topPx = idx * SLOT_HEIGHT;
-                              const isLast = idx === TOTAL_SLOTS;
-                              return (
-                                <div key={slot.label} className="absolute left-0 right-0 flex" style={{ top: `${topPx}px`, height: `${SLOT_HEIGHT}px` }}>
-                                  <div className="w-[60px] flex-shrink-0 text-right pr-2 text-[11px] font-semibold text-on-surface-variant/50 -translate-y-[7px] select-none">
-                                    {slot.label}
-                                  </div>
-                                  <div className="flex-1 border-t border-outline-variant/25 relative">
-                                    {!isLast && (
-                                      <div
-                                        className="absolute inset-0 cursor-pointer hover:bg-primary/[0.03] transition-colors"
-                                        onClick={() => {
-                                          const blockHere = findBlockingBlock(dateStr, slot.label, 30);
-                                          if (blockHere) {
-                                            showAlert(`Este horário está bloqueado: ${blockHere.descricao}`);
-                                            return;
-                                          }
-                                          setEditingAppointment(null);
-                                          setNewApptPatient('');
-                                          setNewApptProcedure('');
-                                          setNewApptTime(slot.label);
-                                          setNewApptDate(dateStr);
-                                          setNewApptValor('');
-                                          setIsNewAppointmentOpen(true);
-                                        }}
-                                      />
-                                    )}
-                                  </div>
-                                </div>
-                              );
-                            })}
-
-                            {/* Appointment cards - positioned absolutely across the full timeline */}
-                            {dayAppts.map((appt) => {
-                              const styles = getProcedureStyles(appt.procedimento);
-                              const durAppt = getServiceDuration(appt.procedimento);
-                              const [hStr, mStr] = appt.hora.split(':');
-                              const startH = parseInt(hStr) || 0;
-                              const startM = parseInt(mStr) || 0;
-                              const totalStartMinutes = startH * 60 + startM;
-                              const totalEndMinutes = totalStartMinutes + durAppt;
-                              const formattedEndTime = `${String(Math.floor(totalEndMinutes / 60)).padStart(2, '0')}:${String(totalEndMinutes % 60).padStart(2, '0')}`;
-
-                              const topPx = ((totalStartMinutes - START_HOUR * 60) / 60) * HOUR_HEIGHT;
-                              const heightPx = (durAppt / 60) * HOUR_HEIGHT;
-
-                              const badgeBg = appt.status === 'Finalizado' 
-                                ? 'bg-emerald-500 text-white-pure' 
-                                : appt.status === 'Em Atendimento' 
-                                  ? 'bg-cyan-500 text-white-pure' 
-                                  : appt.status === 'Confirmado' 
-                                    ? 'bg-amber-500 text-white-pure' 
-                                    : 'bg-slate-400 text-white-pure';
-
-                              const isConflicted = appt.notas?.includes('[CONFLITO]');
-                              const bgStyle = isConflicted 
-                                ? { backgroundColor: '#dc2626', borderColor: '#991b1b', color: '#fff' }
-                                : { backgroundColor: styles.bg, borderColor: styles.border, color: styles.text };
-
-                              return (
-                                <div
-                                  key={appt.id}
-                                  className="absolute rounded-md border-l-[3px] cursor-pointer hover:brightness-95 transition-all group/card"
-                                  style={{
-                                    top: `${topPx}px`,
-                                    height: `${heightPx}px`,
-                                    left: '62px',
-                                    right: '4px',
-                                    ...bgStyle,
-                                    zIndex: 20,
-                                  }}
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    const client = patients.find(p => p.nome.toLowerCase() === appt.clienteNome.toLowerCase() || p.id === appt.clienteId);
-                                    if (client) {
-                                      setInteractClient(client);
-                                      setInteractAppointmentId(appt.id);
-                                      setIsWhatsAppSubmenuOpen(false);
-                                      setIsClientInteractModalOpen(true);
-                                    }
-                                  }}
-                                >
-                                  {/* Hover action buttons */}
-                                  <div className="absolute top-0 right-0 hidden group-hover/card:flex gap-0.5 bg-white-pure/80 backdrop-blur-sm rounded-bl-md p-0.5 z-10">
-                                    <button onClick={(e) => { e.stopPropagation(); setEditingAppointment(appt); setNewApptPatient(appt.clienteNome); setNewApptProcedure(appt.procedimento); setNewApptProfessional(appt.profissional); setNewApptTime(appt.hora); setNewApptDate(appt.data); setNewApptCategory(appt.categoria); setNewApptStatus(appt.status); setNewApptValor(appt.valor !== undefined && appt.valor !== null ? appt.valor.toString() : ''); setIsNewAppointmentOpen(true); }} className="p-0.5 hover:text-primary" title="Editar">
-                                      <span className="material-symbols-outlined text-[12px]">edit</span>
-                                    </button>
-                                    <button onClick={(e) => { e.stopPropagation(); showConfirm(`Remover agendamento de ${appt.clienteNome}?`, async () => { try { const { error } = await supabase.from('agendamentos').delete().eq('id', appt.id); if (error) throw error; setAppointments(prev => prev.filter(a => a.id !== appt.id)); showAlert('Agendamento removido.'); } catch (err: any) { showAlert(`Erro ao excluir: ${err.message}`); } }); }} className="p-0.5 hover:text-error" title="Excluir">
-                                      <span className="material-symbols-outlined text-[12px]">delete</span>
-                                    </button>
-                                  </div>
-
-                                  {/* Card content — always 2 lines, fits in 50px (30min) minimum */}
-                                  <div className="flex flex-col justify-start h-full overflow-hidden px-2 py-0.5">
-                                    <div className="flex items-center gap-1.5 shrink-0">
-                                      <span className="font-bold text-[10px] leading-none">{appt.hora} - {formattedEndTime}</span>
-                                      <span className={`text-[6px] px-1 py-0.2 rounded-sm font-bold uppercase leading-none ${badgeBg}`}>{appt.status}</span>
-                                      {appt.valor !== undefined && appt.valor !== null && appt.valor > 0 && (
-                                        <span className="text-[9px] font-extrabold text-primary ml-auto">R$ {appt.valor}</span>
-                                      )}
-                                    </div>
-                                    <div className="flex items-center gap-1 mt-0.5 text-[10px] leading-none flex-wrap">
-                                      <span className="material-symbols-outlined text-[10px] opacity-70">person</span>
-                                      <span className="font-bold">{appt.clienteNome}</span>
-                                      <span className="opacity-45">·</span>
-                                      <span className="material-symbols-outlined text-[10px] opacity-70">{styles.icon}</span>
-                                      <span className="opacity-90">{appt.procedimento}</span>
-                                    </div>
-                                  </div>
-                                </div>
-                              );
-                            })}
-
-                            {/* Bloqueios - faixas hachuradas, nao clicaveis para criar agendamento */}
-                            {dayBlocks.map((block) => {
-                              const [siH, siM] = block.horaInicio.split(':').map(Number);
-                              const [sfH, sfM] = block.horaFim.split(':').map(Number);
-                              const rawStart = block.diaInteiro ? START_HOUR * 60 : siH * 60 + siM;
-                              const rawEnd = block.diaInteiro ? END_HOUR * 60 : sfH * 60 + sfM;
-                              const clampedStart = Math.max(rawStart, START_HOUR * 60);
-                              const clampedEnd = Math.min(rawEnd, END_HOUR * 60);
-                              if (clampedEnd <= clampedStart) return null;
-
-                              const topPx = ((clampedStart - START_HOUR * 60) / 60) * HOUR_HEIGHT;
-                              const heightPx = ((clampedEnd - clampedStart) / 60) * HOUR_HEIGHT;
-
-                              return (
-                                <div
-                                  key={block.id}
-                                  className="absolute rounded-md border-l-[3px] border-slate-500 cursor-pointer text-slate-700"
-                                  style={{
-                                    top: `${topPx}px`,
-                                    height: `${heightPx}px`,
-                                    left: '62px',
-                                    right: '4px',
-                                    backgroundColor: '#f1f5f9',
-                                    backgroundImage: 'repeating-linear-gradient(135deg, rgba(100,116,139,0.18) 0px, rgba(100,116,139,0.18) 6px, transparent 6px, transparent 12px)',
-                                    zIndex: 10,
-                                  }}
-                                  onClick={(e) => { e.stopPropagation(); handleDeleteBloqueio(block); }}
-                                  title="Toque para remover o bloqueio"
-                                >
-                                  <div className="flex items-center gap-1 h-full overflow-hidden px-2 py-0.5">
-                                    <span className="material-symbols-outlined text-[12px] opacity-80">lock</span>
-                                    <span className="font-bold text-[10px] leading-none">
-                                      {block.diaInteiro ? 'Dia inteiro' : `${block.horaInicio} - ${block.horaFim}`}
+                        <div className={`relative mt-4 bg-white-pure rounded-2xl border border-outline-variant/50 shadow-sm overflow-auto custom-scrollbar max-h-[65vh] ${agendaView === 'semanal' ? 'lg:hidden' : ''}`}>
+                          {professionals.length === 0 ? (
+                            <p className="p-8 text-center text-[13px] text-on-surface-variant">Nenhum profissional ativo cadastrado.</p>
+                          ) : (
+                            <div className="flex" style={{ minWidth: `${60 + professionals.length * COLUMN_WIDTH}px` }}>
+                              {/* Gutter de horario, fixo durante o scroll horizontal */}
+                              <div className="sticky left-0 z-20 bg-white-pure w-[60px] shrink-0 border-r border-outline-variant/40">
+                                <div className="sticky top-0 z-30 h-[52px] bg-white-pure border-b border-outline-variant/40" />
+                                <div className="relative" style={{ height: `${TOTAL_SLOTS * SLOT_HEIGHT}px` }}>
+                                  {slots.map((slot, idx) => (
+                                    <span
+                                      key={slot.label}
+                                      className="absolute right-2 text-[11px] font-semibold text-on-surface-variant/50 select-none"
+                                      style={{ top: `${idx * SLOT_HEIGHT - 7}px` }}
+                                    >
+                                      {slot.label}
                                     </span>
-                                    <span className="opacity-45">·</span>
-                                    <span className="text-[10px] leading-none truncate">{block.descricao}</span>
-                                  </div>
+                                  ))}
                                 </div>
-                              );
-                            })}
-                          </div>
+                              </div>
+
+                              {/* Uma coluna por profissional ativo */}
+                              {professionals.map((prof) => {
+                                const profColor = getProfessionalColor(prof.name);
+                                const profAppts = dayAppts.filter(a => a.profissional === prof.name);
+                                const profBlocks = dayBlocks.filter(b => b.profissional === prof.name);
+
+                                return (
+                                  <div key={prof.id} className="shrink-0 border-r border-outline-variant/30" style={{ width: `${COLUMN_WIDTH}px` }}>
+                                    <div
+                                      className="sticky top-0 z-10 h-[52px] flex flex-col items-center justify-center bg-white-pure border-b border-outline-variant/40 px-2"
+                                      style={{ borderTop: `3px solid ${profColor}` }}
+                                    >
+                                      <span className="text-[12px] font-bold text-on-surface truncate max-w-full">{prof.name}</span>
+                                      {prof.specialty && <span className="text-[10px] text-on-surface-variant truncate max-w-full">{prof.specialty}</span>}
+                                    </div>
+
+                                    <div className="relative" style={{ height: `${TOTAL_SLOTS * SLOT_HEIGHT}px` }}>
+                                      {/* Linhas-guia de 30min + clique para criar */}
+                                      {slots.map((slot, idx) => {
+                                        const isLast = idx === TOTAL_SLOTS;
+                                        if (isLast) return null;
+                                        return (
+                                          <div
+                                            key={slot.label}
+                                            className="absolute left-0 right-0 border-t border-outline-variant/25 cursor-pointer hover:bg-primary/[0.03] transition-colors"
+                                            style={{ top: `${idx * SLOT_HEIGHT}px`, height: `${SLOT_HEIGHT}px` }}
+                                            onClick={() => openSlotFor(prof.name, slot.label)}
+                                          />
+                                        );
+                                      })}
+
+                                      {/* Agendamentos desta profissional */}
+                                      {profAppts.map((appt) => {
+                                        const styles = getProcedureStyles(appt.procedimento);
+                                        const durAppt = getServiceDuration(appt.procedimento);
+                                        const [hStr, mStr] = appt.hora.split(':');
+                                        const startH = parseInt(hStr) || 0;
+                                        const startM = parseInt(mStr) || 0;
+                                        const totalStartMinutes = startH * 60 + startM;
+                                        const totalEndMinutes = totalStartMinutes + durAppt;
+                                        const formattedEndTime = `${String(Math.floor(totalEndMinutes / 60)).padStart(2, '0')}:${String(totalEndMinutes % 60).padStart(2, '0')}`;
+
+                                        const topPx = ((totalStartMinutes - START_HOUR * 60) / 60) * HOUR_HEIGHT;
+                                        const heightPx = (durAppt / 60) * HOUR_HEIGHT;
+
+                                        const badgeBg = appt.status === 'Finalizado'
+                                          ? 'bg-emerald-500 text-white-pure'
+                                          : appt.status === 'Em Atendimento'
+                                            ? 'bg-cyan-500 text-white-pure'
+                                            : appt.status === 'Confirmado'
+                                              ? 'bg-amber-500 text-white-pure'
+                                              : 'bg-slate-400 text-white-pure';
+
+                                        const isConflicted = appt.notas?.includes('[CONFLITO]');
+                                        const bgStyle = isConflicted
+                                          ? { backgroundColor: '#dc2626', borderColor: '#991b1b', color: '#fff' }
+                                          : { backgroundColor: styles.bg, borderColor: styles.border, color: styles.text };
+
+                                        return (
+                                          <div
+                                            key={appt.id}
+                                            className="absolute rounded-md border-l-[3px] cursor-pointer hover:brightness-95 transition-all group/card"
+                                            style={{
+                                              top: `${topPx}px`,
+                                              height: `${heightPx}px`,
+                                              left: '4px',
+                                              right: '4px',
+                                              ...bgStyle,
+                                              zIndex: 20,
+                                            }}
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              const client = patients.find(p => p.nome.toLowerCase() === appt.clienteNome.toLowerCase() || p.id === appt.clienteId);
+                                              if (client) {
+                                                setInteractClient(client);
+                                                setInteractAppointmentId(appt.id);
+                                                setIsWhatsAppSubmenuOpen(false);
+                                                setIsClientInteractModalOpen(true);
+                                              }
+                                            }}
+                                          >
+                                            {/* Hover action buttons */}
+                                            <div className="absolute top-0 right-0 hidden group-hover/card:flex gap-0.5 bg-white-pure/80 backdrop-blur-sm rounded-bl-md p-0.5 z-10">
+                                              <button onClick={(e) => { e.stopPropagation(); setEditingAppointment(appt); setNewApptPatient(appt.clienteNome); setNewApptProcedure(appt.procedimento); setNewApptProfessional(appt.profissional); setNewApptTime(appt.hora); setNewApptDate(appt.data); setNewApptCategory(appt.categoria); setNewApptStatus(appt.status); setNewApptValor(appt.valor !== undefined && appt.valor !== null ? appt.valor.toString() : ''); setIsNewAppointmentOpen(true); }} className="p-0.5 hover:text-primary" title="Editar">
+                                                <span className="material-symbols-outlined text-[12px]">edit</span>
+                                              </button>
+                                              <button onClick={(e) => { e.stopPropagation(); showConfirm(`Remover agendamento de ${appt.clienteNome}?`, async () => { try { const { error } = await supabase.from('agendamentos').delete().eq('id', appt.id); if (error) throw error; setAppointments(prev => prev.filter(a => a.id !== appt.id)); showAlert('Agendamento removido.'); } catch (err: any) { showAlert(`Erro ao excluir: ${err.message}`); } }); }} className="p-0.5 hover:text-error" title="Excluir">
+                                                <span className="material-symbols-outlined text-[12px]">delete</span>
+                                              </button>
+                                            </div>
+
+                                            {/* Card content — always 2 lines, fits in 50px (30min) minimum */}
+                                            <div className="flex flex-col justify-start h-full overflow-hidden px-2 py-0.5">
+                                              <div className="flex items-center gap-1.5 shrink-0">
+                                                <span className="font-bold text-[10px] leading-none">{appt.hora} - {formattedEndTime}</span>
+                                                <span className={`text-[6px] px-1 py-0.2 rounded-sm font-bold uppercase leading-none ${badgeBg}`}>{appt.status}</span>
+                                                {appt.valor !== undefined && appt.valor !== null && appt.valor > 0 && (
+                                                  <span className="text-[9px] font-extrabold text-primary ml-auto">R$ {appt.valor}</span>
+                                                )}
+                                              </div>
+                                              <div className="flex items-center gap-1 mt-0.5 text-[10px] leading-none flex-wrap">
+                                                <span className="material-symbols-outlined text-[10px] opacity-70">person</span>
+                                                <span className="font-bold">{appt.clienteNome}</span>
+                                                <span className="opacity-45">·</span>
+                                                <span className="material-symbols-outlined text-[10px] opacity-70">{styles.icon}</span>
+                                                <span className="opacity-90">{appt.procedimento}</span>
+                                              </div>
+                                            </div>
+                                          </div>
+                                        );
+                                      })}
+
+                                      {/* Bloqueios desta profissional - faixas hachuradas, nao clicaveis para criar agendamento */}
+                                      {profBlocks.map((block) => {
+                                        const [siH, siM] = block.horaInicio.split(':').map(Number);
+                                        const [sfH, sfM] = block.horaFim.split(':').map(Number);
+                                        const rawStart = block.diaInteiro ? START_HOUR * 60 : siH * 60 + siM;
+                                        const rawEnd = block.diaInteiro ? END_HOUR * 60 : sfH * 60 + sfM;
+                                        const clampedStart = Math.max(rawStart, START_HOUR * 60);
+                                        const clampedEnd = Math.min(rawEnd, END_HOUR * 60);
+                                        if (clampedEnd <= clampedStart) return null;
+
+                                        const topPx = ((clampedStart - START_HOUR * 60) / 60) * HOUR_HEIGHT;
+                                        const heightPx = ((clampedEnd - clampedStart) / 60) * HOUR_HEIGHT;
+
+                                        return (
+                                          <div
+                                            key={block.id}
+                                            className="absolute rounded-md border-l-[3px] border-slate-500 cursor-pointer text-slate-700"
+                                            style={{
+                                              top: `${topPx}px`,
+                                              height: `${heightPx}px`,
+                                              left: '4px',
+                                              right: '4px',
+                                              backgroundColor: '#f1f5f9',
+                                              backgroundImage: 'repeating-linear-gradient(135deg, rgba(100,116,139,0.18) 0px, rgba(100,116,139,0.18) 6px, transparent 6px, transparent 12px)',
+                                              zIndex: 10,
+                                            }}
+                                            onClick={(e) => { e.stopPropagation(); handleDeleteBloqueio(block); }}
+                                            title="Toque para remover o bloqueio"
+                                          >
+                                            <div className="flex items-center gap-1 h-full overflow-hidden px-2 py-0.5">
+                                              <span className="material-symbols-outlined text-[12px] opacity-80">lock</span>
+                                              <span className="font-bold text-[10px] leading-none">
+                                                {block.diaInteiro ? 'Dia inteiro' : `${block.horaInicio} - ${block.horaFim}`}
+                                              </span>
+                                              <span className="opacity-45">·</span>
+                                              <span className="text-[10px] leading-none truncate">{block.descricao}</span>
+                                            </div>
+                                          </div>
+                                        );
+                                      })}
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          )}
                         </div>
                       );
                     })()}
@@ -6429,12 +6480,24 @@ export default function SystemPage() {
                   </div>
                   <div>
                     <h2 className="text-[18px] font-bold text-on-surface">Gabi Almeida Estética Sistema</h2>
-                    <p className="text-[13px] text-on-surface-variant font-bold">Versão atual: 3.21.0</p>
+                    <p className="text-[13px] text-on-surface-variant font-bold">Versão atual: 3.22.0</p>
                   </div>
                 </div>
 
                 <div className="space-y-4">
                   <h3 className="text-[14px] font-bold text-primary border-b border-outline-variant/30 pb-2">Histórico de Versões (Changelog)</h3>
+
+                  <div className="bg-surface-container-lowest rounded-2xl p-4 border border-outline-variant/50 mb-4">
+                    <div className="flex justify-between items-center mb-2">
+                      <span className="font-bold text-[14px] text-on-surface">Versão 3.22.0</span>
+                      <span className="text-[11px] font-bold text-on-surface-variant px-2 py-1 bg-surface-container rounded-lg">23 Setembro 2026</span>
+                    </div>
+                    <ul className="list-disc pl-5 space-y-1.5 text-[13px] text-on-surface-variant mt-3">
+                      <li><strong className="text-on-surface">Agenda Diária em colunas por profissional:</strong> a visão "Dia" agora mostra uma coluna lado a lado para cada profissional ativa, em qualquer tamanho de tela, com rolagem por toque no celular. Clicar num horário vazio já marca a profissional daquela coluna.</li>
+                      <li><strong className="text-on-surface">Conflito e bloqueio por profissional:</strong> marcar ou bloquear um horário com uma profissional não afeta mais as outras.</li>
+                      <li><strong className="text-on-surface">Correção de dados:</strong> um valor padrão errado no formulário gravava agendamentos com um nome de profissional que não batia com o cadastro. Corrigido, e os agendamentos antigos afetados foram atualizados.</li>
+                    </ul>
+                  </div>
 
                   <div className="bg-surface-container-lowest rounded-2xl p-4 border border-outline-variant/50 mb-4">
                     <div className="flex justify-between items-center mb-2">

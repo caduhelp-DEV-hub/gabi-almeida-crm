@@ -2,6 +2,15 @@
 
 Todas as mudanças notáveis neste projeto serão documentadas neste arquivo.
 
+## [3.22.0] - 2026-09-23
+### Adicionado
+- **Agenda Diária em colunas por profissional.** A visão "Dia" trocou de uma lista única para uma grade com uma coluna por profissional ativo, lado a lado, no estilo de sistemas de agenda de clínicas com equipe — igual em qualquer tamanho de tela, com rolagem horizontal por toque no celular. Clicar num horário vazio já pré-marca a profissional daquela coluna.
+- Cada coluna ganhou uma cor de identificação própria no cabeçalho; os cards de agendamento continuam coloridos por procedimento, como já era.
+
+### Corrigido
+- **Conflito de horário e bloqueio agora são por profissional.** Antes, marcar um horário com uma profissional podia impedir marcar o mesmo horário com outra (o sistema tratava a agenda como um recurso só). Agora cada profissional tem sua própria checagem de conflito e de bloqueio — necessário para a grade em colunas fazer sentido.
+- **Nome de profissional inconsistente nos agendamentos.** Um valor padrão errado no formulário ("Gabi Almeida", sem o "ela") vinha gravando agendamentos com um nome que não batia com o cadastro de usuário ("Gabriela Almeida") — 139 agendamentos antigos tinham esse valor e outros 118 estavam com o campo vazio. Corrigido o valor padrão e normalizados os registros antigos.
+
 ## [3.21.0] - 2026-09-20
 ### Adicionado
 - **Bloqueio de horários na Agenda.** Agora dá para marcar um período em que a profissional não está disponível (folga, workshop, consulta médica) — parcial ou dia inteiro. O bloqueio aparece na timeline diária com um visual hachurado distinto dos agendamentos e some qualquer tentativa de marcar cliente em cima dele, tanto pelo clique no horário quanto editando a data/hora manualmente no formulário. Duas novas tabelas no banco (`bloqueios_agenda`, já nascendo com o mesmo acesso restrito a usuário autenticado adotado desde a v3.20.0).
