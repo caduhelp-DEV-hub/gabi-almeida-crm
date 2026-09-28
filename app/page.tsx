@@ -248,6 +248,8 @@ export default function SystemPage() {
   const [newApptDate, setNewApptDate] = useState(dataLocalISO());
   const [newApptCategory, setNewApptCategory] = useState<'Estética' | 'Consulta'>('Estética');
   const [newApptValor, setNewApptValor] = useState('');
+  const [newApptRepeatType, setNewApptRepeatType] = useState<'nao_repetir' | 'semanal' | 'quinzenal' | 'mensal'>('nao_repetir');
+  const [newApptRepeatCount, setNewApptRepeatCount] = useState(4);
 
   // Bloqueio de agenda (folga, workshop, indisponibilidade)
   const [blocks, setBlocks] = useState<BloqueioAgenda[]>([]);
@@ -1378,6 +1380,75 @@ export default function SystemPage() {
     });
   };
 
+  const addInterval = (dateStr: string, type: 'semanal' | 'quinzenal' | 'mensal', n: number) => {
+    const [y, m, d] = dateStr.split('-').map(Number);
+    const date = new Date(y, m - 1, d);
+    if (type === 'semanal') date.setDate(date.getDate() + 7 * n);
+    else if (type === 'quinzenal') date.setDate(date.getDate() + 14 * n);
+    else if (type === 'mensal') date.setMonth(date.getMonth() + n);
+    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+  };
+
+  const describeRecurrenceResult = (criadas: number, puladas: { data: string; motivo: string }[]) => {
+    const partes: string[] = [];
+    if (criadas > 0) partes.push(`+${criadas} ${criadas > 1 ? 'repetições criadas' : 'repetição criada'}`);
+    if (puladas.length > 0) {
+      const detalhes = puladas.map(p => {
+        const [, m, d] = p.data.split('-');
+        return `${d}/${m} - ${p.motivo}`;
+      }).join('; ');
+      partes.push(`${puladas.length} pulada${puladas.length > 1 ? 's' : ''} (${detalhes})`);
+    }
+    return partes.join(', ');
+  };
+
+  // Gera as repeticoes de um agendamento (a ocorrencia principal ja foi salva antes de chamar isso).
+  // Cada ocorrencia e um agendamento independente, sem vinculo de serie no banco.
+  const createRecurrenceOccurrences = async (baseApptData: Partial<Agendamento>, baseDateStr: string) => {
+    if (editingAppointment || newApptRepeatType === 'nao_repetir' || newApptRepeatCount < 2) {
+      return { criadas: 0, puladas: [] as { data: string; motivo: string }[] };
+    }
+
+    const profissional = baseApptData.profissional || '';
+    const hora = (baseApptData.hora || '').slice(0, 5);
+    const durOcc = getServiceDuration(baseApptData.procedimento || '');
+    const toInsert: Partial<Agendamento>[] = [];
+    const puladas: { data: string; motivo: string }[] = [];
+
+    for (let i = 1; i < newApptRepeatCount; i++) {
+      const occDate = addInterval(baseDateStr, newApptRepeatType, i);
+      const blockHere = findBlockingBlock(occDate, hora, durOcc, profissional);
+      if (blockHere) {
+        puladas.push({ data: occDate, motivo: `bloqueado (${blockHere.descricao})` });
+        continue;
+      }
+      const conflita = appointments.some(a => {
+        if (a.data !== occDate) return false;
+        if (a.profissional !== profissional) return false;
+        const durA = getServiceDuration(a.procedimento);
+        return checkTimeOverlap(a.hora.slice(0, 5), durA, hora, durOcc);
+      });
+      if (conflita) {
+        puladas.push({ data: occDate, motivo: 'horário já ocupado' });
+        continue;
+      }
+      toInsert.push({ ...baseApptData, data: occDate });
+    }
+
+    if (toInsert.length > 0) {
+      const { data, error } = await supabase
+        .from('agendamentos')
+        .insert(toInsert.map(mapAgendamentoToBackend))
+        .select('*, clientes(id, nome, avatar)');
+      if (error) throw error;
+      if (data) {
+        setAppointments(prev => [...prev, ...data.map(mapAgendamentoToFrontend)]);
+      }
+    }
+
+    return { criadas: toInsert.length, puladas };
+  };
+
   const handleAddNewAgendamento = async (e: React.FormEvent) => {
     e.preventDefault();
     const selectedPat = patients.find(p => p.nome === newApptPatient);
@@ -1448,6 +1519,10 @@ export default function SystemPage() {
         if (data && data[0]) {
           setAppointments(prev => [...prev, mapAgendamentoToFrontend(data[0])]);
         }
+        const { criadas, puladas } = await createRecurrenceOccurrences(apptData, newApptDate);
+        if (criadas > 0 || puladas.length > 0) {
+          showAlert(`Agendamento criado. ${describeRecurrenceResult(criadas, puladas)}.`);
+        }
       }
       setIsNewAppointmentOpen(false);
       setEditingAppointment(null);
@@ -1500,8 +1575,12 @@ export default function SystemPage() {
         if (newData && newData[0]) {
           setAppointments(prev => [...prev, mapAgendamentoToFrontend(newData[0])]);
         }
+        const { criadas, puladas } = await createRecurrenceOccurrences(finalApptData, finalApptData.data);
+        if (criadas > 0 || puladas.length > 0) {
+          showAlert(`Agendamento (em conflito) criado. ${describeRecurrenceResult(criadas, puladas)}.`);
+        }
       }
-      
+
       setIsNewAppointmentOpen(false);
       setEditingAppointment(null);
       setIsConflictModalOpen(false);
@@ -1612,6 +1691,8 @@ export default function SystemPage() {
     setIsWaitlistOpen(false);
     setEditingAppointment(null);
     setNewApptPatient(entry.clienteNome);
+    setNewApptRepeatType('nao_repetir');
+    setNewApptRepeatCount(4);
     setNewApptProcedure(entry.procedimentoDesejado || '');
     setNewApptProfessional(entry.profissionalPreferido || 'Gabriela Almeida');
     setNewApptTime('09:00');
@@ -1857,7 +1938,7 @@ export default function SystemPage() {
               <span>Acesso seguro. Todos os dados são criptografados.</span>
             </div>
             <span>© 2026 Gabi Almeida Estética.</span>
-            <span>Desenvolvido: caduhelp-dev | Ver. 3.22.0</span>
+            <span>Desenvolvido: caduhelp-dev | Ver. 3.23.0</span>
           </div>
         </div>
       </div>
@@ -1944,6 +2025,8 @@ export default function SystemPage() {
         onNewAppointment={() => {
           setEditingAppointment(null);
           setNewApptPatient('');
+          setNewApptRepeatType('nao_repetir');
+          setNewApptRepeatCount(4);
           setNewApptProcedure('');
           setNewApptTime('09:00');
           setNewApptDate(dataLocalISO());
@@ -2602,6 +2685,8 @@ export default function SystemPage() {
                           onClick={() => {
                             setEditingAppointment(null);
                             setNewApptPatient('');
+                            setNewApptRepeatType('nao_repetir');
+                            setNewApptRepeatCount(4);
                             setNewApptProcedure('');
                             setNewApptTime('09:00');
                             setNewApptDate(`${agendaNavDate.getFullYear()}-${String(agendaNavDate.getMonth() + 1).padStart(2, '0')}-${String(agendaNavDate.getDate()).padStart(2, '0')}`);
@@ -2618,6 +2703,8 @@ export default function SystemPage() {
                         onClick={() => {
                           setEditingAppointment(null);
                           setNewApptPatient('');
+                          setNewApptRepeatType('nao_repetir');
+                          setNewApptRepeatCount(4);
                           setNewApptProcedure('');
                           setNewApptTime('09:00');
                           setNewApptDate(`${agendaNavDate.getFullYear()}-${String(agendaNavDate.getMonth() + 1).padStart(2, '0')}-${String(agendaNavDate.getDate()).padStart(2, '0')}`);
@@ -2660,6 +2747,8 @@ export default function SystemPage() {
                         }
                         setEditingAppointment(null);
                         setNewApptPatient('');
+                        setNewApptRepeatType('nao_repetir');
+                        setNewApptRepeatCount(4);
                         setNewApptProcedure('');
                         setNewApptProfessional(profName);
                         setNewApptTime(timeLabel);
@@ -3078,6 +3167,8 @@ export default function SystemPage() {
                                   const dateStr = `${agendaNavDate.getFullYear()}-${formattedMonth}-${formattedDay}`;
                                   setEditingAppointment(null);
                                   setNewApptPatient('');
+                                  setNewApptRepeatType('nao_repetir');
+                                  setNewApptRepeatCount(4);
                                   setNewApptProcedure('');
                                   setNewApptTime('10:00');
                                   setNewApptDate(dateStr);
@@ -3269,6 +3360,8 @@ export default function SystemPage() {
                       setIsFabMenuOpen(false);
                       setEditingAppointment(null);
                       setNewApptPatient('');
+                      setNewApptRepeatType('nao_repetir');
+                      setNewApptRepeatCount(4);
                       setNewApptProcedure('');
                       setNewApptProfessional('');
                       setNewApptTime('08:00');
@@ -6480,12 +6573,23 @@ export default function SystemPage() {
                   </div>
                   <div>
                     <h2 className="text-[18px] font-bold text-on-surface">Gabi Almeida Estética Sistema</h2>
-                    <p className="text-[13px] text-on-surface-variant font-bold">Versão atual: 3.22.0</p>
+                    <p className="text-[13px] text-on-surface-variant font-bold">Versão atual: 3.23.0</p>
                   </div>
                 </div>
 
                 <div className="space-y-4">
                   <h3 className="text-[14px] font-bold text-primary border-b border-outline-variant/30 pb-2">Histórico de Versões (Changelog)</h3>
+
+                  <div className="bg-surface-container-lowest rounded-2xl p-4 border border-outline-variant/50 mb-4">
+                    <div className="flex justify-between items-center mb-2">
+                      <span className="font-bold text-[14px] text-on-surface">Versão 3.23.0</span>
+                      <span className="text-[11px] font-bold text-on-surface-variant px-2 py-1 bg-surface-container rounded-lg">28 Setembro 2026</span>
+                    </div>
+                    <ul className="list-disc pl-5 space-y-1.5 text-[13px] text-on-surface-variant mt-3">
+                      <li><strong className="text-on-surface">Repetir Agendamento:</strong> o formulário de novo agendamento agora repete o mesmo procedimento automaticamente (semanal, a cada 2 semanas ou mensal, até 24 vezes) — ótimo para tratamentos com sessões recorrentes.</li>
+                      <li><strong className="text-on-surface">Conflitos tratados com cuidado:</strong> se uma data da série cair num horário ocupado ou bloqueado, só aquela data é pulada — o resto da série é criado normalmente, e o sistema avisa o que ficou de fora.</li>
+                    </ul>
+                  </div>
 
                   <div className="bg-surface-container-lowest rounded-2xl p-4 border border-outline-variant/50 mb-4">
                     <div className="flex justify-between items-center mb-2">
@@ -8037,8 +8141,42 @@ export default function SystemPage() {
                 </div>
               </div>
 
+              {!editingAppointment && (
+                <div className="space-y-1.5">
+                  <label className="font-bold text-on-surface-variant">Repetir Agendamento</label>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <select
+                      value={newApptRepeatType}
+                      onChange={(e) => setNewApptRepeatType(e.target.value as typeof newApptRepeatType)}
+                      className="w-full p-2.5 bg-surface rounded-xl border border-outline-variant/60 focus:outline-none focus:ring-1 focus:ring-primary/40 font-medium font-sans text-[13px]"
+                    >
+                      <option value="nao_repetir">Não repetir</option>
+                      <option value="semanal">Semanalmente</option>
+                      <option value="quinzenal">A cada 2 semanas</option>
+                      <option value="mensal">Mensalmente</option>
+                    </select>
+                    {newApptRepeatType !== 'nao_repetir' && (
+                      <input
+                        type="number"
+                        min={2}
+                        max={24}
+                        value={newApptRepeatCount}
+                        onChange={(e) => setNewApptRepeatCount(Math.min(24, Math.max(2, parseInt(e.target.value) || 2)))}
+                        className="w-full p-2.5 bg-surface rounded-xl border border-outline-variant/60 focus:outline-none focus:ring-1 focus:ring-primary/40 font-medium font-sans text-[13px]"
+                        placeholder="Quantas vezes"
+                      />
+                    )}
+                  </div>
+                  {newApptRepeatType !== 'nao_repetir' && (
+                    <p className="text-[11px] text-on-surface-variant">
+                      Serão criados {newApptRepeatCount} agendamentos, um a cada intervalo, a partir da data acima.
+                    </p>
+                  )}
+                </div>
+              )}
+
               <div className="pt-4 flex gap-3">
-                <button 
+                <button
                   type="button"
                   onClick={() => {
                     setIsNewAppointmentOpen(false);

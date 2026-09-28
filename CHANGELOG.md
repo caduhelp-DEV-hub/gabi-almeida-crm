@@ -2,6 +2,11 @@
 
 Todas as mudanças notáveis neste projeto serão documentadas neste arquivo.
 
+## [3.23.0] - 2026-09-28
+### Adicionado
+- **Repetir Agendamento.** O modal de "Novo Agendamento" ganhou um campo para repetir o mesmo procedimento automaticamente — Semanalmente, a cada 2 semanas ou Mensalmente, por até 24 vezes. Útil para tratamentos com sessões recorrentes (ex: "toda terça por 6 semanas"). Cada repetição vira um agendamento comum, editável e excluível individualmente como qualquer outro.
+- Se alguma data da série cair num horário já ocupado ou bloqueado, aquela ocorrência é pulada (não trava as demais) e o sistema avisa quais datas ficaram de fora e por quê.
+
 ## [3.22.0] - 2026-09-23
 ### Adicionado
 - **Agenda Diária em colunas por profissional.** A visão "Dia" trocou de uma lista única para uma grade com uma coluna por profissional ativo, lado a lado, no estilo de sistemas de agenda de clínicas com equipe — igual em qualquer tamanho de tela, com rolagem horizontal por toque no celular. Clicar num horário vazio já pré-marca a profissional daquela coluna.
