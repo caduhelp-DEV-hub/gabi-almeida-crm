@@ -2,6 +2,12 @@
 
 Todas as mudanças notáveis neste projeto serão documentadas neste arquivo.
 
+## [3.24.0] - 2026-10-03
+### Adicionado
+- **Central de Atendimento WhatsApp — infraestrutura (Sprint 1).** Primeira peça de um novo módulo que vai trazer atendimento automático pelo WhatsApp: identificação de clientes, agendamento, reagendamento, cancelamento e avisos para as profissionais. Nesta entrega: as tabelas novas no banco (contatos, conversas, mensagens, histórico de eventos) e um serviço dedicado, separado deste CRM, que fala com a Evolution API — sem duplicar a agenda nem o cadastro de clientes já existentes.
+- **Novo card "WhatsApp" em Configurações.** Bot ativo/inativo, mensagem de boas-vindas, mensagem de fora do horário e o horário de atendimento de cada dia da semana agora são editáveis direto pela tela, sem precisar de um novo deploy toda vez que o texto ou o horário mudar. Mostra também o status da conexão da instância (por enquanto "desconectado", até a parte externa do WhatsApp ser configurada).
+- Nova coluna `origem` em cada agendamento (preenchida como "ADMIN" para todos os existentes), preparando o terreno para medir, no futuro, quantos agendamentos vêm do WhatsApp.
+
 ## [3.23.0] - 2026-09-28
 ### Adicionado
 - **Repetir Agendamento.** O modal de "Novo Agendamento" ganhou um campo para repetir o mesmo procedimento automaticamente — Semanalmente, a cada 2 semanas ou Mensalmente, por até 24 vezes. Útil para tratamentos com sessões recorrentes (ex: "toda terça por 6 semanas"). Cada repetição vira um agendamento comum, editável e excluível individualmente como qualquer outro.

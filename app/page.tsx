@@ -36,6 +36,10 @@ import {
   mapServicoToBackend,
   mapCobrancaToFrontend,
   mapCobrancaToBackend,
+  mapWhatsappInstanceToFrontend,
+  mapWhatsappSettingsRowsToFrontend,
+  mapWhatsappSettingsToRows,
+  WHATSAPP_SETTINGS_DEFAULTS,
   USER_PUBLIC_COLUMNS,
   CLIENTE_LIST_COLUMNS,
   CLIENTE_DETALHE_COLUMNS
@@ -46,6 +50,9 @@ import type {
   Agendamento,
   BloqueioAgenda,
   ListaEsperaItem,
+  WhatsappInstance,
+  WhatsappBotSettings,
+  DiaSemana,
   Servico,
   InventoryItem,
   Cobranca,
@@ -272,6 +279,11 @@ export default function SystemPage() {
 
   // FAB speed-dial (mobile)
   const [isFabMenuOpen, setIsFabMenuOpen] = useState(false);
+
+  // Central de Atendimento WhatsApp - configuracoes (Sprint 1: so status + ajustes)
+  const [whatsappInstance, setWhatsappInstance] = useState<WhatsappInstance | null>(null);
+  const [whatsappSettings, setWhatsappSettings] = useState<WhatsappBotSettings>(WHATSAPP_SETTINGS_DEFAULTS);
+  const [isSavingWhatsappSettings, setIsSavingWhatsappSettings] = useState(false);
 
   // Clientes Module Detail Tab
   const [activePatientSubTab, setActivePatientSubTab] = useState<'evolution' | 'anamnese' | 'financeiro' | 'documentos' | 'retorno' | 'planos'>('evolution');
@@ -1144,7 +1156,9 @@ export default function SystemPage() {
         { data: desp },
         { data: compData },
         { data: blks },
-        { data: waits }
+        { data: waits },
+        { data: waInstances },
+        { data: waSettings }
       ] = await Promise.all([
         supabase.from('clientes').select(CLIENTE_LIST_COLUMNS),
         supabase.from('agendamentos').select('*, clientes(id, nome, avatar)'),
@@ -1156,7 +1170,9 @@ export default function SystemPage() {
         supabase.from('despesas').select('*').order('data', { ascending: false }),
         supabase.from('configuracoes_empresa').select('*').limit(1),
         supabase.from('bloqueios_agenda').select('*'),
-        supabase.from('lista_espera').select('*').eq('status', 'Aguardando')
+        supabase.from('lista_espera').select('*').eq('status', 'Aguardando'),
+        supabase.from('whatsapp_instances').select('*').limit(1),
+        supabase.from('whatsapp_bot_settings').select('*')
       ]);
 
       if (pats) {
@@ -1210,6 +1226,8 @@ export default function SystemPage() {
       if (compData && compData.length > 0) setCompanyData(prev => ({ ...prev, ...compData[0] }));
       if (blks) setBlocks(blks.map(mapBloqueioToFrontend));
       if (waits) setWaitlist(waits.map(mapListaEsperaToFrontend));
+      if (waInstances && waInstances[0]) setWhatsappInstance(mapWhatsappInstanceToFrontend(waInstances[0]));
+      if (waSettings) setWhatsappSettings(mapWhatsappSettingsRowsToFrontend(waSettings));
 
       setIsInitialLoading(false);
     };
@@ -1273,6 +1291,12 @@ export default function SystemPage() {
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'bloqueios_agenda' }, () => {
         supabase.from('bloqueios_agenda').select('*').then((res: any) => { const data = res.data; if (data) setBlocks(data.map(mapBloqueioToFrontend)); });
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'whatsapp_instances' }, () => {
+        supabase.from('whatsapp_instances').select('*').limit(1).then((res: any) => { const data = res.data; if (data && data[0]) setWhatsappInstance(mapWhatsappInstanceToFrontend(data[0])); });
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'whatsapp_bot_settings' }, () => {
+        supabase.from('whatsapp_bot_settings').select('*').then((res: any) => { const data = res.data; if (data) setWhatsappSettings(mapWhatsappSettingsRowsToFrontend(data)); });
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'lista_espera' }, () => {
         supabase.from('lista_espera').select('*').eq('status', 'Aguardando').then((res: any) => { const data = res.data; if (data) setWaitlist(data.map(mapListaEsperaToFrontend)); });
@@ -1701,6 +1725,21 @@ export default function SystemPage() {
     setIsNewAppointmentOpen(true);
   };
 
+  const handleSaveWhatsappSettings = async () => {
+    setIsSavingWhatsappSettings(true);
+    try {
+      const { error } = await supabase
+        .from('whatsapp_bot_settings')
+        .upsert(mapWhatsappSettingsToRows(whatsappSettings), { onConflict: 'chave' });
+      if (error) throw error;
+      showAlert('Configurações do WhatsApp salvas com sucesso!');
+    } catch (err: any) {
+      showAlert(`Erro ao salvar configurações do WhatsApp: ${err.message || err}`);
+    } finally {
+      setIsSavingWhatsappSettings(false);
+    }
+  };
+
   // Search state (unified search experience across views)
   const [searchQuery, setSearchQuery] = useState('');
   
@@ -1938,7 +1977,7 @@ export default function SystemPage() {
               <span>Acesso seguro. Todos os dados são criptografados.</span>
             </div>
             <span>© 2026 Gabi Almeida Estética.</span>
-            <span>Desenvolvido: caduhelp-dev | Ver. 3.23.0</span>
+            <span>Desenvolvido: caduhelp-dev | Ver. 3.24.0</span>
           </div>
         </div>
       </div>
@@ -6482,6 +6521,126 @@ export default function SystemPage() {
                   </button>
                 </div>
               </div>
+
+              <div className="bg-white-pure rounded-3xl p-6 border border-outline-variant space-y-5">
+                <div className="flex items-center justify-between flex-wrap gap-2">
+                  <h3 className="font-bold text-[16px] text-primary flex items-center gap-2">
+                    <span className="material-symbols-outlined text-[20px]">forum</span>
+                    WhatsApp — Central de Atendimento
+                  </h3>
+                  <span className={`px-3 py-1 rounded-full text-[11px] font-bold uppercase tracking-wide ${
+                    whatsappInstance?.status === 'conectado' ? 'bg-emerald-500/10 text-emerald-700'
+                      : whatsappInstance?.status === 'conectando' ? 'bg-amber-500/10 text-amber-700'
+                      : whatsappInstance?.status === 'erro' ? 'bg-error/10 text-error'
+                      : 'bg-slate-500/10 text-slate-600'
+                  }`}>
+                    {whatsappInstance?.status || 'desconectado'}
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-[12px]">
+                  <div>
+                    <p className="font-bold text-on-surface-variant mb-0.5">Instância</p>
+                    <p className="text-on-surface">{whatsappInstance?.nome || whatsappInstance?.instanceName || 'Nenhuma instância configurada ainda'}</p>
+                  </div>
+                  <div>
+                    <p className="font-bold text-on-surface-variant mb-0.5">Número conectado</p>
+                    <p className="text-on-surface">{whatsappInstance?.numero || '—'}</p>
+                  </div>
+                  <div>
+                    <p className="font-bold text-on-surface-variant mb-0.5">Última atividade</p>
+                    <p className="text-on-surface">{whatsappInstance?.ultimoStatusEm ? new Date(whatsappInstance.ultimoStatusEm).toLocaleString('pt-BR') : '—'}</p>
+                  </div>
+                </div>
+
+                <div className="h-px bg-outline-variant/40" />
+
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="font-bold text-[13px] text-on-surface">Bot ativo</p>
+                    <p className="text-[11px] text-on-surface-variant">Quando desligado, as mensagens recebidas não são respondidas automaticamente.</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setWhatsappSettings(prev => ({ ...prev, botAtivo: !prev.botAtivo }))}
+                    className={`relative w-12 h-7 rounded-full shrink-0 transition-colors ${whatsappSettings.botAtivo ? 'bg-emerald-500' : 'bg-outline-variant/60'}`}
+                  >
+                    <span className={`absolute top-0.5 left-0.5 w-6 h-6 bg-white-pure rounded-full shadow transition-transform ${whatsappSettings.botAtivo ? 'translate-x-5' : 'translate-x-0'}`} />
+                  </button>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="font-bold text-[13px] text-on-surface-variant">Mensagem de boas-vindas</label>
+                  <textarea
+                    value={whatsappSettings.mensagemBoasVindas}
+                    onChange={(e) => setWhatsappSettings(prev => ({ ...prev, mensagemBoasVindas: e.target.value }))}
+                    rows={3}
+                    className="w-full p-2.5 bg-surface rounded-xl border border-outline-variant/60 focus:outline-none focus:ring-1 focus:ring-primary/40 font-medium font-sans text-[13px]"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="font-bold text-[13px] text-on-surface-variant">Mensagem fora do horário de atendimento</label>
+                  <textarea
+                    value={whatsappSettings.mensagemForaHorario}
+                    onChange={(e) => setWhatsappSettings(prev => ({ ...prev, mensagemForaHorario: e.target.value }))}
+                    rows={3}
+                    className="w-full p-2.5 bg-surface rounded-xl border border-outline-variant/60 focus:outline-none focus:ring-1 focus:ring-primary/40 font-medium font-sans text-[13px]"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <label className="font-bold text-[13px] text-on-surface-variant">Horário de atendimento</label>
+                  <div className="space-y-1.5">
+                    {([
+                      ['dom', 'Domingo'], ['seg', 'Segunda'], ['ter', 'Terça'], ['qua', 'Quarta'],
+                      ['qui', 'Quinta'], ['sex', 'Sexta'], ['sab', 'Sábado']
+                    ] as [DiaSemana, string][]).map(([dia, label]) => {
+                      const horario = whatsappSettings.horarioAtendimento[dia];
+                      return (
+                        <div key={dia} className="flex items-center gap-3 flex-wrap">
+                          <button
+                            type="button"
+                            onClick={() => setWhatsappSettings(prev => ({
+                              ...prev,
+                              horarioAtendimento: { ...prev.horarioAtendimento, [dia]: { ...prev.horarioAtendimento[dia], ativo: !prev.horarioAtendimento[dia].ativo } }
+                            }))}
+                            className={`relative w-10 h-6 rounded-full shrink-0 transition-colors ${horario.ativo ? 'bg-emerald-500' : 'bg-outline-variant/60'}`}
+                          >
+                            <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white-pure rounded-full shadow transition-transform ${horario.ativo ? 'translate-x-4' : 'translate-x-0'}`} />
+                          </button>
+                          <span className="text-[12px] font-bold text-on-surface w-20 shrink-0">{label}</span>
+                          <input
+                            type="time"
+                            value={horario.abre}
+                            disabled={!horario.ativo}
+                            onChange={(e) => setWhatsappSettings(prev => ({ ...prev, horarioAtendimento: { ...prev.horarioAtendimento, [dia]: { ...prev.horarioAtendimento[dia], abre: e.target.value } } }))}
+                            className="p-1.5 bg-surface rounded-lg border border-outline-variant/60 focus:outline-none text-[12px] disabled:opacity-50"
+                          />
+                          <span className="text-[11px] text-on-surface-variant">até</span>
+                          <input
+                            type="time"
+                            value={horario.fecha}
+                            disabled={!horario.ativo}
+                            onChange={(e) => setWhatsappSettings(prev => ({ ...prev, horarioAtendimento: { ...prev.horarioAtendimento, [dia]: { ...prev.horarioAtendimento[dia], fecha: e.target.value } } }))}
+                            className="p-1.5 bg-surface rounded-lg border border-outline-variant/60 focus:outline-none text-[12px] disabled:opacity-50"
+                          />
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <div className="pt-2">
+                  <button
+                    onClick={handleSaveWhatsappSettings}
+                    disabled={isSavingWhatsappSettings}
+                    className="bg-primary text-white-pure px-4 py-2 rounded-xl text-[12px] font-bold hover:bg-primary/90 transition-colors disabled:opacity-60"
+                  >
+                    {isSavingWhatsappSettings ? 'Salvando...' : 'Salvar Configurações do WhatsApp'}
+                  </button>
+                </div>
+              </div>
             </div>
           </section>
         )}
@@ -6573,12 +6732,23 @@ export default function SystemPage() {
                   </div>
                   <div>
                     <h2 className="text-[18px] font-bold text-on-surface">Gabi Almeida Estética Sistema</h2>
-                    <p className="text-[13px] text-on-surface-variant font-bold">Versão atual: 3.23.0</p>
+                    <p className="text-[13px] text-on-surface-variant font-bold">Versão atual: 3.24.0</p>
                   </div>
                 </div>
 
                 <div className="space-y-4">
                   <h3 className="text-[14px] font-bold text-primary border-b border-outline-variant/30 pb-2">Histórico de Versões (Changelog)</h3>
+
+                  <div className="bg-surface-container-lowest rounded-2xl p-4 border border-outline-variant/50 mb-4">
+                    <div className="flex justify-between items-center mb-2">
+                      <span className="font-bold text-[14px] text-on-surface">Versão 3.24.0</span>
+                      <span className="text-[11px] font-bold text-on-surface-variant px-2 py-1 bg-surface-container rounded-lg">03 Outubro 2026</span>
+                    </div>
+                    <ul className="list-disc pl-5 space-y-1.5 text-[13px] text-on-surface-variant mt-3">
+                      <li><strong className="text-on-surface">Central de Atendimento WhatsApp (primeira parte):</strong> preparado o terreno para o atendimento automático pelo WhatsApp — identificação de clientes, agendamento, reagendamento, cancelamento e avisos para as profissionais, tudo reaproveitando a agenda e o cadastro já existentes, sem duplicar nada.</li>
+                      <li><strong className="text-on-surface">Novo card "WhatsApp" em Configurações:</strong> ligar/desligar o atendimento automático, editar as mensagens de boas-vindas e de fora do horário, e ajustar o horário de atendimento de cada dia — tudo pela tela, sem precisar de um novo deploy.</li>
+                    </ul>
+                  </div>
 
                   <div className="bg-surface-container-lowest rounded-2xl p-4 border border-outline-variant/50 mb-4">
                     <div className="flex justify-between items-center mb-2">

@@ -1,4 +1,4 @@
-import type { AppUser, Cliente, Agendamento, BloqueioAgenda, ListaEsperaItem, InventoryItem, Servico, Cobranca, PlanoTratamento, PlanoTratamentoItem, PlanoTratamentoSessao } from './types';
+import type { AppUser, Cliente, Agendamento, BloqueioAgenda, ListaEsperaItem, InventoryItem, Servico, Cobranca, PlanoTratamento, PlanoTratamentoItem, PlanoTratamentoSessao, WhatsappInstance, WhatsappBotSettings } from './types';
 import { dataLocalISO } from './utils';
 
 /**
@@ -348,6 +348,48 @@ export const mapPlanoTratamentoSessaoToBackend = (s: Partial<PlanoTratamentoSess
   if (s.assinaturaDispensadaMotivo !== undefined) res.assinatura_dispensada_motivo = s.assinaturaDispensadaMotivo;
   return res;
 };
+
+export const mapWhatsappInstanceToFrontend = (i: any): WhatsappInstance => ({
+  id: i.id,
+  nome: i.nome,
+  instanceName: i.instance_name,
+  numero: i.numero,
+  status: i.status,
+  conectadoEm: i.conectado_em,
+  ultimoStatusEm: i.ultimo_status_em
+});
+
+export const WHATSAPP_SETTINGS_DEFAULTS: WhatsappBotSettings = {
+  botAtivo: false,
+  mensagemBoasVindas: 'Olá! 👋 Sou o atendimento virtual do Gabi Almeida Studio. Em breve posso te ajudar a agendar, consultar ou cancelar um horário.',
+  mensagemForaHorario: 'Olá! 💕 Recebemos sua mensagem. No momento estamos fora do nosso horário de atendimento. Assim que estivermos disponíveis, continuaremos seu atendimento.',
+  horarioAtendimento: {
+    dom: { abre: '09:00', fecha: '18:00', ativo: false },
+    seg: { abre: '09:00', fecha: '19:00', ativo: true },
+    ter: { abre: '09:00', fecha: '19:00', ativo: true },
+    qua: { abre: '09:00', fecha: '19:00', ativo: true },
+    qui: { abre: '09:00', fecha: '19:00', ativo: true },
+    sex: { abre: '09:00', fecha: '19:00', ativo: true },
+    sab: { abre: '09:00', fecha: '14:00', ativo: true }
+  }
+};
+
+export const mapWhatsappSettingsRowsToFrontend = (rows: { chave: string; valor: any }[]): WhatsappBotSettings => {
+  const map: Record<string, any> = Object.fromEntries(rows.map(r => [r.chave, r.valor]));
+  return {
+    botAtivo: map['bot_ativo'] ?? WHATSAPP_SETTINGS_DEFAULTS.botAtivo,
+    mensagemBoasVindas: map['mensagem_boas_vindas'] ?? WHATSAPP_SETTINGS_DEFAULTS.mensagemBoasVindas,
+    mensagemForaHorario: map['mensagem_fora_horario'] ?? WHATSAPP_SETTINGS_DEFAULTS.mensagemForaHorario,
+    horarioAtendimento: map['horario_atendimento'] ?? WHATSAPP_SETTINGS_DEFAULTS.horarioAtendimento
+  };
+};
+
+export const mapWhatsappSettingsToRows = (s: WhatsappBotSettings): { chave: string; valor: any }[] => ([
+  { chave: 'bot_ativo', valor: s.botAtivo },
+  { chave: 'mensagem_boas_vindas', valor: s.mensagemBoasVindas },
+  { chave: 'mensagem_fora_horario', valor: s.mensagemForaHorario },
+  { chave: 'horario_atendimento', valor: s.horarioAtendimento }
+]);
 
 export const getAppointmentColorClass = (status: string, notas: string = ''): string => {
   if (notas.includes('[CONFLITO]')) {

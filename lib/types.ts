@@ -292,3 +292,30 @@ export type SystemTab =
   | 'dados-empresa'
   | 'sobre';
 
+export type WhatsappInstanceStatus = 'desconectado' | 'conectando' | 'conectado' | 'erro';
+
+export interface WhatsappInstance {
+  id: string;
+  nome: string;
+  instanceName: string;
+  numero?: string;
+  status: WhatsappInstanceStatus;
+  conectadoEm?: string;
+  ultimoStatusEm?: string;
+}
+
+export interface HorarioDia {
+  abre: string;
+  fecha: string;
+  ativo: boolean;
+}
+
+export type DiaSemana = 'dom' | 'seg' | 'ter' | 'qua' | 'qui' | 'sex' | 'sab';
+
+export interface WhatsappBotSettings {
+  botAtivo: boolean;
+  mensagemBoasVindas: string;
+  mensagemForaHorario: string;
+  horarioAtendimento: Record<DiaSemana, HorarioDia>;
+}
+
