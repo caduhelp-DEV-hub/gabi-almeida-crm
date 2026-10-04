@@ -21,3 +21,6 @@ home.png
 
 .vercel
 .env*
+
+# Documentacao com credenciais/chaves de API -- nunca commitar (repo publico)
+docs-privados/
