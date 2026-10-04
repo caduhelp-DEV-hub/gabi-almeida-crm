@@ -376,7 +376,8 @@ export const WHATSAPP_SETTINGS_DEFAULTS: WhatsappBotSettings = {
   },
   profissionalPadrao: 'Gabriela Almeida',
   lembreteHorario: '10:00',
-  mensagemLembrete: 'Olá! 💕 Passando para lembrar do seu horário amanhã ([data]) às [hora] - [procedimento]. Pode confirmar, reagendar ou cancelar respondendo aqui mesmo!'
+  mensagemLembrete: 'Olá! 💕 Passando para lembrar do seu horário amanhã ([data]) às [hora] - [procedimento]. Pode confirmar, reagendar ou cancelar respondendo aqui mesmo!',
+  confirmacaoPrazoHoras: 3
 };
 
 export const mapWhatsappSettingsRowsToFrontend = (rows: { chave: string; valor: any }[]): WhatsappBotSettings => {
@@ -388,7 +389,8 @@ export const mapWhatsappSettingsRowsToFrontend = (rows: { chave: string; valor: 
     horarioAtendimento: map['horario_atendimento'] ?? WHATSAPP_SETTINGS_DEFAULTS.horarioAtendimento,
     profissionalPadrao: map['profissional_padrao'] ?? WHATSAPP_SETTINGS_DEFAULTS.profissionalPadrao,
     lembreteHorario: map['lembrete_horario'] ?? WHATSAPP_SETTINGS_DEFAULTS.lembreteHorario,
-    mensagemLembrete: map['mensagem_lembrete'] ?? WHATSAPP_SETTINGS_DEFAULTS.mensagemLembrete
+    mensagemLembrete: map['mensagem_lembrete'] ?? WHATSAPP_SETTINGS_DEFAULTS.mensagemLembrete,
+    confirmacaoPrazoHoras: map['confirmacao_prazo_horas'] ?? WHATSAPP_SETTINGS_DEFAULTS.confirmacaoPrazoHoras
   };
 };
 
@@ -399,7 +401,8 @@ export const mapWhatsappSettingsToRows = (s: WhatsappBotSettings): { chave: stri
   { chave: 'horario_atendimento', valor: s.horarioAtendimento },
   { chave: 'profissional_padrao', valor: s.profissionalPadrao },
   { chave: 'lembrete_horario', valor: s.lembreteHorario },
-  { chave: 'mensagem_lembrete', valor: s.mensagemLembrete }
+  { chave: 'mensagem_lembrete', valor: s.mensagemLembrete },
+  { chave: 'confirmacao_prazo_horas', valor: s.confirmacaoPrazoHoras }
 ]);
 
 export const getAppointmentColorClass = (status: string, notas: string = ''): string => {

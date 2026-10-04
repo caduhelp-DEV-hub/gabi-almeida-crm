@@ -2,6 +2,10 @@
 
 Todas as mudanças notáveis neste projeto serão documentadas neste arquivo.
 
+## [3.27.0] - 2026-10-04
+### Adicionado
+- **Aviso de "não confirmou" para a profissional.** Se o cliente for lembrado do agendamento do dia seguinte e não confirmar nem cancelar dentro de um prazo (padrão 3h, ajustável em Configurações), a profissional recebe um aviso pelo WhatsApp pra ligar e confirmar manualmente — fecha a lacuna entre "mandei o lembrete" e "ninguém respondeu e ela só descobre na hora".
+
 ## [3.26.0] - 2026-10-04
 ### Adicionado
 - **Atendimento automático pelo WhatsApp ativado.** A IA agora interpreta a mensagem do cliente e, através do bot, agenda, remarca, cancela, informa preço de procedimento, confirma presença e avisa quando um pagamento foi informado — reaproveitando sempre a mesma agenda e as mesmas regras de conflito já usadas na tela.

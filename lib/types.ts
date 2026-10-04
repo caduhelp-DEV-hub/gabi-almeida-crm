@@ -322,5 +322,6 @@ export interface WhatsappBotSettings {
   profissionalPadrao: string;
   lembreteHorario: string;
   mensagemLembrete: string;
+  confirmacaoPrazoHoras: number;
 }
 
