@@ -1939,7 +1939,7 @@ export default function SystemPage() {
               <span>Acesso seguro. Todos os dados são criptografados.</span>
             </div>
             <span>© 2026 Gabi Almeida Estética.</span>
-            <span>Desenvolvido: caduhelp-dev | Ver. 3.25.0</span>
+            <span>Desenvolvido: caduhelp-dev | Ver. 3.26.0</span>
           </div>
         </div>
       </div>
@@ -6593,6 +6593,44 @@ export default function SystemPage() {
                   </div>
                 </div>
 
+                <div className="h-px bg-outline-variant/40" />
+
+                <div className="space-y-1.5">
+                  <label className="font-bold text-[13px] text-on-surface-variant">Profissional padrão para agendamentos pelo bot</label>
+                  <select
+                    value={whatsappSettings.profissionalPadrao}
+                    onChange={(e) => setWhatsappSettings(prev => ({ ...prev, profissionalPadrao: e.target.value }))}
+                    className="w-full p-2.5 bg-surface rounded-xl border border-outline-variant/60 focus:outline-none focus:ring-1 focus:ring-primary/40 font-medium font-sans text-[13px]"
+                  >
+                    {appUsers.filter(u => u.status === 'active').map(u => (
+                      <option key={u.id} value={u.name}>{u.name}</option>
+                    ))}
+                  </select>
+                  <p className="text-[11px] text-on-surface-variant">Usada quando o cliente não diz com quem quer agendar.</p>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="font-bold text-[13px] text-on-surface-variant">Horário do lembrete diário</label>
+                  <input
+                    type="time"
+                    value={whatsappSettings.lembreteHorario}
+                    onChange={(e) => setWhatsappSettings(prev => ({ ...prev, lembreteHorario: e.target.value }))}
+                    className="p-2.5 bg-surface rounded-xl border border-outline-variant/60 focus:outline-none focus:ring-1 focus:ring-primary/40 font-medium font-sans text-[13px]"
+                  />
+                  <p className="text-[11px] text-on-surface-variant">Horário (fuso de São Paulo) em que o bot avisa quem tem agendamento no dia seguinte.</p>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="font-bold text-[13px] text-on-surface-variant">Mensagem do lembrete</label>
+                  <textarea
+                    value={whatsappSettings.mensagemLembrete}
+                    onChange={(e) => setWhatsappSettings(prev => ({ ...prev, mensagemLembrete: e.target.value }))}
+                    rows={3}
+                    className="w-full p-2.5 bg-surface rounded-xl border border-outline-variant/60 focus:outline-none focus:ring-1 focus:ring-primary/40 font-medium font-sans text-[13px]"
+                  />
+                  <p className="text-[10px] text-on-surface-variant">Use [data], [hora] e [procedimento] como variáveis dinâmicas.</p>
+                </div>
+
                 <div className="pt-2">
                   <button
                     onClick={handleSaveWhatsappSettings}
@@ -6694,12 +6732,23 @@ export default function SystemPage() {
                   </div>
                   <div>
                     <h2 className="text-[18px] font-bold text-on-surface">Gabi Almeida Estética Sistema</h2>
-                    <p className="text-[13px] text-on-surface-variant font-bold">Versão atual: 3.25.0</p>
+                    <p className="text-[13px] text-on-surface-variant font-bold">Versão atual: 3.26.0</p>
                   </div>
                 </div>
 
                 <div className="space-y-4">
                   <h3 className="text-[14px] font-bold text-primary border-b border-outline-variant/30 pb-2">Histórico de Versões (Changelog)</h3>
+
+                  <div className="bg-surface-container-lowest rounded-2xl p-4 border border-outline-variant/50 mb-4">
+                    <div className="flex justify-between items-center mb-2">
+                      <span className="font-bold text-[14px] text-on-surface">Versão 3.26.0</span>
+                      <span className="text-[11px] font-bold text-on-surface-variant px-2 py-1 bg-surface-container rounded-lg">04 Outubro 2026</span>
+                    </div>
+                    <ul className="list-disc pl-5 space-y-1.5 text-[13px] text-on-surface-variant mt-3">
+                      <li><strong className="text-on-surface">Atendimento automático pelo WhatsApp ativado:</strong> a IA interpreta a mensagem do cliente e o bot agenda, remarca, cancela, informa preço, confirma presença e avisa quando um pagamento foi informado — sempre pela mesma agenda e as mesmas regras de conflito da tela.</li>
+                      <li><strong className="text-on-surface">Novos ajustes no card "WhatsApp" em Configurações:</strong> profissional padrão do bot, horário do lembrete diário e texto do lembrete (com variáveis [nome], [data], [hora], [procedimento]) — tudo pela tela, sem precisar de deploy.</li>
+                    </ul>
+                  </div>
 
                   <div className="bg-surface-container-lowest rounded-2xl p-4 border border-outline-variant/50 mb-4">
                     <div className="flex justify-between items-center mb-2">

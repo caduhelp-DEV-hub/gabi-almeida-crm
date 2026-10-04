@@ -319,5 +319,8 @@ export interface WhatsappBotSettings {
   mensagemBoasVindas: string;
   mensagemForaHorario: string;
   horarioAtendimento: Record<DiaSemana, HorarioDia>;
+  profissionalPadrao: string;
+  lembreteHorario: string;
+  mensagemLembrete: string;
 }
 

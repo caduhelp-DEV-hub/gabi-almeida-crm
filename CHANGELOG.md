@@ -2,6 +2,11 @@
 
 Todas as mudanças notáveis neste projeto serão documentadas neste arquivo.
 
+## [3.26.0] - 2026-10-04
+### Adicionado
+- **Atendimento automático pelo WhatsApp ativado.** A IA agora interpreta a mensagem do cliente e, através do bot, agenda, remarca, cancela, informa preço de procedimento, confirma presença e avisa quando um pagamento foi informado — reaproveitando sempre a mesma agenda e as mesmas regras de conflito já usadas na tela.
+- **Novos ajustes no card "WhatsApp" em Configurações:** profissional padrão oferecida pelo bot, horário do lembrete diário e o texto do lembrete (com variáveis `[nome]`, `[data]`, `[hora]`, `[procedimento]`) — tudo editável pela tela, sem precisar de um novo deploy.
+
 ## [3.25.0] - 2026-10-06
 ### Adicionado
 - **API para o bot de WhatsApp agendar de verdade.** Três rotas novas e protegidas (`/api/bot/disponibilidade`, `/api/bot/agendamentos`, com criar/reagendar/cancelar) para o serviço de atendimento via WhatsApp consultar horários livres e criar/alterar agendamentos — sempre com a mesma checagem de conflito e bloqueio que a tela já usa, nunca uma lógica paralela.

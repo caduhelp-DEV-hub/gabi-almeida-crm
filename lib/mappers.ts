@@ -373,7 +373,10 @@ export const WHATSAPP_SETTINGS_DEFAULTS: WhatsappBotSettings = {
     qui: { abre: '09:00', fecha: '19:00', ativo: true },
     sex: { abre: '09:00', fecha: '19:00', ativo: true },
     sab: { abre: '09:00', fecha: '14:00', ativo: true }
-  }
+  },
+  profissionalPadrao: 'Gabriela Almeida',
+  lembreteHorario: '10:00',
+  mensagemLembrete: 'Olá! 💕 Passando para lembrar do seu horário amanhã ([data]) às [hora] - [procedimento]. Pode confirmar, reagendar ou cancelar respondendo aqui mesmo!'
 };
 
 export const mapWhatsappSettingsRowsToFrontend = (rows: { chave: string; valor: any }[]): WhatsappBotSettings => {
@@ -382,7 +385,10 @@ export const mapWhatsappSettingsRowsToFrontend = (rows: { chave: string; valor: 
     botAtivo: map['bot_ativo'] ?? WHATSAPP_SETTINGS_DEFAULTS.botAtivo,
     mensagemBoasVindas: map['mensagem_boas_vindas'] ?? WHATSAPP_SETTINGS_DEFAULTS.mensagemBoasVindas,
     mensagemForaHorario: map['mensagem_fora_horario'] ?? WHATSAPP_SETTINGS_DEFAULTS.mensagemForaHorario,
-    horarioAtendimento: map['horario_atendimento'] ?? WHATSAPP_SETTINGS_DEFAULTS.horarioAtendimento
+    horarioAtendimento: map['horario_atendimento'] ?? WHATSAPP_SETTINGS_DEFAULTS.horarioAtendimento,
+    profissionalPadrao: map['profissional_padrao'] ?? WHATSAPP_SETTINGS_DEFAULTS.profissionalPadrao,
+    lembreteHorario: map['lembrete_horario'] ?? WHATSAPP_SETTINGS_DEFAULTS.lembreteHorario,
+    mensagemLembrete: map['mensagem_lembrete'] ?? WHATSAPP_SETTINGS_DEFAULTS.mensagemLembrete
   };
 };
 
@@ -390,7 +396,10 @@ export const mapWhatsappSettingsToRows = (s: WhatsappBotSettings): { chave: stri
   { chave: 'bot_ativo', valor: s.botAtivo },
   { chave: 'mensagem_boas_vindas', valor: s.mensagemBoasVindas },
   { chave: 'mensagem_fora_horario', valor: s.mensagemForaHorario },
-  { chave: 'horario_atendimento', valor: s.horarioAtendimento }
+  { chave: 'horario_atendimento', valor: s.horarioAtendimento },
+  { chave: 'profissional_padrao', valor: s.profissionalPadrao },
+  { chave: 'lembrete_horario', valor: s.lembreteHorario },
+  { chave: 'mensagem_lembrete', valor: s.mensagemLembrete }
 ]);
 
 export const getAppointmentColorClass = (status: string, notas: string = ''): string => {
