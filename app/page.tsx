@@ -21,6 +21,11 @@ import { usePlanosResumoCliente } from '../hooks/usePlanosResumoCliente';
 import type { AnamneseFormPayload } from '../components/AnamneseForm';
 import { ANAMNESE_TEMPLATES, type AnamneseTemplateId } from '../lib/anamneseTemplates';
 import {
+  checkTimeOverlap,
+  getServiceDuration as getServiceDurationPure,
+  findBlockingBlock as findBlockingBlockPure,
+} from '../lib/availability';
+import {
   mapUserToFrontend,
   mapClienteToFrontend,
   mapClienteToBackend,
@@ -63,19 +68,6 @@ import type {
   AnamneseDocumentoConteudo,
   TimelineItem
 } from '../lib/types';
-
-const checkTimeOverlap = (time1: string, dur1: number, time2: string, dur2: number) => {
-  if (!time1 || !time2) return false;
-  const t1 = time1.split(':').map(Number);
-  const start1 = t1[0] * 60 + t1[1];
-  const end1 = start1 + dur1;
-
-  const t2 = time2.split(':').map(Number);
-  const start2 = t2[0] * 60 + t2[1];
-  const end2 = start2 + dur2;
-
-  return start1 < end2 && start2 < end1;
-};
 
 // Helpers for dynamic styling
 const getProcedureStyles = (procName: string) => {
@@ -1367,42 +1359,12 @@ export default function SystemPage() {
   }, [isAuthenticated, selectedPatientId, versaoClientes]);
 
   // Handle new appointment submission
-  const getServiceDuration = (procedureName: string) => {
-    if (!procedureName) return 30;
-    const names = procedureName.split(' + ');
-    let totalDur = 0;
-    names.forEach(name => {
-      const s = services.find(srv => srv.nome.trim() === name.trim());
-      if (s && s.duracao) {
-         let d = s.duracao.toLowerCase().trim();
-         if (d.includes('h')) {
-           const parts = d.split('h');
-           const hours = parseInt(parts[0]) || 0;
-           const mins = parseInt(parts[1]) || 0;
-           totalDur += (hours * 60) + mins;
-         } else {
-           totalDur += parseInt(d) || 30;
-         }
-      } else {
-         totalDur += 30;
-      }
-    });
-    return totalDur > 0 ? totalDur : 30;
-  };
-
-  // Bloqueio que cobre um horario: retorna o bloqueio (para exibir a descricao) ou undefined.
-  const findBlockingBlock = (date: string, timeHHMM: string, durMin: number, profissional: string) => {
-    return blocks.find(b => {
-      if (b.data !== date) return false;
-      if (b.profissional !== profissional) return false;
-      const durB = b.diaInteiro
-        ? 24 * 60
-        : (parseInt(b.horaFim.split(':')[0]) * 60 + parseInt(b.horaFim.split(':')[1]))
-          - (parseInt(b.horaInicio.split(':')[0]) * 60 + parseInt(b.horaInicio.split(':')[1]));
-      const inicio = b.diaInteiro ? '00:00' : b.horaInicio;
-      return checkTimeOverlap(inicio.slice(0, 5), durB, timeHHMM, durMin);
-    });
-  };
+  // Wrappers finos sobre lib/availability.ts (fonte unica de verdade, tambem
+  // usada pelas rotas app/api/bot/* para o atendimento via WhatsApp) --
+  // fecham sobre o state local (services/blocks) pra nao mudar os call-sites.
+  const getServiceDuration = (procedureName: string) => getServiceDurationPure(services, procedureName);
+  const findBlockingBlock = (date: string, timeHHMM: string, durMin: number, profissional: string) =>
+    findBlockingBlockPure(blocks, date, timeHHMM, durMin, profissional);
 
   const addInterval = (dateStr: string, type: 'semanal' | 'quinzenal' | 'mensal', n: number) => {
     const [y, m, d] = dateStr.split('-').map(Number);
@@ -1977,7 +1939,7 @@ export default function SystemPage() {
               <span>Acesso seguro. Todos os dados são criptografados.</span>
             </div>
             <span>© 2026 Gabi Almeida Estética.</span>
-            <span>Desenvolvido: caduhelp-dev | Ver. 3.24.0</span>
+            <span>Desenvolvido: caduhelp-dev | Ver. 3.25.0</span>
           </div>
         </div>
       </div>
@@ -6732,12 +6694,22 @@ export default function SystemPage() {
                   </div>
                   <div>
                     <h2 className="text-[18px] font-bold text-on-surface">Gabi Almeida Estética Sistema</h2>
-                    <p className="text-[13px] text-on-surface-variant font-bold">Versão atual: 3.24.0</p>
+                    <p className="text-[13px] text-on-surface-variant font-bold">Versão atual: 3.25.0</p>
                   </div>
                 </div>
 
                 <div className="space-y-4">
                   <h3 className="text-[14px] font-bold text-primary border-b border-outline-variant/30 pb-2">Histórico de Versões (Changelog)</h3>
+
+                  <div className="bg-surface-container-lowest rounded-2xl p-4 border border-outline-variant/50 mb-4">
+                    <div className="flex justify-between items-center mb-2">
+                      <span className="font-bold text-[14px] text-on-surface">Versão 3.25.0</span>
+                      <span className="text-[11px] font-bold text-on-surface-variant px-2 py-1 bg-surface-container rounded-lg">06 Outubro 2026</span>
+                    </div>
+                    <ul className="list-disc pl-5 space-y-1.5 text-[13px] text-on-surface-variant mt-3">
+                      <li><strong className="text-on-surface">API para o atendimento via WhatsApp agendar de verdade:</strong> o bot agora consegue consultar horários livres e criar/reagendar/cancelar agendamentos reais, sempre respeitando os mesmos bloqueios e conflitos já aplicados na Agenda.</li>
+                    </ul>
+                  </div>
 
                   <div className="bg-surface-container-lowest rounded-2xl p-4 border border-outline-variant/50 mb-4">
                     <div className="flex justify-between items-center mb-2">

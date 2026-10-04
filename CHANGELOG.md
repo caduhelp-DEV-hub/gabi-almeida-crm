@@ -2,6 +2,14 @@
 
 Todas as mudanças notáveis neste projeto serão documentadas neste arquivo.
 
+## [3.25.0] - 2026-10-06
+### Adicionado
+- **API para o bot de WhatsApp agendar de verdade.** Três rotas novas e protegidas (`/api/bot/disponibilidade`, `/api/bot/agendamentos`, com criar/reagendar/cancelar) para o serviço de atendimento via WhatsApp consultar horários livres e criar/alterar agendamentos — sempre com a mesma checagem de conflito e bloqueio que a tela já usa, nunca uma lógica paralela.
+- Campo `origem` do agendamento agora aparece no sistema (os vindos do WhatsApp ficam marcados `WHATSAPP_BOT`, o resto continua `ADMIN`), preparando o terreno para medir quantos agendamentos vêm de cada canal.
+
+### Técnico
+- A lógica de disponibilidade e conflito de horário, que só existia presa dentro da tela da Agenda, foi extraída para um módulo próprio (`lib/availability.ts`) reaproveitado tanto pela tela quanto pela API nova — elimina o risco de a Agenda e o WhatsApp decidirem coisas diferentes sobre o mesmo horário.
+
 ## [3.24.0] - 2026-10-03
 ### Adicionado
 - **Central de Atendimento WhatsApp — infraestrutura (Sprint 1).** Primeira peça de um novo módulo que vai trazer atendimento automático pelo WhatsApp: identificação de clientes, agendamento, reagendamento, cancelamento e avisos para as profissionais. Nesta entrega: as tabelas novas no banco (contatos, conversas, mensagens, histórico de eventos) e um serviço dedicado, separado deste CRM, que fala com a Evolution API — sem duplicar a agenda nem o cadastro de clientes já existentes.

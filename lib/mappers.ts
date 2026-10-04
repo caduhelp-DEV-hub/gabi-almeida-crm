@@ -119,7 +119,8 @@ export const mapAgendamentoToFrontend = (a: any): Agendamento => ({
   categoria: a.categoria,
   notas: a.notas,
   data: a.data || dataLocalISO(),
-  valor: a.valor !== undefined && a.valor !== null ? Number(a.valor) : undefined
+  valor: a.valor !== undefined && a.valor !== null ? Number(a.valor) : undefined,
+  origem: a.origem
 });
 
 export const mapAgendamentoToBackend = (a: Partial<Agendamento>): Record<string, unknown> => {
@@ -136,6 +137,7 @@ export const mapAgendamentoToBackend = (a: Partial<Agendamento>): Record<string,
   if (a.notas !== undefined) res.notas = a.notas;
   if (a.data !== undefined) res.data = a.data;
   if (a.valor !== undefined) res.valor = a.valor;
+  if (a.origem !== undefined) res.origem = a.origem;
   return res;
 };
 

@@ -96,6 +96,8 @@ export interface Agendamento {
   notas?: string;
   data: string;
   valor?: number;
+  /** De onde veio o agendamento. Default 'ADMIN' no banco para os já existentes. */
+  origem?: 'ADMIN' | 'WHATSAPP_BOT';
 }
 
 export interface BloqueioAgenda {
