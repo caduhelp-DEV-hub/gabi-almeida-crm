@@ -2,6 +2,11 @@
 
 Todas as mudanças notáveis neste projeto serão documentadas neste arquivo.
 
+## [3.28.0] - 2026-10-05
+### Adicionado
+- **Aviso final + cancelamento automático.** Perto da hora do agendamento (padrão 3h antes), o bot manda um último aviso ao cliente avisando que, sem resposta, o horário será cancelado — e já avisa a profissional também. Se em 30 minutos (ajustável) ninguém agir (cliente não responde e a profissional não marca "Confirmado" na Agenda), o bot cancela de verdade e libera o horário. Agendamentos marcados em cima da hora não entram nessa regra. Quem está na Lista de Espera com procedimento/profissional compatível é avisado automaticamente que o horário abriu.
+- Três novos campos em Configurações > WhatsApp: antecedência do aviso final, prazo até cancelar, e os textos das três mensagens novas (aviso final, cancelamento automático, lista de espera).
+
 ## [3.27.0] - 2026-10-04
 ### Adicionado
 - **Aviso de "não confirmou" para a profissional.** Se o cliente for lembrado do agendamento do dia seguinte e não confirmar nem cancelar dentro de um prazo (padrão 3h, ajustável em Configurações), a profissional recebe um aviso pelo WhatsApp pra ligar e confirmar manualmente — fecha a lacuna entre "mandei o lembrete" e "ninguém respondeu e ela só descobre na hora".

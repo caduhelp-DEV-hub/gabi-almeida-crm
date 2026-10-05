@@ -377,7 +377,12 @@ export const WHATSAPP_SETTINGS_DEFAULTS: WhatsappBotSettings = {
   profissionalPadrao: 'Gabriela Almeida',
   lembreteHorario: '10:00',
   mensagemLembrete: 'Olá! 💕 Passando para lembrar do seu horário amanhã ([data]) às [hora] - [procedimento]. Pode confirmar, reagendar ou cancelar respondendo aqui mesmo!',
-  confirmacaoPrazoHoras: 3
+  confirmacaoPrazoHoras: 3,
+  avisoFinalAntecedenciaHoras: 3,
+  avisoFinalPrazoMinutos: 30,
+  mensagemAvisoFinal: 'Olá! ⚠️ Seu horário é hoje às [hora] ([procedimento]) e está chegando a hora! Se eu não tiver resposta sua em até [prazo] minutos, vou precisar cancelar automaticamente pra liberar o horário pra outra pessoa. Pode confirmar, reagendar ou cancelar respondendo aqui!',
+  mensagemCancelamentoAutomatico: 'Como não tive resposta a tempo, cancelei seu horário de hoje às [hora] ([procedimento]) pra liberar pra outras pessoas. Se quiser remarcar, é só me chamar! 💕',
+  mensagemListaEspera: 'Olá! 🌹 Abriu um horário em [data] às [hora] para [procedimento]. Se ainda tiver interesse, responde aqui que eu confirmo pra você!'
 };
 
 export const mapWhatsappSettingsRowsToFrontend = (rows: { chave: string; valor: any }[]): WhatsappBotSettings => {
@@ -390,7 +395,12 @@ export const mapWhatsappSettingsRowsToFrontend = (rows: { chave: string; valor: 
     profissionalPadrao: map['profissional_padrao'] ?? WHATSAPP_SETTINGS_DEFAULTS.profissionalPadrao,
     lembreteHorario: map['lembrete_horario'] ?? WHATSAPP_SETTINGS_DEFAULTS.lembreteHorario,
     mensagemLembrete: map['mensagem_lembrete'] ?? WHATSAPP_SETTINGS_DEFAULTS.mensagemLembrete,
-    confirmacaoPrazoHoras: map['confirmacao_prazo_horas'] ?? WHATSAPP_SETTINGS_DEFAULTS.confirmacaoPrazoHoras
+    confirmacaoPrazoHoras: map['confirmacao_prazo_horas'] ?? WHATSAPP_SETTINGS_DEFAULTS.confirmacaoPrazoHoras,
+    avisoFinalAntecedenciaHoras: map['aviso_final_antecedencia_horas'] ?? WHATSAPP_SETTINGS_DEFAULTS.avisoFinalAntecedenciaHoras,
+    avisoFinalPrazoMinutos: map['aviso_final_prazo_minutos'] ?? WHATSAPP_SETTINGS_DEFAULTS.avisoFinalPrazoMinutos,
+    mensagemAvisoFinal: map['mensagem_aviso_final'] ?? WHATSAPP_SETTINGS_DEFAULTS.mensagemAvisoFinal,
+    mensagemCancelamentoAutomatico: map['mensagem_cancelamento_automatico'] ?? WHATSAPP_SETTINGS_DEFAULTS.mensagemCancelamentoAutomatico,
+    mensagemListaEspera: map['mensagem_lista_espera'] ?? WHATSAPP_SETTINGS_DEFAULTS.mensagemListaEspera
   };
 };
 
@@ -402,7 +412,12 @@ export const mapWhatsappSettingsToRows = (s: WhatsappBotSettings): { chave: stri
   { chave: 'profissional_padrao', valor: s.profissionalPadrao },
   { chave: 'lembrete_horario', valor: s.lembreteHorario },
   { chave: 'mensagem_lembrete', valor: s.mensagemLembrete },
-  { chave: 'confirmacao_prazo_horas', valor: s.confirmacaoPrazoHoras }
+  { chave: 'confirmacao_prazo_horas', valor: s.confirmacaoPrazoHoras },
+  { chave: 'aviso_final_antecedencia_horas', valor: s.avisoFinalAntecedenciaHoras },
+  { chave: 'aviso_final_prazo_minutos', valor: s.avisoFinalPrazoMinutos },
+  { chave: 'mensagem_aviso_final', valor: s.mensagemAvisoFinal },
+  { chave: 'mensagem_cancelamento_automatico', valor: s.mensagemCancelamentoAutomatico },
+  { chave: 'mensagem_lista_espera', valor: s.mensagemListaEspera }
 ]);
 
 export const getAppointmentColorClass = (status: string, notas: string = ''): string => {

@@ -1939,7 +1939,7 @@ export default function SystemPage() {
               <span>Acesso seguro. Todos os dados são criptografados.</span>
             </div>
             <span>© 2026 Gabi Almeida Estética.</span>
-            <span>Desenvolvido: caduhelp-dev | Ver. 3.27.0</span>
+            <span>Desenvolvido: caduhelp-dev | Ver. 3.28.0</span>
           </div>
         </div>
       </div>
@@ -6644,6 +6644,73 @@ export default function SystemPage() {
                   <p className="text-[11px] text-on-surface-variant">Se o cliente for lembrado e não confirmar nem cancelar nesse prazo, a profissional recebe um aviso pra ligar e confirmar manualmente.</p>
                 </div>
 
+                <div className="h-px bg-outline-variant/40" />
+
+                <div>
+                  <p className="font-bold text-[13px] text-on-surface mb-1">Aviso final + cancelamento automático</p>
+                  <p className="text-[11px] text-on-surface-variant mb-3">Perto da hora do agendamento, o bot manda um último aviso. Se ninguém responder nem agir a tempo, o horário é cancelado de verdade e oferecido pra quem está na Lista de Espera.</p>
+                </div>
+
+                <div className="flex gap-4 flex-wrap">
+                  <div className="space-y-1.5">
+                    <label className="font-bold text-[13px] text-on-surface-variant">Enviar aviso final (horas antes)</label>
+                    <input
+                      type="number"
+                      min={1}
+                      max={12}
+                      value={whatsappSettings.avisoFinalAntecedenciaHoras}
+                      onChange={(e) => setWhatsappSettings(prev => ({ ...prev, avisoFinalAntecedenciaHoras: Math.max(1, Number(e.target.value) || 1) }))}
+                      className="w-24 p-2.5 bg-surface rounded-xl border border-outline-variant/60 focus:outline-none focus:ring-1 focus:ring-primary/40 font-medium font-sans text-[13px]"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="font-bold text-[13px] text-on-surface-variant">Cancelar automaticamente após (minutos)</label>
+                    <input
+                      type="number"
+                      min={5}
+                      max={180}
+                      step={5}
+                      value={whatsappSettings.avisoFinalPrazoMinutos}
+                      onChange={(e) => setWhatsappSettings(prev => ({ ...prev, avisoFinalPrazoMinutos: Math.max(5, Number(e.target.value) || 5) }))}
+                      className="w-28 p-2.5 bg-surface rounded-xl border border-outline-variant/60 focus:outline-none focus:ring-1 focus:ring-primary/40 font-medium font-sans text-[13px]"
+                    />
+                  </div>
+                </div>
+                <p className="text-[11px] text-on-surface-variant -mt-2">Agendamentos marcados com menos de {whatsappSettings.avisoFinalAntecedenciaHoras + 1}h de antecedência não entram nessa regra. Se a profissional marcar o horário como "Confirmado" na Agenda, o cancelamento automático não acontece.</p>
+
+                <div className="space-y-1.5">
+                  <label className="font-bold text-[13px] text-on-surface-variant">Mensagem do aviso final (pro cliente)</label>
+                  <textarea
+                    value={whatsappSettings.mensagemAvisoFinal}
+                    onChange={(e) => setWhatsappSettings(prev => ({ ...prev, mensagemAvisoFinal: e.target.value }))}
+                    rows={3}
+                    className="w-full p-2.5 bg-surface rounded-xl border border-outline-variant/60 focus:outline-none focus:ring-1 focus:ring-primary/40 font-medium font-sans text-[13px]"
+                  />
+                  <p className="text-[10px] text-on-surface-variant">Use [hora], [procedimento] e [prazo] (minutos) como variáveis dinâmicas.</p>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="font-bold text-[13px] text-on-surface-variant">Mensagem de cancelamento automático (pro cliente)</label>
+                  <textarea
+                    value={whatsappSettings.mensagemCancelamentoAutomatico}
+                    onChange={(e) => setWhatsappSettings(prev => ({ ...prev, mensagemCancelamentoAutomatico: e.target.value }))}
+                    rows={3}
+                    className="w-full p-2.5 bg-surface rounded-xl border border-outline-variant/60 focus:outline-none focus:ring-1 focus:ring-primary/40 font-medium font-sans text-[13px]"
+                  />
+                  <p className="text-[10px] text-on-surface-variant">Use [hora] e [procedimento] como variáveis dinâmicas.</p>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="font-bold text-[13px] text-on-surface-variant">Mensagem para quem está na Lista de Espera</label>
+                  <textarea
+                    value={whatsappSettings.mensagemListaEspera}
+                    onChange={(e) => setWhatsappSettings(prev => ({ ...prev, mensagemListaEspera: e.target.value }))}
+                    rows={3}
+                    className="w-full p-2.5 bg-surface rounded-xl border border-outline-variant/60 focus:outline-none focus:ring-1 focus:ring-primary/40 font-medium font-sans text-[13px]"
+                  />
+                  <p className="text-[10px] text-on-surface-variant">Use [data], [hora] e [procedimento] como variáveis dinâmicas. Enviada a quem está "Aguardando" com procedimento/profissional compatível com o horário liberado.</p>
+                </div>
+
                 <div className="pt-2">
                   <button
                     onClick={handleSaveWhatsappSettings}
@@ -6745,12 +6812,22 @@ export default function SystemPage() {
                   </div>
                   <div>
                     <h2 className="text-[18px] font-bold text-on-surface">Gabi Almeida Estética Sistema</h2>
-                    <p className="text-[13px] text-on-surface-variant font-bold">Versão atual: 3.27.0</p>
+                    <p className="text-[13px] text-on-surface-variant font-bold">Versão atual: 3.28.0</p>
                   </div>
                 </div>
 
                 <div className="space-y-4">
                   <h3 className="text-[14px] font-bold text-primary border-b border-outline-variant/30 pb-2">Histórico de Versões (Changelog)</h3>
+
+                  <div className="bg-surface-container-lowest rounded-2xl p-4 border border-outline-variant/50 mb-4">
+                    <div className="flex justify-between items-center mb-2">
+                      <span className="font-bold text-[14px] text-on-surface">Versão 3.28.0</span>
+                      <span className="text-[11px] font-bold text-on-surface-variant px-2 py-1 bg-surface-container rounded-lg">05 Outubro 2026</span>
+                    </div>
+                    <ul className="list-disc pl-5 space-y-1.5 text-[13px] text-on-surface-variant mt-3">
+                      <li><strong className="text-on-surface">Aviso final + cancelamento automático:</strong> perto da hora do agendamento, o bot avisa o cliente e a profissional que, sem resposta, o horário será cancelado. Se ninguém agir no prazo, cancela de verdade, libera o horário e avisa quem está na Lista de Espera compatível.</li>
+                    </ul>
+                  </div>
 
                   <div className="bg-surface-container-lowest rounded-2xl p-4 border border-outline-variant/50 mb-4">
                     <div className="flex justify-between items-center mb-2">

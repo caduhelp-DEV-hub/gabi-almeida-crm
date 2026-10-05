@@ -323,5 +323,10 @@ export interface WhatsappBotSettings {
   lembreteHorario: string;
   mensagemLembrete: string;
   confirmacaoPrazoHoras: number;
+  avisoFinalAntecedenciaHoras: number;
+  avisoFinalPrazoMinutos: number;
+  mensagemAvisoFinal: string;
+  mensagemCancelamentoAutomatico: string;
+  mensagemListaEspera: string;
 }
 
