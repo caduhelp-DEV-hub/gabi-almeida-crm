@@ -276,6 +276,9 @@ export default function SystemPage() {
   const [whatsappInstance, setWhatsappInstance] = useState<WhatsappInstance | null>(null);
   const [whatsappSettings, setWhatsappSettings] = useState<WhatsappBotSettings>(WHATSAPP_SETTINGS_DEFAULTS);
   const [isSavingWhatsappSettings, setIsSavingWhatsappSettings] = useState(false);
+  const [whatsappChats, setWhatsappChats] = useState<WhatsappChat[]>([]);
+  const [selectedWhatsappChat, setSelectedWhatsappChat] = useState<WhatsappChat | null>(null);
+  const [whatsappMessages, setWhatsappMessages] = useState<WhatsappMessage[]>([]);
 
   // Clientes Module Detail Tab
   const [activePatientSubTab, setActivePatientSubTab] = useState<'evolution' | 'anamnese' | 'financeiro' | 'documentos' | 'retorno' | 'planos'>('evolution');
@@ -1150,7 +1153,8 @@ export default function SystemPage() {
         { data: blks },
         { data: waits },
         { data: waInstances },
-        { data: waSettings }
+        { data: waSettings },
+        { data: waChats }
       ] = await Promise.all([
         supabase.from('clientes').select(CLIENTE_LIST_COLUMNS),
         supabase.from('agendamentos').select('*, clientes(id, nome, avatar)'),
@@ -1164,7 +1168,8 @@ export default function SystemPage() {
         supabase.from('bloqueios_agenda').select('*'),
         supabase.from('lista_espera').select('*').eq('status', 'Aguardando'),
         supabase.from('whatsapp_instances').select('*').limit(1),
-        supabase.from('whatsapp_bot_settings').select('*')
+        supabase.from('whatsapp_bot_settings').select('*'),
+        supabase.from('whatsapp_conversations').select('*, whatsapp_contacts(*)').order('last_message_at', { ascending: false })
       ]);
 
       if (pats) {
@@ -1220,6 +1225,7 @@ export default function SystemPage() {
       if (waits) setWaitlist(waits.map(mapListaEsperaToFrontend));
       if (waInstances && waInstances[0]) setWhatsappInstance(mapWhatsappInstanceToFrontend(waInstances[0]));
       if (waSettings) setWhatsappSettings(mapWhatsappSettingsRowsToFrontend(waSettings));
+      if (waChats) setWhatsappChats(waChats.map(mapWhatsappChatToFrontend));
 
       setIsInitialLoading(false);
     };
@@ -1298,6 +1304,12 @@ export default function SystemPage() {
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'users' }, () => {
         supabase.from('users').select(USER_PUBLIC_COLUMNS).then((res: any) => { const data = res.data; if (data) setAppUsers(data.map(mapUserToFrontend)); });
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'whatsapp_conversations' }, () => {
+        supabase.from('whatsapp_conversations').select('*, whatsapp_contacts(*)').order('last_message_at', { ascending: false }).then((res: any) => {
+          const data = res.data;
+          if (data) setWhatsappChats(data.map(mapWhatsappChatToFrontend));
+        });
       });
 
     // As leituras REST pegam o token sozinhas (opcao accessToken do supabase-js),
@@ -1317,6 +1329,37 @@ export default function SystemPage() {
       supabase.removeChannel(dbChangesChannel);
     };
   }, [isAuthenticated]);
+
+  // Carrega as mensagens do chat selecionado
+  useEffect(() => {
+    if (!isAuthenticated || !selectedWhatsappChat) return;
+
+    let cancelado = false;
+    supabase
+      .from('whatsapp_messages')
+      .select('*')
+      .eq('conversation_id', selectedWhatsappChat.id)
+      .order('criado_em', { ascending: true })
+      .then((res: any) => {
+        if (cancelado) return;
+        if (res.data) setWhatsappMessages(res.data.map(mapWhatsappMessageToFrontend));
+      });
+
+    // Subscrição para novas mensagens apenas deste chat
+    const msgChannel = supabase
+      .channel('chat-messages')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'whatsapp_messages', filter: `conversation_id=eq.${selectedWhatsappChat.id}` }, () => {
+        supabase.from('whatsapp_messages').select('*').eq('conversation_id', selectedWhatsappChat.id).order('criado_em', { ascending: true }).then((r: any) => {
+          if (r.data) setWhatsappMessages(r.data.map(mapWhatsappMessageToFrontend));
+        });
+      })
+      .subscribe();
+
+    return () => {
+      cancelado = true;
+      supabase.removeChannel(msgChannel);
+    };
+  }, [isAuthenticated, selectedWhatsappChat?.id]);
 
   // Carrega os campos pesados do cliente (fotos, documentos, financeiro) somente
   // quando o prontuario dele e aberto. A listagem nao precisa deles e carregar
@@ -1939,7 +1982,7 @@ export default function SystemPage() {
               <span>Acesso seguro. Todos os dados são criptografados.</span>
             </div>
             <span>© 2026 Gabi Almeida Estética.</span>
-            <span>Desenvolvido: caduhelp-dev | Ver. 3.28.0</span>
+            <span>Desenvolvido: caduhelp-dev | Ver. 3.29.0</span>
           </div>
         </div>
       </div>
@@ -6551,6 +6594,18 @@ export default function SystemPage() {
                   />
                 </div>
 
+                <div className="space-y-1.5">
+                  <label className="font-bold text-[13px] text-on-surface-variant">Reativação automática do bot (horas)</label>
+                  <input
+                    type="number"
+                    min={1}
+                    value={whatsappSettings.tempoAtivacaoAutomaticaHoras || 24}
+                    onChange={(e) => setWhatsappSettings(prev => ({ ...prev, tempoAtivacaoAutomaticaHoras: Math.max(1, Number(e.target.value) || 24) }))}
+                    className="w-24 p-2.5 bg-surface rounded-xl border border-outline-variant/60 focus:outline-none focus:ring-1 focus:ring-primary/40 font-medium font-sans text-[13px]"
+                  />
+                  <p className="text-[11px] text-on-surface-variant">Tempo em horas para o bot voltar a responder sozinho após você desativá-lo manualmente em uma conversa.</p>
+                </div>
+
                 <div className="space-y-2">
                   <label className="font-bold text-[13px] text-on-surface-variant">Horário de atendimento</label>
                   <div className="space-y-1.5">
@@ -6801,6 +6856,96 @@ export default function SystemPage() {
           </section>
         )}
 
+        {currentTab === 'whatsapp-chats' && (
+          <section className="flex-1 overflow-y-auto p-4 sm:p-8 bg-surface">
+            <div className="max-w-6xl mx-auto h-full flex flex-col md:flex-row gap-6">
+              
+              {/* Lista de Chats */}
+              <div className="w-full md:w-1/3 bg-white-pure rounded-3xl border border-outline-variant flex flex-col h-[calc(100vh-8rem)]">
+                <div className="p-4 border-b border-outline-variant/50">
+                  <h2 className="font-manrope font-bold text-[18px] text-primary">Conversas (Robô)</h2>
+                  <p className="text-[12px] text-on-surface-variant">Histórico de interações da inteligência artificial</p>
+                </div>
+                <div className="flex-1 overflow-y-auto p-2 space-y-1">
+                  {whatsappChats.length === 0 ? (
+                    <p className="text-center text-on-surface-variant text-[13px] py-8">Nenhuma conversa registrada ainda.</p>
+                  ) : (
+                    whatsappChats.map(chat => (
+                      <button
+                        key={chat.id}
+                        onClick={() => setSelectedWhatsappChat(chat)}
+                        className={`w-full text-left p-3 rounded-xl transition-colors ${selectedWhatsappChat?.id === chat.id ? 'bg-primary/10 border border-primary/20' : 'hover:bg-surface-container border border-transparent'}`}
+                      >
+                        <div className="flex justify-between items-start">
+                          <p className="font-bold text-[14px] text-on-surface">{chat.nome || chat.telefone}</p>
+                          {chat.mode === 'HUMAN' && (
+                            <span className="bg-error/10 text-error px-2 py-0.5 rounded text-[10px] font-bold">Bot Desativado</span>
+                          )}
+                        </div>
+                        <p className="text-[12px] text-on-surface-variant mt-1">{chat.telefone}</p>
+                      </button>
+                    ))
+                  )}
+                </div>
+              </div>
+
+              {/* Área de Mensagens */}
+              <div className="w-full md:w-2/3 bg-white-pure rounded-3xl border border-outline-variant flex flex-col h-[calc(100vh-8rem)]">
+                {selectedWhatsappChat ? (
+                  <>
+                    <div className="p-4 border-b border-outline-variant/50 flex justify-between items-center bg-surface-container-lowest rounded-t-3xl">
+                      <div>
+                        <h2 className="font-manrope font-bold text-[16px] text-on-surface">{selectedWhatsappChat.nome || selectedWhatsappChat.telefone}</h2>
+                        <p className="text-[12px] text-on-surface-variant">{selectedWhatsappChat.telefone}</p>
+                      </div>
+                      <button
+                        onClick={async () => {
+                          const novoStatus = selectedWhatsappChat.mode === 'BOT' ? 'HUMAN' : 'BOT';
+                          const res = await supabase.from('whatsapp_conversations').update({
+                            mode: novoStatus
+                          }).eq('id', selectedWhatsappChat.id);
+                          
+                          if (!res.error) {
+                            const updatedChat = { ...selectedWhatsappChat, mode: novoStatus as 'BOT' | 'HUMAN' };
+                            setSelectedWhatsappChat(updatedChat);
+                            setWhatsappChats(prev => prev.map(c => c.id === updatedChat.id ? updatedChat : c));
+                          }
+                        }}
+                        className={`px-4 py-2 rounded-xl font-bold text-[12px] transition-colors ${selectedWhatsappChat.mode === 'HUMAN' ? 'bg-primary text-on-primary' : 'bg-error/10 text-error hover:bg-error/20'}`}
+                      >
+                        {selectedWhatsappChat.mode === 'HUMAN' ? 'Reativar Robô' : 'Desativar Robô'}
+                      </button>
+                    </div>
+                    <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-[#e5ddd5]/30">
+                      {whatsappMessages.length === 0 ? (
+                        <p className="text-center text-on-surface-variant text-[13px] py-8">Carregando mensagens ou histórico vazio.</p>
+                      ) : (
+                        whatsappMessages.map(msg => (
+                          <div key={msg.id} className={`flex ${msg.direction === 'OUTBOUND' ? 'justify-end' : 'justify-start'}`}>
+                            <div className={`max-w-[80%] rounded-2xl p-3 ${msg.direction === 'OUTBOUND' ? 'bg-[#d9fdd3] text-[#111b21] rounded-tr-sm' : 'bg-white-pure text-[#111b21] rounded-tl-sm border border-outline-variant/30 shadow-sm'}`}>
+                              <p className="text-[14px] whitespace-pre-wrap">{msg.content}</p>
+                              <p className="text-[10px] text-right mt-1 opacity-60">
+                                {new Date(msg.createdAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                              </p>
+                            </div>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </>
+                ) : (
+                  <div className="flex-1 flex flex-col items-center justify-center text-on-surface-variant p-8 text-center">
+                    <span className="material-symbols-outlined text-[48px] opacity-20 mb-4">chat</span>
+                    <p className="font-bold">Nenhuma conversa selecionada</p>
+                    <p className="text-[13px]">Selecione um chat na lista ao lado para ver o histórico de interações do robô.</p>
+                  </div>
+                )}
+              </div>
+
+            </div>
+          </section>
+        )}
+
         {currentTab === 'sobre' && (
           <section className="flex-1 overflow-y-auto p-4 sm:p-8 bg-surface">
             <div className="max-w-4xl mx-auto space-y-6">
@@ -6812,12 +6957,24 @@ export default function SystemPage() {
                   </div>
                   <div>
                     <h2 className="text-[18px] font-bold text-on-surface">Gabi Almeida Estética Sistema</h2>
-                    <p className="text-[13px] text-on-surface-variant font-bold">Versão atual: 3.28.0</p>
+                    <p className="text-[13px] text-on-surface-variant font-bold">Versão atual: 3.29.0</p>
                   </div>
                 </div>
 
                 <div className="space-y-4">
                   <h3 className="text-[14px] font-bold text-primary border-b border-outline-variant/30 pb-2">Histórico de Versões (Changelog)</h3>
+
+                  <div className="bg-surface-container-lowest rounded-2xl p-4 border border-outline-variant/50 mb-4">
+                    <div className="flex justify-between items-center mb-2">
+                      <span className="font-bold text-[14px] text-on-surface">Versão 3.29.0</span>
+                      <span className="text-[11px] font-bold text-on-surface-variant px-2 py-1 bg-surface-container rounded-lg">06 Outubro 2026</span>
+                    </div>
+                    <ul className="list-disc pl-5 space-y-1.5 text-[13px] text-on-surface-variant mt-3">
+                      <li><strong className="text-on-surface">Histórico de Conversas (WhatsApp):</strong> Nova aba adicionada para listar o histórico de conversas atendidas pela Inteligência Artificial. Agora é possível ler as mensagens diretamente do CRM.</li>
+                      <li><strong className="text-on-surface">Controle de Ativação do Robô:</strong> Possibilidade de desativar/reativar manualmente o robô para conversas específicas, e definição de reativação automática em horas (ex: após 24h).</li>
+                      <li><strong className="text-on-surface">Inteligência de Agendamento:</strong> Filtro de "manhã vs tarde" nativo na API e restrição para mostrar apenas os horários rigorosamente dentro do plano de horário da clínica, minuto a minuto.</li>
+                    </ul>
+                  </div>
 
                   <div className="bg-surface-container-lowest rounded-2xl p-4 border border-outline-variant/50 mb-4">
                     <div className="flex justify-between items-center mb-2">

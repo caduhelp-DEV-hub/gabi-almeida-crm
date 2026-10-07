@@ -90,16 +90,15 @@ export interface GetAvailableSlotsParams {
   appointments: Agendamento[];
   blocks: BloqueioAgenda[];
   services: Servico[];
-  startHour?: number;
-  endHour?: number;
+  startMinutesFromMidnight?: number;
+  endMinutesFromMidnight?: number;
   slotMinutes?: number;
 }
 
 /**
- * Lista os horarios livres de um profissional num dia, na mesma grade de 30
- * minutos (08:00-19:00 por padrao) ja usada na grade da Agenda. Um horario e
- * livre quando nao colide com bloqueio nem com outro agendamento do mesmo
- * profissional, e cabe inteiro dentro do expediente.
+ * Lista os horarios livres de um profissional num dia, na grade configurada.
+ * Um horario e livre quando nao colide com bloqueio nem com outro agendamento
+ * do mesmo profissional, e cabe inteiro dentro do expediente.
  */
 export const getAvailableSlots = (params: GetAvailableSlotsParams): string[] => {
   const {
@@ -109,22 +108,25 @@ export const getAvailableSlots = (params: GetAvailableSlotsParams): string[] => 
     appointments,
     blocks,
     services,
-    startHour = 8,
-    endHour = 19,
+    startMinutesFromMidnight = 8 * 60, // Default 08:00
+    endMinutesFromMidnight = 19 * 60, // Default 19:00
     slotMinutes = 30,
   } = params;
 
   const slots: string[] = [];
-  const totalSlots = ((endHour - startHour) * 60) / slotMinutes;
+  const totalMinutes = endMinutesFromMidnight - startMinutesFromMidnight;
+  const totalSlots = Math.floor(totalMinutes / slotMinutes);
 
-  for (let i = 0; i < totalSlots; i++) {
-    const minutesFromStart = i * slotMinutes;
-    const hour = startHour + Math.floor(minutesFromStart / 60);
-    const minute = minutesFromStart % 60;
+  for (let i = 0; i <= totalSlots; i++) {
+    const minutesFromMidnight = startMinutesFromMidnight + i * slotMinutes;
+    const hour = Math.floor(minutesFromMidnight / 60);
+    const minute = minutesFromMidnight % 60;
+    
+    // Format label to HH:MM
     const label = `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
 
-    const endMinutesFromStart = minutesFromStart + durationMin;
-    if (startHour * 60 + endMinutesFromStart > endHour * 60) continue;
+    const endMinutesForSlot = minutesFromMidnight + durationMin;
+    if (endMinutesForSlot > endMinutesFromMidnight) continue;
 
     if (findBlockingBlock(blocks, date, label, durationMin, profissional)) continue;
     if (hasAppointmentConflict(appointments, date, label, durationMin, profissional, services)) continue;

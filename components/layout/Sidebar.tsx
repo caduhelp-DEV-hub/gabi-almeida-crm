@@ -18,6 +18,7 @@ type NavItem = { id: SystemTab; icon: string; label: string };
 const mainTabs: NavItem[] = [
   { id: 'agenda', icon: 'calendar_month', label: 'Agenda' },
   { id: 'financeiro', icon: 'payments', label: 'Cobranças' },
+  { id: 'whatsapp-chats', icon: 'chat', label: 'WhatsApp (Robô)' },
   { id: 'mensagens-pre', icon: 'chat_bubble', label: 'Msgs Pre-definidas' },
   { id: 'cadastro-cliente', icon: 'person_add', label: 'Cadastro de Clientes' },
   { id: 'clientes', icon: 'group', label: 'Prontuário (Sistema)' },

@@ -2,6 +2,12 @@
 
 Todas as mudanças notáveis neste projeto serão documentadas neste arquivo.
 
+## [3.29.0] - 2026-10-06
+### Adicionado
+- **Histórico de Conversas (WhatsApp):** Nova aba adicionada para listar o histórico de conversas atendidas pela Inteligência Artificial. Agora é possível ler as mensagens diretamente do CRM.
+- **Controle de Ativação do Robô:** Possibilidade de desativar/reativar manualmente o robô para conversas específicas, e definição de reativação automática em horas (ex: após 24h).
+- **Inteligência de Agendamento:** Filtro de "manhã vs tarde" nativo na API e restrição para mostrar apenas os horários rigorosamente dentro do plano de horário da clínica, minuto a minuto.
+
 ## [3.28.0] - 2026-10-05
 ### Adicionado
 - **Aviso final + cancelamento automático.** Perto da hora do agendamento (padrão 3h antes), o bot manda um último aviso ao cliente avisando que, sem resposta, o horário será cancelado — e já avisa a profissional também. Se em 30 minutos (ajustável) ninguém agir (cliente não responde e a profissional não marca "Confirmado" na Agenda), o bot cancela de verdade e libera o horário. Agendamentos marcados em cima da hora não entram nessa regra. Quem está na Lista de Espera com procedimento/profissional compatível é avisado automaticamente que o horário abriu.

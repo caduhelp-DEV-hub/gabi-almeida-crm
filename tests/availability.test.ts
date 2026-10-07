@@ -56,7 +56,7 @@ describe('getAvailableSlots', () => {
   };
 
   it('retorna todos os slots do expediente quando nao ha nada marcado', () => {
-    const slots = getAvailableSlots({ ...baseParams, appointments: [], blocks: [], startHour: 8, endHour: 9 });
+    const slots = getAvailableSlots({ ...baseParams, appointments: [], blocks: [], startMinutesFromMidnight: 8 * 60, endMinutesFromMidnight: 9 * 60 });
     expect(slots).toEqual(['08:00', '08:30']);
   });
 
@@ -64,7 +64,7 @@ describe('getAvailableSlots', () => {
     const appointments: Agendamento[] = [
       { id: 'a1', hora: '08:00', clienteNome: 'Cliente Teste', procedimento: 'Manicure', status: 'Confirmado', profissional: 'Gabriela Almeida', categoria: 'Estética', data: '2026-11-03' },
     ];
-    const slots = getAvailableSlots({ ...baseParams, appointments, blocks: [], startHour: 8, endHour: 9 });
+    const slots = getAvailableSlots({ ...baseParams, appointments, blocks: [], startMinutesFromMidnight: 8 * 60, endMinutesFromMidnight: 9 * 60 });
     expect(slots).toEqual(['08:30']);
   });
 
@@ -72,7 +72,7 @@ describe('getAvailableSlots', () => {
     const appointments: Agendamento[] = [
       { id: 'a1', hora: '08:00', clienteNome: 'Cliente Teste', procedimento: 'Manicure', status: 'Confirmado', profissional: 'Administrador', categoria: 'Estética', data: '2026-11-03' },
     ];
-    const slots = getAvailableSlots({ ...baseParams, appointments, blocks: [], startHour: 8, endHour: 9 });
+    const slots = getAvailableSlots({ ...baseParams, appointments, blocks: [], startMinutesFromMidnight: 8 * 60, endMinutesFromMidnight: 9 * 60 });
     expect(slots).toEqual(['08:00', '08:30']);
   });
 
@@ -80,12 +80,12 @@ describe('getAvailableSlots', () => {
     const blocks: BloqueioAgenda[] = [
       { id: 'b1', profissional: 'Gabriela Almeida', data: '2026-11-03', horaInicio: '08:00', horaFim: '08:30', diaInteiro: false, descricao: 'Folga' },
     ];
-    const slots = getAvailableSlots({ ...baseParams, appointments: [], blocks, startHour: 8, endHour: 9 });
+    const slots = getAvailableSlots({ ...baseParams, appointments: [], blocks, startMinutesFromMidnight: 8 * 60, endMinutesFromMidnight: 9 * 60 });
     expect(slots).toEqual(['08:30']);
   });
 
   it('nao oferece slot cujo procedimento nao caberia antes do fechamento', () => {
-    const slots = getAvailableSlots({ ...baseParams, durationMin: 60, appointments: [], blocks: [], startHour: 8, endHour: 9 });
+    const slots = getAvailableSlots({ ...baseParams, durationMin: 60, appointments: [], blocks: [], startMinutesFromMidnight: 8 * 60, endMinutesFromMidnight: 9 * 60 });
     expect(slots).toEqual(['08:00']);
   });
 });

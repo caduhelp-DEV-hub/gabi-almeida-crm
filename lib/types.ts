@@ -292,7 +292,8 @@ export type SystemTab =
   | 'relatorios-melhores-clientes'
   | 'configuracoes'
   | 'dados-empresa'
-  | 'sobre';
+  | 'sobre'
+  | 'whatsapp-chats';
 
 export type WhatsappInstanceStatus = 'desconectado' | 'conectando' | 'conectado' | 'erro';
 
@@ -304,6 +305,24 @@ export interface WhatsappInstance {
   status: WhatsappInstanceStatus;
   conectadoEm?: string;
   ultimoStatusEm?: string;
+}
+
+export interface WhatsappChat {
+  id: string;
+  contactId: string;
+  telefone: string;
+  nome?: string;
+  mode: 'BOT' | 'HUMAN';
+  status: string;
+  lastMessageAt?: string;
+}
+
+export interface WhatsappMessage {
+  id: string;
+  conversationId: string;
+  direction: 'INBOUND' | 'OUTBOUND';
+  content: string;
+  createdAt: string;
 }
 
 export interface HorarioDia {
@@ -328,5 +347,6 @@ export interface WhatsappBotSettings {
   mensagemAvisoFinal: string;
   mensagemCancelamentoAutomatico: string;
   mensagemListaEspera: string;
+  tempoAtivacaoAutomaticaHoras: number;
 }
 
