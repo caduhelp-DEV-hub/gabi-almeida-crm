@@ -45,7 +45,7 @@ export async function GET(request: NextRequest) {
     
     let tempoHoras = 24; // fallback padrão
     if (settings && settings.length > 0) {
-      const mapSettings = Object.fromEntries(settings.map(r => [r.chave, r.valor]));
+      const mapSettings = Object.fromEntries(settings.map((r: any) => [r.chave, r.valor]));
       if (mapSettings['tempo_ativacao_automatica_horas']) {
         tempoHoras = Number(mapSettings['tempo_ativacao_automatica_horas']);
       }

@@ -47,7 +47,7 @@ export async function GET(request: NextRequest) {
     let endMins = 19 * 60;
     
     if (settings && settings.length > 0) {
-      const mapSettings = Object.fromEntries(settings.map(r => [r.chave, r.valor]));
+      const mapSettings = Object.fromEntries(settings.map((r: any) => [r.chave, r.valor]));
       const horario = mapSettings['horario_atendimento'];
       if (horario && horario[diaSemana]) {
         if (!horario[diaSemana].ativo) {
