@@ -348,5 +348,8 @@ export interface WhatsappBotSettings {
   mensagemCancelamentoAutomatico: string;
   mensagemListaEspera: string;
   tempoAtivacaoAutomaticaHoras: number;
+  digitacaoMinSegundos: number;
+  digitacaoMaxSegundos: number;
+  mensagemSemHorario: string;
 }
 

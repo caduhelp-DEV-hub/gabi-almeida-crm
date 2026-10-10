@@ -2,6 +2,15 @@
 
 Todas as mudanças notáveis neste projeto serão documentadas neste arquivo.
 
+## [3.30.0] - 2026-10-10
+### Adicionado
+- **Pausa de "digitando..." ajustável.** O robô mostrava o "digitando..." por no máximo 3,5 s, e a espera era aplicada em dobro no código. Agora a pausa é proporcional ao tamanho da resposta, com mínimo e máximo editáveis em Configurações > WhatsApp (padrão 2,5 s a 7 s).
+- **Mensagem de "sem horário disponível" editável.** Quando o dia ou período pedido está fechado, bloqueado ou lotado, o robô responde com um texto cordial pedindo outra data. A variável `[quando]` vira "em 15/10/2026" ou "na tarde de 15/10/2026".
+
+### Corrigido
+- **Respostas embaralhadas/cortadas.** O bot processava em paralelo duas mensagens seguidas do mesmo cliente, então as respostas podiam se cruzar ou o estado da conversa ser lido desatualizado. Agora cada conversa é processada uma mensagem por vez, na ordem de chegada.
+- **Reagendamento sem horário.** Ao não haver horário na data escolhida, a conversa ficava presa no passo "período" e a próxima mensagem do cliente era lida como período. Agora volta ao passo "data".
+
 ## [3.29.0] - 2026-10-06
 ### Adicionado
 - **Histórico de Conversas (WhatsApp):** Nova aba adicionada para listar o histórico de conversas atendidas pela Inteligência Artificial. Agora é possível ler as mensagens diretamente do CRM.

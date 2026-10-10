@@ -1986,7 +1986,7 @@ export default function SystemPage() {
               <span>Acesso seguro. Todos os dados são criptografados.</span>
             </div>
             <span>© 2026 Gabi Almeida Estética.</span>
-            <span>Desenvolvido: caduhelp-dev | Ver. 3.29.0</span>
+            <span>Desenvolvido: caduhelp-dev | Ver. 3.30.0</span>
           </div>
         </div>
       </div>
@@ -6610,6 +6610,42 @@ export default function SystemPage() {
                   <p className="text-[11px] text-on-surface-variant">Tempo em horas para o bot voltar a responder sozinho após você desativá-lo manualmente em uma conversa.</p>
                 </div>
 
+                <div className="space-y-1.5">
+                  <label className="font-bold text-[13px] text-on-surface-variant">Pausa de "digitando..." antes de cada resposta (segundos)</label>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="number"
+                      min={0.5}
+                      step={0.5}
+                      value={whatsappSettings.digitacaoMinSegundos}
+                      onChange={(e) => setWhatsappSettings(prev => ({ ...prev, digitacaoMinSegundos: Math.max(0.5, Number(e.target.value) || 2.5) }))}
+                      className="w-24 p-2.5 bg-surface rounded-xl border border-outline-variant/60 focus:outline-none focus:ring-1 focus:ring-primary/40 font-medium font-sans text-[13px]"
+                    />
+                    <span className="text-[11px] text-on-surface-variant">mínimo</span>
+                    <input
+                      type="number"
+                      min={1}
+                      step={0.5}
+                      value={whatsappSettings.digitacaoMaxSegundos}
+                      onChange={(e) => setWhatsappSettings(prev => ({ ...prev, digitacaoMaxSegundos: Math.max(prev.digitacaoMinSegundos, Number(e.target.value) || 7) }))}
+                      className="w-24 p-2.5 bg-surface rounded-xl border border-outline-variant/60 focus:outline-none focus:ring-1 focus:ring-primary/40 font-medium font-sans text-[13px]"
+                    />
+                    <span className="text-[11px] text-on-surface-variant">máximo</span>
+                  </div>
+                  <p className="text-[11px] text-on-surface-variant">O cliente vê "digitando..." por um tempo proporcional ao tamanho da resposta, dentro desses limites. Respostas longas ficam perto do máximo.</p>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="font-bold text-[13px] text-on-surface-variant">Mensagem quando não há horário disponível</label>
+                  <textarea
+                    value={whatsappSettings.mensagemSemHorario}
+                    onChange={(e) => setWhatsappSettings(prev => ({ ...prev, mensagemSemHorario: e.target.value }))}
+                    rows={3}
+                    className="w-full p-2.5 bg-surface rounded-xl border border-outline-variant/60 focus:outline-none focus:ring-1 focus:ring-primary/40 font-medium font-sans text-[13px]"
+                  />
+                  <p className="text-[11px] text-on-surface-variant">Enviada quando o dia ou período pedido está fechado, bloqueado ou lotado. Use <strong>[quando]</strong> para o bot escrever "em 15/10/2026" ou "na tarde de 15/10/2026".</p>
+                </div>
+
                 <div className="space-y-2">
                   <label className="font-bold text-[13px] text-on-surface-variant">Horário de atendimento</label>
                   <div className="space-y-1.5">
@@ -6961,12 +6997,24 @@ export default function SystemPage() {
                   </div>
                   <div>
                     <h2 className="text-[18px] font-bold text-on-surface">Gabi Almeida Estética Sistema</h2>
-                    <p className="text-[13px] text-on-surface-variant font-bold">Versão atual: 3.29.0</p>
+                    <p className="text-[13px] text-on-surface-variant font-bold">Versão atual: 3.30.0</p>
                   </div>
                 </div>
 
                 <div className="space-y-4">
                   <h3 className="text-[14px] font-bold text-primary border-b border-outline-variant/30 pb-2">Histórico de Versões (Changelog)</h3>
+
+                  <div className="bg-surface-container-lowest rounded-2xl p-4 border border-outline-variant/50 mb-4">
+                    <div className="flex justify-between items-center mb-2">
+                      <span className="font-bold text-[14px] text-on-surface">Versão 3.30.0</span>
+                      <span className="text-[11px] font-bold text-on-surface-variant px-2 py-1 bg-surface-container rounded-lg">10 Outubro 2026</span>
+                    </div>
+                    <ul className="list-disc pl-5 space-y-1.5 text-[13px] text-on-surface-variant mt-3">
+                      <li><strong className="text-on-surface">Atendimento mais humano:</strong> o robô agora mostra "digitando..." por mais tempo antes de cada resposta, proporcional ao tamanho do texto. Mínimo e máximo são ajustáveis em Configurações &gt; WhatsApp.</li>
+                      <li><strong className="text-on-surface">Respostas na ordem certa:</strong> quando o cliente envia várias mensagens seguidas, o robô responde uma de cada vez, evitando respostas embaralhadas ou cortadas.</li>
+                      <li><strong className="text-on-surface">Agenda sem horário:</strong> se o dia ou período pedido estiver fechado, bloqueado ou lotado, o robô avisa com uma mensagem cordial e sugere outra data. O texto é editável em Configurações &gt; WhatsApp.</li>
+                    </ul>
+                  </div>
 
                   <div className="bg-surface-container-lowest rounded-2xl p-4 border border-outline-variant/50 mb-4">
                     <div className="flex justify-between items-center mb-2">

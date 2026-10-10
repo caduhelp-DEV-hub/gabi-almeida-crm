@@ -401,7 +401,10 @@ export const WHATSAPP_SETTINGS_DEFAULTS: WhatsappBotSettings = {
   mensagemAvisoFinal: 'Olá! ⚠️ Seu horário é hoje às [hora] ([procedimento]) e está chegando a hora! Se eu não tiver resposta sua em até [prazo] minutos, vou precisar cancelar automaticamente pra liberar o horário pra outra pessoa. Pode confirmar, reagendar ou cancelar respondendo aqui!',
   mensagemCancelamentoAutomatico: 'Como não tive resposta a tempo, cancelei seu horário de hoje às [hora] ([procedimento]) pra liberar pra outras pessoas. Se quiser remarcar, é só me chamar! 💕',
   mensagemListaEspera: 'Olá! 🌹 Abriu um horário em [data] às [hora] para [procedimento]. Se ainda tiver interesse, responde aqui que eu confirmo pra você!',
-  tempoAtivacaoAutomaticaHoras: 24
+  tempoAtivacaoAutomaticaHoras: 24,
+  digitacaoMinSegundos: 2.5,
+  digitacaoMaxSegundos: 7,
+  mensagemSemHorario: 'Infelizmente não temos horário disponível [quando] 😕 Que tal escolher outra data? É só me dizer o dia (ex: amanhã, sábado, 15/10).'
 };
 
 export const mapWhatsappSettingsRowsToFrontend = (rows: { chave: string; valor: any }[]): WhatsappBotSettings => {
@@ -420,7 +423,10 @@ export const mapWhatsappSettingsRowsToFrontend = (rows: { chave: string; valor: 
     mensagemAvisoFinal: map['mensagem_aviso_final'] ?? WHATSAPP_SETTINGS_DEFAULTS.mensagemAvisoFinal,
     mensagemCancelamentoAutomatico: map['mensagem_cancelamento_automatico'] ?? WHATSAPP_SETTINGS_DEFAULTS.mensagemCancelamentoAutomatico,
     mensagemListaEspera: map['mensagem_lista_espera'] ?? WHATSAPP_SETTINGS_DEFAULTS.mensagemListaEspera,
-    tempoAtivacaoAutomaticaHoras: map['tempo_ativacao_automatica_horas'] ?? WHATSAPP_SETTINGS_DEFAULTS.tempoAtivacaoAutomaticaHoras
+    tempoAtivacaoAutomaticaHoras: map['tempo_ativacao_automatica_horas'] ?? WHATSAPP_SETTINGS_DEFAULTS.tempoAtivacaoAutomaticaHoras,
+    digitacaoMinSegundos: map['digitacao_min_segundos'] ?? WHATSAPP_SETTINGS_DEFAULTS.digitacaoMinSegundos,
+    digitacaoMaxSegundos: map['digitacao_max_segundos'] ?? WHATSAPP_SETTINGS_DEFAULTS.digitacaoMaxSegundos,
+    mensagemSemHorario: map['mensagem_sem_horario'] ?? WHATSAPP_SETTINGS_DEFAULTS.mensagemSemHorario
   };
 };
 
@@ -438,7 +444,10 @@ export const mapWhatsappSettingsToRows = (s: WhatsappBotSettings): { chave: stri
   { chave: 'mensagem_aviso_final', valor: s.mensagemAvisoFinal },
   { chave: 'mensagem_cancelamento_automatico', valor: s.mensagemCancelamentoAutomatico },
   { chave: 'mensagem_lista_espera', valor: s.mensagemListaEspera },
-  { chave: 'tempo_ativacao_automatica_horas', valor: s.tempoAtivacaoAutomaticaHoras }
+  { chave: 'tempo_ativacao_automatica_horas', valor: s.tempoAtivacaoAutomaticaHoras },
+  { chave: 'digitacao_min_segundos', valor: s.digitacaoMinSegundos },
+  { chave: 'digitacao_max_segundos', valor: s.digitacaoMaxSegundos },
+  { chave: 'mensagem_sem_horario', valor: s.mensagemSemHorario }
 ]);
 
 export const getAppointmentColorClass = (status: string, notas: string = ''): string => {
