@@ -3,6 +3,8 @@ import { supabaseAdmin } from '../../../../lib/supabase';
 import { isBotApiKeyValid } from '../../../../lib/botAuth';
 import { getServiceDuration, findBlockingBlock, hasAppointmentConflict } from '../../../../lib/availability';
 import { mapAgendamentoToFrontend, mapAgendamentoToBackend, mapBloqueioToFrontend, mapServicoToFrontend } from '../../../../lib/mappers';
+import { cabeNoExpediente } from '../../../../lib/horarioAtendimento';
+import { carregarHorarioAtendimento } from '../../../../lib/botHorario';
 
 interface CriarAgendamentoBody {
   clienteId?: string;
@@ -43,10 +45,11 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const [{ data: servs, error: servsErr }, { data: appts, error: apptsErr }, { data: blks, error: blksErr }] = await Promise.all([
+    const [{ data: servs, error: servsErr }, { data: appts, error: apptsErr }, { data: blks, error: blksErr }, horarioAtendimento] = await Promise.all([
       supabaseAdmin.from('servicos').select('*'),
       supabaseAdmin.from('agendamentos').select('*').eq('data', data),
       supabaseAdmin.from('bloqueios_agenda').select('*').eq('data', data),
+      carregarHorarioAtendimento(),
     ]);
     if (servsErr || apptsErr || blksErr) throw new Error((servsErr || apptsErr || blksErr)?.message);
 
@@ -54,6 +57,11 @@ export async function POST(request: NextRequest) {
     const appointments = (appts || []).map(mapAgendamentoToFrontend);
     const blocks = (blks || []).map(mapBloqueioToFrontend);
     const durationMin = getServiceDuration(services, procedimento);
+
+    // Trava: nunca grava fora do horario de atendimento, mesmo que o bot tenha oferecido o horario.
+    if (!cabeNoExpediente(horarioAtendimento, data, hora, durationMin)) {
+      return NextResponse.json({ error: 'fora_do_expediente', motivo: 'Esse horário está fora do horário de atendimento.' }, { status: 409 });
+    }
 
     const bloqueio = findBlockingBlock(blocks, data, hora.slice(0, 5), durationMin, profissional);
     if (bloqueio) {

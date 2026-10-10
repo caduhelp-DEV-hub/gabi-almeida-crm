@@ -2,6 +2,16 @@
 
 Todas as mudanças notáveis neste projeto serão documentadas neste arquivo.
 
+## [3.32.0] - 2026-10-10
+### Corrigido
+- **Robô respondia "fora do horário de atendimento" num atendimento 24 horas.** A saudação da primeira mensagem mudava conforme o horário de funcionamento (num sábado depois das 15h, por exemplo, o cliente recebia o aviso de fora do horário e só conseguia agendar insistindo). Agora o robô sempre recebe o cliente com a boas-vindas e o menu, a qualquer hora. O horário de funcionamento passou a limitar apenas quais horários da agenda são oferecidos. O campo "Mensagem fora do horário de atendimento" não é mais usado pelo robô.
+
+### Segurança
+- **Trava de horário de funcionamento no agendamento.** Além de só oferecer horários dentro do expediente, a criação e a remarcação de agendamentos pelo robô agora são recusadas se o dia estiver fechado ou o atendimento não couber inteiro entre a abertura e o fechamento cadastrados em Configurações > WhatsApp. Se a configuração estiver ausente, o dia conta como fechado (nunca se assume um horário padrão).
+
+### Testes
+- Novos testes da regra de expediente (dia fechado, 08:00 antes da abertura, atendimento que passa do fechamento, configuração ausente ou inválida).
+
 ## [3.31.0] - 2026-10-10
 ### Corrigido
 - **Horário de atendimento ignorado pelo robô.** A consulta de disponibilidade lia só uma linha das configurações do WhatsApp (a do "bot ativo"), então o horário de atendimento nunca era aplicado: o robô oferecia horários em dias fechados (ex.: domingo e segunda) e fora do expediente (das 8h às 19h, em vez do configurado). Agora a rota lê o horário de atendimento cadastrado em Configurações > WhatsApp, e dia fechado volta sem horários.

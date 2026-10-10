@@ -3,6 +3,8 @@ import { supabaseAdmin } from '../../../../../lib/supabase';
 import { isBotApiKeyValid } from '../../../../../lib/botAuth';
 import { getServiceDuration, findBlockingBlock, hasAppointmentConflict } from '../../../../../lib/availability';
 import { mapAgendamentoToFrontend, mapBloqueioToFrontend, mapServicoToFrontend } from '../../../../../lib/mappers';
+import { cabeNoExpediente } from '../../../../../lib/horarioAtendimento';
+import { carregarHorarioAtendimento } from '../../../../../lib/botHorario';
 
 interface ReagendarBody {
   data: string;
@@ -38,10 +40,11 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
       return NextResponse.json({ error: 'Agendamento não encontrado.' }, { status: 404 });
     }
 
-    const [{ data: servs, error: servsErr }, { data: appts, error: apptsErr }, { data: blks, error: blksErr }] = await Promise.all([
+    const [{ data: servs, error: servsErr }, { data: appts, error: apptsErr }, { data: blks, error: blksErr }, horarioAtendimento] = await Promise.all([
       supabaseAdmin.from('servicos').select('*'),
       supabaseAdmin.from('agendamentos').select('*').eq('data', body.data),
       supabaseAdmin.from('bloqueios_agenda').select('*').eq('data', body.data),
+      carregarHorarioAtendimento(),
     ]);
     if (servsErr || apptsErr || blksErr) throw new Error((servsErr || apptsErr || blksErr)?.message);
 
@@ -49,6 +52,11 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     const appointments = (appts || []).map(mapAgendamentoToFrontend);
     const blocks = (blks || []).map(mapBloqueioToFrontend);
     const durationMin = getServiceDuration(services, atual.procedimento);
+
+    // Trava: nunca remarca para fora do horario de atendimento.
+    if (!cabeNoExpediente(horarioAtendimento, body.data, body.hora, durationMin)) {
+      return NextResponse.json({ error: 'fora_do_expediente', motivo: 'Esse horário está fora do horário de atendimento.' }, { status: 409 });
+    }
 
     const bloqueio = findBlockingBlock(blocks, body.data, body.hora.slice(0, 5), durationMin, atual.profissional);
     if (bloqueio) {

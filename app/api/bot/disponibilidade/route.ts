@@ -3,6 +3,8 @@ import { supabaseAdmin } from '../../../../lib/supabase';
 import { isBotApiKeyValid } from '../../../../lib/botAuth';
 import { getServiceDuration, getAvailableSlots } from '../../../../lib/availability';
 import { mapAgendamentoToFrontend, mapBloqueioToFrontend, mapServicoToFrontend } from '../../../../lib/mappers';
+import { janelaDoDia } from '../../../../lib/horarioAtendimento';
+import { carregarHorarioAtendimento } from '../../../../lib/botHorario';
 
 /**
  * GET /api/bot/disponibilidade?data=YYYY-MM-DD&profissional=Nome&procedimento=Nome
@@ -26,41 +28,26 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const [{ data: servs }, { data: appts }, { data: blks }, { data: settings }] = await Promise.all([
+    const [{ data: servs }, { data: appts }, { data: blks }, horarioAtendimento] = await Promise.all([
       supabaseAdmin.from('servicos').select('*'),
       supabaseAdmin.from('agendamentos').select('*').eq('data', data),
       supabaseAdmin.from('bloqueios_agenda').select('*').eq('data', data),
-      supabaseAdmin.from('whatsapp_bot_settings').select('*').eq('chave', 'horario_atendimento')
+      carregarHorarioAtendimento()
     ]);
 
     const services = (servs || []).map(mapServicoToFrontend);
     const appointments = (appts || []).map(mapAgendamentoToFrontend);
     const blocks = (blks || []).map(mapBloqueioToFrontend);
     const durationMin = getServiceDuration(services, procedimento);
-    
-    // Configurações de Horário de Atendimento
-    const daysMap = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sab'];
-    const dateObj = new Date(data + 'T12:00:00Z');
-    const diaSemana = daysMap[dateObj.getUTCDay()] as any;
-    
-    let startMins = 8 * 60;
-    let endMins = 19 * 60;
-    
-    if (settings && settings.length > 0) {
-      const mapSettings = Object.fromEntries(settings.map((r: any) => [r.chave, r.valor]));
-      const horario = mapSettings['horario_atendimento'];
-      if (horario && horario[diaSemana]) {
-        if (!horario[diaSemana].ativo) {
-          // Dia não há atendimento, sem horários
-          return NextResponse.json({ slots: [], durationMin });
-        }
-        const [aH, aM] = horario[diaSemana].abre.split(':').map(Number);
-        const [fH, fM] = horario[diaSemana].fecha.split(':').map(Number);
-        startMins = aH * 60 + aM;
-        endMins = fH * 60 + fM;
-      }
+
+    // Horario de atendimento (Configuracoes > WhatsApp): dia fechado ou sem configuracao = sem horarios.
+    const janela = janelaDoDia(horarioAtendimento, data);
+    if (!janela) {
+      return NextResponse.json({ slots: [], durationMin });
     }
-    
+    let startMins = janela.inicioMin;
+    let endMins = janela.fimMin;
+
     // Filtro por Período (manhã/tarde)
     const periodo = searchParams.get('periodo');
     if (periodo === 'manha') {
