@@ -22,6 +22,28 @@ function hhmmParaMinutos(valor: unknown): number | null {
   return h < 24 && min < 60 ? h * 60 + min : null;
 }
 
+/** Data (YYYY-MM-DD) e hora (HH:MM) de agora no fuso de Sao Paulo, independente do fuso do servidor. */
+function agoraEmSaoPaulo(agora: Date): { data: string; hhmm: string } {
+  const partes = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'America/Sao_Paulo',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    hourCycle: 'h23',
+  }).formatToParts(agora);
+  const get = (tipo: string) => partes.find((p) => p.type === tipo)?.value ?? '';
+  return { data: `${get('year')}-${get('month')}-${get('day')}`, hhmm: `${get('hour')}:${get('minute')}` };
+}
+
+/** O horario `data` + `hora` ja passou (ou e agora)? Usado pra nunca oferecer nem gravar horario no passado. */
+export function jaPassou(dataISO: string, hora: string, agora: Date = new Date()): boolean {
+  const atual = agoraEmSaoPaulo(agora);
+  if (dataISO !== atual.data) return dataISO < atual.data;
+  return hora.slice(0, 5) <= atual.hhmm;
+}
+
 /** Janela de atendimento do dia (minutos desde 00:00), ou null se estiver fechado. */
 export function janelaDoDia(horarioAtendimento: unknown, dataISO: string): JanelaAtendimento | null {
   if (!horarioAtendimento || typeof horarioAtendimento !== 'object') return null;

@@ -3,7 +3,7 @@ import { supabaseAdmin } from '../../../../lib/supabase';
 import { isBotApiKeyValid } from '../../../../lib/botAuth';
 import { getServiceDuration, findBlockingBlock, hasAppointmentConflict } from '../../../../lib/availability';
 import { mapAgendamentoToFrontend, mapAgendamentoToBackend, mapBloqueioToFrontend, mapServicoToFrontend } from '../../../../lib/mappers';
-import { cabeNoExpediente } from '../../../../lib/horarioAtendimento';
+import { cabeNoExpediente, jaPassou } from '../../../../lib/horarioAtendimento';
 import { carregarHorarioAtendimento } from '../../../../lib/botHorario';
 
 interface CriarAgendamentoBody {
@@ -61,6 +61,9 @@ export async function POST(request: NextRequest) {
     // Trava: nunca grava fora do horario de atendimento, mesmo que o bot tenha oferecido o horario.
     if (!cabeNoExpediente(horarioAtendimento, data, hora, durationMin)) {
       return NextResponse.json({ error: 'fora_do_expediente', motivo: 'Esse horário está fora do horário de atendimento.' }, { status: 409 });
+    }
+    if (jaPassou(data, hora)) {
+      return NextResponse.json({ error: 'horario_passado', motivo: 'Esse horário já passou.' }, { status: 409 });
     }
 
     const bloqueio = findBlockingBlock(blocks, data, hora.slice(0, 5), durationMin, profissional);

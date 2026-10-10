@@ -2,6 +2,14 @@
 
 Todas as mudanças notáveis neste projeto serão documentadas neste arquivo.
 
+## [3.33.0] - 2026-10-10
+### Corrigido
+- **Robô podia oferecer e agendar horário que já passou hoje.** A agenda do robô não descartava horários anteriores ao momento atual, então quem pedia "hoje" podia receber, por exemplo, 09:30 às 15h. Agora só são oferecidos horários de hoje que ainda não passaram, e a criação/remarcação é recusada se o horário já passou (usando o horário de São Paulo, independente do servidor). A lista de dias do menu agora também inclui o dia de hoje, quando ainda há horário.
+- **Espaços sobrando nas mensagens do robô.** Nomes de procedimento cadastrados com espaço no fim ou no começo (ex.: "Manicure ") deixavam espaço duplo e espaço antes da pontuação ("Manicure ?"). As mensagens agora saem limpas, sem alterar o cadastro.
+
+### Testes
+- Novos testes de "horário já passou" (hoje, dias anteriores e virada de dia no fuso de São Paulo) e da limpeza de espaços.
+
 ## [3.32.0] - 2026-10-10
 ### Corrigido
 - **Robô respondia "fora do horário de atendimento" num atendimento 24 horas.** A saudação da primeira mensagem mudava conforme o horário de funcionamento (num sábado depois das 15h, por exemplo, o cliente recebia o aviso de fora do horário e só conseguia agendar insistindo). Agora o robô sempre recebe o cliente com a boas-vindas e o menu, a qualquer hora. O horário de funcionamento passou a limitar apenas quais horários da agenda são oferecidos. O campo "Mensagem fora do horário de atendimento" não é mais usado pelo robô.

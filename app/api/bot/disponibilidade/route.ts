@@ -3,7 +3,7 @@ import { supabaseAdmin } from '../../../../lib/supabase';
 import { isBotApiKeyValid } from '../../../../lib/botAuth';
 import { getServiceDuration, getAvailableSlots } from '../../../../lib/availability';
 import { mapAgendamentoToFrontend, mapBloqueioToFrontend, mapServicoToFrontend } from '../../../../lib/mappers';
-import { janelaDoDia } from '../../../../lib/horarioAtendimento';
+import { janelaDoDia, jaPassou } from '../../../../lib/horarioAtendimento';
 import { carregarHorarioAtendimento } from '../../../../lib/botHorario';
 
 /**
@@ -56,7 +56,7 @@ export async function GET(request: NextRequest) {
       startMins = Math.max(startMins, 12 * 60); // a partir das 12:00
     }
 
-    const slots = getAvailableSlots({ 
+    const slots = getAvailableSlots({
       date: data, 
       profissional, 
       durationMin, 
@@ -67,7 +67,8 @@ export async function GET(request: NextRequest) {
       endMinutesFromMidnight: endMins
     });
 
-    return NextResponse.json({ slots, durationMin });
+    // Nunca oferece horario que ja passou (relevante so para hoje; datas passadas voltam vazias).
+    return NextResponse.json({ slots: slots.filter((h) => !jaPassou(data, h)), durationMin });
   } catch (err: any) {
     console.error('[api/bot/disponibilidade]', err);
     return NextResponse.json({ error: 'Erro ao consultar disponibilidade.' }, { status: 500 });

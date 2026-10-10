@@ -3,7 +3,7 @@ import { supabaseAdmin } from '../../../../../lib/supabase';
 import { isBotApiKeyValid } from '../../../../../lib/botAuth';
 import { getServiceDuration, findBlockingBlock, hasAppointmentConflict } from '../../../../../lib/availability';
 import { mapAgendamentoToFrontend, mapBloqueioToFrontend, mapServicoToFrontend } from '../../../../../lib/mappers';
-import { cabeNoExpediente } from '../../../../../lib/horarioAtendimento';
+import { cabeNoExpediente, jaPassou } from '../../../../../lib/horarioAtendimento';
 import { carregarHorarioAtendimento } from '../../../../../lib/botHorario';
 
 interface ReagendarBody {
@@ -56,6 +56,9 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     // Trava: nunca remarca para fora do horario de atendimento.
     if (!cabeNoExpediente(horarioAtendimento, body.data, body.hora, durationMin)) {
       return NextResponse.json({ error: 'fora_do_expediente', motivo: 'Esse horário está fora do horário de atendimento.' }, { status: 409 });
+    }
+    if (jaPassou(body.data, body.hora)) {
+      return NextResponse.json({ error: 'horario_passado', motivo: 'Esse horário já passou.' }, { status: 409 });
     }
 
     const bloqueio = findBlockingBlock(blocks, body.data, body.hora.slice(0, 5), durationMin, atual.profissional);

@@ -1,5 +1,29 @@
 import { describe, it, expect } from 'vitest';
-import { janelaDoDia, cabeNoExpediente } from '../lib/horarioAtendimento';
+import { janelaDoDia, cabeNoExpediente, jaPassou } from '../lib/horarioAtendimento';
+
+describe('jaPassou', () => {
+  // 10/10/2026 15:30 em Sao Paulo (UTC-3) = 18:30 UTC.
+  const agora = new Date('2026-10-10T18:30:00Z');
+
+  it('dias anteriores ja passaram, dias futuros nao', () => {
+    expect(jaPassou('2026-10-09', '17:00', agora)).toBe(true);
+    expect(jaPassou('2026-10-11', '08:00', agora)).toBe(false);
+  });
+
+  it('hoje: horario anterior ou igual a agora passou, posterior nao', () => {
+    expect(jaPassou('2026-10-10', '09:30', agora)).toBe(true);
+    expect(jaPassou('2026-10-10', '15:30', agora)).toBe(true);
+    expect(jaPassou('2026-10-10', '16:00', agora)).toBe(false);
+    expect(jaPassou('2026-10-10', '16:00:00', agora)).toBe(false);
+  });
+
+  it('usa o fuso de Sao Paulo: 02:00 UTC de 11/10 ainda e 23:00 de 10/10', () => {
+    const tarde = new Date('2026-10-11T02:00:00Z');
+    expect(jaPassou('2026-10-10', '22:00', tarde)).toBe(true);
+    expect(jaPassou('2026-10-10', '23:30', tarde)).toBe(false);
+    expect(jaPassou('2026-10-11', '00:30', tarde)).toBe(false);
+  });
+});
 
 // Configuracao real de producao em 10/10/2026: seg/dom fechados, ter-sex 09:30-17:00, sab 09:30-15:00.
 const horario = {
