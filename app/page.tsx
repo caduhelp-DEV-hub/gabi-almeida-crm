@@ -1986,7 +1986,7 @@ export default function SystemPage() {
               <span>Acesso seguro. Todos os dados são criptografados.</span>
             </div>
             <span>© 2026 Gabi Almeida Estética.</span>
-            <span>Desenvolvido: caduhelp-dev | Ver. 3.30.0</span>
+            <span>Desenvolvido: caduhelp-dev | Ver. 3.31.0</span>
           </div>
         </div>
       </div>
@@ -6997,12 +6997,23 @@ export default function SystemPage() {
                   </div>
                   <div>
                     <h2 className="text-[18px] font-bold text-on-surface">Gabi Almeida Estética Sistema</h2>
-                    <p className="text-[13px] text-on-surface-variant font-bold">Versão atual: 3.30.0</p>
+                    <p className="text-[13px] text-on-surface-variant font-bold">Versão atual: 3.31.0</p>
                   </div>
                 </div>
 
                 <div className="space-y-4">
                   <h3 className="text-[14px] font-bold text-primary border-b border-outline-variant/30 pb-2">Histórico de Versões (Changelog)</h3>
+
+                  <div className="bg-surface-container-lowest rounded-2xl p-4 border border-outline-variant/50 mb-4">
+                    <div className="flex justify-between items-center mb-2">
+                      <span className="font-bold text-[14px] text-on-surface">Versão 3.31.0</span>
+                      <span className="text-[11px] font-bold text-on-surface-variant px-2 py-1 bg-surface-container rounded-lg">10 Outubro 2026</span>
+                    </div>
+                    <ul className="list-disc pl-5 space-y-1.5 text-[13px] text-on-surface-variant mt-3">
+                      <li><strong className="text-on-surface">Menu por números no WhatsApp:</strong> o robô conduz o cliente por listas numeradas (menu, procedimento, dias com horário livre, período e horário). O cliente responde só o número, sem se preocupar com formato de data ou hora.</li>
+                      <li><strong className="text-on-surface">Horário de atendimento respeitado:</strong> corrigido um erro em que o robô oferecia horários em dias fechados e fora do expediente. Agora ele segue o que está em Configurações &gt; WhatsApp.</li>
+                    </ul>
+                  </div>
 
                   <div className="bg-surface-container-lowest rounded-2xl p-4 border border-outline-variant/50 mb-4">
                     <div className="flex justify-between items-center mb-2">

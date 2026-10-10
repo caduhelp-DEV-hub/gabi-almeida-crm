@@ -2,6 +2,13 @@
 
 Todas as mudanças notáveis neste projeto serão documentadas neste arquivo.
 
+## [3.31.0] - 2026-10-10
+### Corrigido
+- **Horário de atendimento ignorado pelo robô.** A consulta de disponibilidade lia só uma linha das configurações do WhatsApp (a do "bot ativo"), então o horário de atendimento nunca era aplicado: o robô oferecia horários em dias fechados (ex.: domingo e segunda) e fora do expediente (das 8h às 19h, em vez do configurado). Agora a rota lê o horário de atendimento cadastrado em Configurações > WhatsApp, e dia fechado volta sem horários.
+
+### Adicionado
+- **Menu por números no atendimento.** O robô passou a conduzir o cliente por listas numeradas (menu principal, procedimento, próximos dias com horário livre, período e horário), sem exigir formato de data ou hora. O cliente responde só o número; escrever com as próprias palavras continua funcionando.
+
 ## [3.30.0] - 2026-10-10
 ### Adicionado
 - **Pausa de "digitando..." ajustável.** O robô mostrava o "digitando..." por no máximo 3,5 s, e a espera era aplicada em dobro no código. Agora a pausa é proporcional ao tamanho da resposta, com mínimo e máximo editáveis em Configurações > WhatsApp (padrão 2,5 s a 7 s).

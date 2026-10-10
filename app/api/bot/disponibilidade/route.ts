@@ -30,7 +30,7 @@ export async function GET(request: NextRequest) {
       supabaseAdmin.from('servicos').select('*'),
       supabaseAdmin.from('agendamentos').select('*').eq('data', data),
       supabaseAdmin.from('bloqueios_agenda').select('*').eq('data', data),
-      supabaseAdmin.from('whatsapp_bot_settings').select('*').limit(1)
+      supabaseAdmin.from('whatsapp_bot_settings').select('*').eq('chave', 'horario_atendimento')
     ]);
 
     const services = (servs || []).map(mapServicoToFrontend);
