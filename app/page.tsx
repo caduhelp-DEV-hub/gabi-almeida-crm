@@ -1986,7 +1986,7 @@ export default function SystemPage() {
               <span>Acesso seguro. Todos os dados são criptografados.</span>
             </div>
             <span>© 2026 Gabi Almeida Estética.</span>
-            <span>Desenvolvido: caduhelp-dev | Ver. 3.33.0</span>
+            <span>Desenvolvido: caduhelp-dev | Ver. 3.34.0</span>
           </div>
         </div>
       </div>
@@ -6643,7 +6643,69 @@ export default function SystemPage() {
                     rows={3}
                     className="w-full p-2.5 bg-surface rounded-xl border border-outline-variant/60 focus:outline-none focus:ring-1 focus:ring-primary/40 font-medium font-sans text-[13px]"
                   />
-                  <p className="text-[11px] text-on-surface-variant">Enviada quando o dia ou período pedido está fechado, bloqueado ou lotado. Use <strong>[quando]</strong> para o bot escrever "em 15/10/2026" ou "na tarde de 15/10/2026".</p>
+                  <p className="text-[11px] text-on-surface-variant">Enviada quando o dia ou período pedido está fechado, bloqueado ou lotado. Use <strong>[quando]</strong> para o bot escrever "em 15/10/2026" ou "na tarde de 15/10/2026". Logo depois dela o robô já mostra os dias que têm horário livre.</p>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="font-bold text-[13px] text-on-surface-variant">Pausa do robô quando você responde pelo celular (minutos)</label>
+                  <input
+                    type="number"
+                    min={0}
+                    value={whatsappSettings.pausaAposRespostaHumanaMin}
+                    onChange={(e) => setWhatsappSettings(prev => ({ ...prev, pausaAposRespostaHumanaMin: Math.max(0, Number(e.target.value) || 0) }))}
+                    className="w-24 p-2.5 bg-surface rounded-xl border border-outline-variant/60 focus:outline-none focus:ring-1 focus:ring-primary/40 font-medium font-sans text-[13px]"
+                  />
+                  <p className="text-[11px] text-on-surface-variant">Se você escrever para um cliente direto no WhatsApp, o robô se cala nessa conversa por esse tempo. Se o cliente digitar "menu", o robô volta na hora. Use 0 para nunca pausar.</p>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="font-bold text-[13px] text-on-surface-variant">Validade de um atendimento em andamento (minutos)</label>
+                  <input
+                    type="number"
+                    min={10}
+                    value={whatsappSettings.fluxoExpiraMinutos}
+                    onChange={(e) => setWhatsappSettings(prev => ({ ...prev, fluxoExpiraMinutos: Math.max(10, Number(e.target.value) || 180) }))}
+                    className="w-24 p-2.5 bg-surface rounded-xl border border-outline-variant/60 focus:outline-none focus:ring-1 focus:ring-primary/40 font-medium font-sans text-[13px]"
+                  />
+                  <p className="text-[11px] text-on-surface-variant">Se o cliente demorar mais que isso para responder, o robô recomeça pelo menu em vez de usar uma lista antiga.</p>
+                </div>
+
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="font-bold text-[13px] text-on-surface">Resgatar agendamento abandonado</p>
+                      <p className="text-[11px] text-on-surface-variant">Se o cliente escolher o procedimento e sumir antes de concluir, o robô manda um único lembrete.</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setWhatsappSettings(prev => ({ ...prev, resgateAtivo: !prev.resgateAtivo }))}
+                      className={`relative w-12 h-7 rounded-full shrink-0 transition-colors ${whatsappSettings.resgateAtivo ? 'bg-emerald-500' : 'bg-outline-variant/60'}`}
+                    >
+                      <span className={`absolute top-0.5 left-0.5 w-6 h-6 bg-white-pure rounded-full shadow transition-transform ${whatsappSettings.resgateAtivo ? 'translate-x-5' : 'translate-x-0'}`} />
+                    </button>
+                  </div>
+                  {whatsappSettings.resgateAtivo && (
+                    <>
+                      <div className="flex items-center gap-2">
+                        <label className="font-bold text-[13px] text-on-surface-variant">Enviar após</label>
+                        <input
+                          type="number"
+                          min={1}
+                          value={whatsappSettings.resgateMinutos}
+                          onChange={(e) => setWhatsappSettings(prev => ({ ...prev, resgateMinutos: Math.max(1, Number(e.target.value) || 5) }))}
+                          className="w-20 p-2.5 bg-surface rounded-xl border border-outline-variant/60 focus:outline-none focus:ring-1 focus:ring-primary/40 font-medium font-sans text-[13px]"
+                        />
+                        <span className="text-[12px] text-on-surface-variant">minutos sem resposta</span>
+                      </div>
+                      <textarea
+                        value={whatsappSettings.mensagemResgate}
+                        onChange={(e) => setWhatsappSettings(prev => ({ ...prev, mensagemResgate: e.target.value }))}
+                        rows={3}
+                        className="w-full p-2.5 bg-surface rounded-xl border border-outline-variant/60 focus:outline-none focus:ring-1 focus:ring-primary/40 font-medium font-sans text-[13px]"
+                      />
+                      <p className="text-[11px] text-on-surface-variant">Use <strong>[procedimento]</strong> para citar o procedimento. A última pergunta do robô é reenviada logo abaixo desta mensagem.</p>
+                    </>
+                  )}
                 </div>
 
                 <div className="space-y-2">
@@ -6997,12 +7059,25 @@ export default function SystemPage() {
                   </div>
                   <div>
                     <h2 className="text-[18px] font-bold text-on-surface">Gabi Almeida Estética Sistema</h2>
-                    <p className="text-[13px] text-on-surface-variant font-bold">Versão atual: 3.33.0</p>
+                    <p className="text-[13px] text-on-surface-variant font-bold">Versão atual: 3.34.0</p>
                   </div>
                 </div>
 
                 <div className="space-y-4">
                   <h3 className="text-[14px] font-bold text-primary border-b border-outline-variant/30 pb-2">Histórico de Versões (Changelog)</h3>
+
+                  <div className="bg-surface-container-lowest rounded-2xl p-4 border border-outline-variant/50 mb-4">
+                    <div className="flex justify-between items-center mb-2">
+                      <span className="font-bold text-[14px] text-on-surface">Versão 3.34.0</span>
+                      <span className="text-[11px] font-bold text-on-surface-variant px-2 py-1 bg-surface-container rounded-lg">12 Outubro 2026</span>
+                    </div>
+                    <ul className="list-disc pl-5 space-y-1.5 text-[13px] text-on-surface-variant mt-3">
+                      <li><strong className="text-on-surface">Cliente nunca fica sem saída:</strong> digitar <strong>menu</strong>, <strong>0</strong>, <strong>voltar</strong> ou <strong>oi</strong> leva ao menu em qualquer passo. Um número solto reabre o menu, e depois de duas respostas não entendidas o robô volta ao início e oferece falar com a equipe.</li>
+                      <li><strong className="text-on-surface">Entende melhor:</strong> "pra fazer a mão" vira Manicure; "obrigado" e "que pena" encerram com educação; sem horário, o robô já mostra os dias com vaga.</li>
+                      <li><strong className="text-on-surface">Respeita a sua conversa:</strong> se você responder o cliente pelo celular, o robô pausa nessa conversa (padrão 2 horas). Mensagens de divulgação e links soltos não disparam o robô.</li>
+                      <li><strong className="text-on-surface">Resgate de agendamento:</strong> se o cliente escolher o procedimento e sumir, o robô manda um único lembrete após 5 minutos. Tudo ajustável em Configurações &gt; WhatsApp.</li>
+                    </ul>
+                  </div>
 
                   <div className="bg-surface-container-lowest rounded-2xl p-4 border border-outline-variant/50 mb-4">
                     <div className="flex justify-between items-center mb-2">

@@ -351,5 +351,10 @@ export interface WhatsappBotSettings {
   digitacaoMinSegundos: number;
   digitacaoMaxSegundos: number;
   mensagemSemHorario: string;
+  pausaAposRespostaHumanaMin: number;
+  fluxoExpiraMinutos: number;
+  resgateAtivo: boolean;
+  resgateMinutos: number;
+  mensagemResgate: string;
 }
 

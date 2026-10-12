@@ -2,6 +2,24 @@
 
 Todas as mudanças notáveis neste projeto serão documentadas neste arquivo.
 
+## [3.34.0] - 2026-10-12
+### Corrigido
+- **Cliente ficava sem resposta quando se perdia no atendimento.** Depois de uma opção sem resultado (ex.: "não encontrei agendamento"), o robô voltava a ficar parado e só respondia se o cliente digitasse "oi". Agora um número solto reabre o menu, e **`menu`, `0`, `voltar` ou `oi` levam ao menu em qualquer passo**. Toda lista mostra "Digite 0 para voltar ao menu".
+- **Robô preso em "não encontrei esse procedimento".** Qualquer coisa que o cliente escrevesse nesse passo (até "obrigado") recebia a mesma resposta. Agora, na segunda resposta não entendida o robô volta ao menu e oferece falar com a equipe; "obrigado", "que pena", "deixa pra lá" encerram com educação.
+- **Procedimento em linguagem natural.** "pra fazer a mão" agora é entendido como Manicure (a IA escolhe entre os procedimentos cadastrados).
+- **Sem horário não deixava saída.** Ao não haver vaga no dia, o robô agora mostra na hora os dias que têm horário livre.
+- **Fluxos antigos valendo para sempre.** Conversas paradas em meio ao agendamento (algumas desde 06/10) faziam um "1" digitado dias depois ser lido contra uma lista que o cliente nem via mais. Agora o atendimento em andamento expira (padrão 3 horas).
+- **Respostas indevidas.** "Pagamento informado" só vale para cliente cadastrado (antes um papo de compra de terceiros avisou a profissional à toa); pergunta de preço sem procedimento mostra a tabela de valores; mensagem de divulgação muito longa ou só link não dispara o robô; "blz/boa" sem agendamento futuro não vira confirmação de presença; texto de 1–2 letras não casa mais com qualquer procedimento.
+
+### Adicionado
+- **Pausa quando você responde pelo celular.** Se a Gabi escrever direto para o cliente, o robô se cala nessa conversa (padrão 2 horas, ajustável; 0 desliga). Se o cliente digitar "menu", o robô volta na hora. Resolve o robô atropelando a conversa (como com Kelliani e Regiane).
+- **Resgate de agendamento abandonado.** Se o cliente escolheu o procedimento e sumiu, após 5 minutos (ajustável) o robô manda um único lembrete e reapresenta a última pergunta. Liga/desliga, tempo e texto em Configurações > WhatsApp.
+- **Novos ajustes em Configurações > WhatsApp:** pausa após resposta humana, validade do atendimento em andamento, resgate (liga/desliga, tempo e texto).
+- **Boas-vindas mais direta:** novo texto padrão "Sou a assistente virtual do Gabi Almeida Studio" (o anterior dizia "em breve posso te ajudar", que não faz mais sentido com o menu).
+
+### Testes
+- Novos testes das regras de cortesia/desistência, mensagem de divulgação, número solto e atalho de menu. Roteiro completo validado com mensagens reais no WhatsApp de teste (beco sem saída, 2 falhas, "0"/"voltar", fluxo expirado, pausa humana e resgate).
+
 ## [3.33.0] - 2026-10-10
 ### Corrigido
 - **Robô podia oferecer e agendar horário que já passou hoje.** A agenda do robô não descartava horários anteriores ao momento atual, então quem pedia "hoje" podia receber, por exemplo, 09:30 às 15h. Agora só são oferecidos horários de hoje que ainda não passaram, e a criação/remarcação é recusada se o horário já passou (usando o horário de São Paulo, independente do servidor). A lista de dias do menu agora também inclui o dia de hoje, quando ainda há horário.
