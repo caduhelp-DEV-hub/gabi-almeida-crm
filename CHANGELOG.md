@@ -2,6 +2,10 @@
 
 Todas as mudanças notáveis neste projeto serão documentadas neste arquivo.
 
+## [3.35.0] - 2026-10-12
+### Adicionado
+- **Limite de lembretes de resgate por cliente.** Para não importunar, o robô agora respeita um teto de lembretes de agendamento abandonado por cliente: por padrão **1 a cada 7 dias** (e nunca mais de 1 por dia). Os dois números são editáveis em Configurações > WhatsApp, no bloco "Resgatar agendamento abandonado".
+
 ## [3.34.0] - 2026-10-12
 ### Corrigido
 - **Cliente ficava sem resposta quando se perdia no atendimento.** Depois de uma opção sem resultado (ex.: "não encontrei agendamento"), o robô voltava a ficar parado e só respondia se o cliente digitasse "oi". Agora um número solto reabre o menu, e **`menu`, `0`, `voltar` ou `oi` levam ao menu em qualquer passo**. Toda lista mostra "Digite 0 para voltar ao menu".

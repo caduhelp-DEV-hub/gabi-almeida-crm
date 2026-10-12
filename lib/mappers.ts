@@ -409,6 +409,8 @@ export const WHATSAPP_SETTINGS_DEFAULTS: WhatsappBotSettings = {
   fluxoExpiraMinutos: 180,
   resgateAtivo: true,
   resgateMinutos: 5,
+  resgateMaxPorCliente: 1,
+  resgateIntervaloDias: 7,
   mensagemResgate: 'Oi! 😊 Vi que você estava escolhendo seu horário ([procedimento]). Posso te ajudar a concluir? É só responder abaixo ou digitar *menu* para recomeçar.'
 };
 
@@ -436,6 +438,8 @@ export const mapWhatsappSettingsRowsToFrontend = (rows: { chave: string; valor: 
     fluxoExpiraMinutos: map['fluxo_expira_minutos'] ?? WHATSAPP_SETTINGS_DEFAULTS.fluxoExpiraMinutos,
     resgateAtivo: map['resgate_ativo'] ?? WHATSAPP_SETTINGS_DEFAULTS.resgateAtivo,
     resgateMinutos: map['resgate_minutos'] ?? WHATSAPP_SETTINGS_DEFAULTS.resgateMinutos,
+    resgateMaxPorCliente: map['resgate_max_por_cliente'] ?? WHATSAPP_SETTINGS_DEFAULTS.resgateMaxPorCliente,
+    resgateIntervaloDias: map['resgate_intervalo_dias'] ?? WHATSAPP_SETTINGS_DEFAULTS.resgateIntervaloDias,
     mensagemResgate: map['mensagem_resgate'] ?? WHATSAPP_SETTINGS_DEFAULTS.mensagemResgate
   };
 };
@@ -462,6 +466,8 @@ export const mapWhatsappSettingsToRows = (s: WhatsappBotSettings): { chave: stri
   { chave: 'fluxo_expira_minutos', valor: s.fluxoExpiraMinutos },
   { chave: 'resgate_ativo', valor: s.resgateAtivo },
   { chave: 'resgate_minutos', valor: s.resgateMinutos },
+  { chave: 'resgate_max_por_cliente', valor: s.resgateMaxPorCliente },
+  { chave: 'resgate_intervalo_dias', valor: s.resgateIntervaloDias },
   { chave: 'mensagem_resgate', valor: s.mensagemResgate }
 ]);
 

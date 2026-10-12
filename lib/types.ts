@@ -355,6 +355,8 @@ export interface WhatsappBotSettings {
   fluxoExpiraMinutos: number;
   resgateAtivo: boolean;
   resgateMinutos: number;
+  resgateMaxPorCliente: number;
+  resgateIntervaloDias: number;
   mensagemResgate: string;
 }
 

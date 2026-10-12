@@ -1986,7 +1986,7 @@ export default function SystemPage() {
               <span>Acesso seguro. Todos os dados são criptografados.</span>
             </div>
             <span>© 2026 Gabi Almeida Estética.</span>
-            <span>Desenvolvido: caduhelp-dev | Ver. 3.34.0</span>
+            <span>Desenvolvido: caduhelp-dev | Ver. 3.35.0</span>
           </div>
         </div>
       </div>
@@ -6697,6 +6697,25 @@ export default function SystemPage() {
                         />
                         <span className="text-[12px] text-on-surface-variant">minutos sem resposta</span>
                       </div>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <label className="font-bold text-[13px] text-on-surface-variant">Limite por cliente:</label>
+                        <input
+                          type="number"
+                          min={1}
+                          value={whatsappSettings.resgateMaxPorCliente}
+                          onChange={(e) => setWhatsappSettings(prev => ({ ...prev, resgateMaxPorCliente: Math.max(1, Number(e.target.value) || 1) }))}
+                          className="w-16 p-2.5 bg-surface rounded-xl border border-outline-variant/60 focus:outline-none focus:ring-1 focus:ring-primary/40 font-medium font-sans text-[13px]"
+                        />
+                        <span className="text-[12px] text-on-surface-variant">lembrete(s) a cada</span>
+                        <input
+                          type="number"
+                          min={1}
+                          value={whatsappSettings.resgateIntervaloDias}
+                          onChange={(e) => setWhatsappSettings(prev => ({ ...prev, resgateIntervaloDias: Math.max(1, Number(e.target.value) || 7) }))}
+                          className="w-16 p-2.5 bg-surface rounded-xl border border-outline-variant/60 focus:outline-none focus:ring-1 focus:ring-primary/40 font-medium font-sans text-[13px]"
+                        />
+                        <span className="text-[12px] text-on-surface-variant">dias (nunca mais de 1 por dia)</span>
+                      </div>
                       <textarea
                         value={whatsappSettings.mensagemResgate}
                         onChange={(e) => setWhatsappSettings(prev => ({ ...prev, mensagemResgate: e.target.value }))}
@@ -7059,12 +7078,22 @@ export default function SystemPage() {
                   </div>
                   <div>
                     <h2 className="text-[18px] font-bold text-on-surface">Gabi Almeida Estética Sistema</h2>
-                    <p className="text-[13px] text-on-surface-variant font-bold">Versão atual: 3.34.0</p>
+                    <p className="text-[13px] text-on-surface-variant font-bold">Versão atual: 3.35.0</p>
                   </div>
                 </div>
 
                 <div className="space-y-4">
                   <h3 className="text-[14px] font-bold text-primary border-b border-outline-variant/30 pb-2">Histórico de Versões (Changelog)</h3>
+
+                  <div className="bg-surface-container-lowest rounded-2xl p-4 border border-outline-variant/50 mb-4">
+                    <div className="flex justify-between items-center mb-2">
+                      <span className="font-bold text-[14px] text-on-surface">Versão 3.35.0</span>
+                      <span className="text-[11px] font-bold text-on-surface-variant px-2 py-1 bg-surface-container rounded-lg">12 Outubro 2026</span>
+                    </div>
+                    <ul className="list-disc pl-5 space-y-1.5 text-[13px] text-on-surface-variant mt-3">
+                      <li><strong className="text-on-surface">Limite de lembretes de resgate:</strong> o robô manda no máximo 1 lembrete de agendamento abandonado por cliente a cada 7 dias (e nunca mais de 1 por dia). Os dois números são ajustáveis em Configurações &gt; WhatsApp.</li>
+                    </ul>
+                  </div>
 
                   <div className="bg-surface-container-lowest rounded-2xl p-4 border border-outline-variant/50 mb-4">
                     <div className="flex justify-between items-center mb-2">
