@@ -2,6 +2,22 @@
 
 Todas as mudanças notáveis neste projeto serão documentadas neste arquivo.
 
+## [3.36.0] - 2026-10-16
+### Corrigido
+- **Robô dizia "Recebi seu pagamento" sem ter recebido (caso Iris).** A cliente escreveu "me passa seu pix" (pedindo a chave) e a IA entendeu como pagamento feito: o robô respondeu "Recebi aqui, obrigada!" e avisou a profissional à toa. Agora o pagamento só é considerado quando o texto **afirma** que pagou ("pix feito", "paguei", "comprovante"); pedido de chave, pergunta, "vou pagar" e conversa solta são ignorados. E o robô **nunca mais diz que recebeu**: responde "vou pedir pra equipe conferir" e a profissional recebe o aviso com a frase do cliente.
+- **Cliente que já confirmou recebia o aviso final de cancelamento.** O aviso "se eu não tiver resposta vou cancelar" ignorava a confirmação (a Iris confirmou no dia anterior e recebeu o aviso às 11h). Agora quem confirmou não recebe.
+- **Lembrete duplicado.** Agendamentos repetidos na agenda (a Nathalia tinha dois iguais) geravam dois lembretes iguais e, como só um era confirmado, um falso aviso de "não confirmou" para a profissional. Agora cada telefone recebe **um lembrete por dia** (vários horários saem numa mensagem só) e um "confirmado" vale para todos os agendamentos do dia.
+- **Resgate repetindo a mensagem.** O lembrete de agendamento abandonado contava o silêncio desde a última mensagem do cliente, então podia reenviar, minutos depois, o mesmo texto que o robô acabara de mandar (caso Carol). Agora conta desde a última mensagem do robô.
+- **Menu repetido para amigos e fornecedores.** Conversa solta ("Vou te mandar por aqui", "Sim sim Gabi") recebia "Não consegui entender" com o menu de novo. Agora o robô só abre o menu para um "oi" curto na primeira mensagem; papo solto fica em silêncio.
+- **Cliente ligada ao cadastro errado.** Dois cadastros com o mesmo telefone (ex.: "Juliana" e "Juliana Ramos") faziam o robô escolher um deles sem saber qual. Agora, com telefone ambíguo, ele não adivinha.
+
+### Adicionado
+- **Horário pedido é respeitado.** "Consegue amanhã às 14h, pé e mão?" antes caía em "manhã ou tarde?" e o cliente desistia (caso Márcia). Agora, se o horário está livre, o robô pergunta só "Posso agendar? 1. Sim / 2. Ver outros horários"; se não está, mostra os mais próximos do pedido.
+- **Data e hora entendidas pelo próprio sistema:** "hoje", "amanhã", "depois de amanhã", "sexta", "25/10", "dia 25", "14h", "9h30", "às 14". Resolve o "Hoje" que a IA não entendia e economiza a cota do Gemini; a IA fica como segunda opção.
+
+### Testes
+- Novos testes: guarda de pagamento (casos reais Iris e Márcia), interpretação de data/hora (incl. um erro encontrado: "14.00 hs" era lido como meia-noite), horários mais próximos e agrupamento de lembretes. Roteiro validado de ponta a ponta com envio simulado (nenhuma mensagem foi para clientes).
+
 ## [3.35.0] - 2026-10-12
 ### Adicionado
 - **Limite de lembretes de resgate por cliente.** Para não importunar, o robô agora respeita um teto de lembretes de agendamento abandonado por cliente: por padrão **1 a cada 7 dias** (e nunca mais de 1 por dia). Os dois números são editáveis em Configurações > WhatsApp, no bloco "Resgatar agendamento abandonado".
