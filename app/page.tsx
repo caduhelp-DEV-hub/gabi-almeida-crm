@@ -1986,7 +1986,7 @@ export default function SystemPage() {
               <span>Acesso seguro. Todos os dados são criptografados.</span>
             </div>
             <span>© 2026 Gabi Almeida Estética.</span>
-            <span>Desenvolvido: caduhelp-dev | Ver. 3.36.0</span>
+            <span>Desenvolvido: caduhelp-dev | Ver. 3.37.0</span>
           </div>
         </div>
       </div>
@@ -6647,6 +6647,24 @@ export default function SystemPage() {
                 </div>
 
                 <div className="space-y-1.5">
+                  <label className="font-bold text-[13px] text-on-surface-variant">Chave Pix enviada automaticamente</label>
+                  <input
+                    type="text"
+                    value={whatsappSettings.pixChave}
+                    onChange={(e) => setWhatsappSettings(prev => ({ ...prev, pixChave: e.target.value.trim() }))}
+                    placeholder="CPF, CNPJ, e-mail, telefone ou chave aleatória"
+                    className="w-full p-2.5 bg-surface rounded-xl border border-outline-variant/60 focus:outline-none focus:ring-1 focus:ring-primary/40 font-medium font-sans text-[13px]"
+                  />
+                  <textarea
+                    value={whatsappSettings.mensagemPix}
+                    onChange={(e) => setWhatsappSettings(prev => ({ ...prev, mensagemPix: e.target.value }))}
+                    rows={3}
+                    className="w-full p-2.5 bg-surface rounded-xl border border-outline-variant/60 focus:outline-none focus:ring-1 focus:ring-primary/40 font-medium font-sans text-[13px]"
+                  />
+                  <p className="text-[11px] text-on-surface-variant">Quando o cliente pedir o Pix ("me passa seu pix", "qual a chave?"), o robô manda este texto e, em seguida, a chave sozinha numa mensagem (para copiar com um toque), mesmo se você estiver conversando. Deixe a chave vazia para o robô não responder pedidos de Pix.</p>
+                </div>
+
+                <div className="space-y-1.5">
                   <label className="font-bold text-[13px] text-on-surface-variant">Pausa do robô quando você responde pelo celular (minutos)</label>
                   <input
                     type="number"
@@ -7078,12 +7096,22 @@ export default function SystemPage() {
                   </div>
                   <div>
                     <h2 className="text-[18px] font-bold text-on-surface">Gabi Almeida Estética Sistema</h2>
-                    <p className="text-[13px] text-on-surface-variant font-bold">Versão atual: 3.36.0</p>
+                    <p className="text-[13px] text-on-surface-variant font-bold">Versão atual: 3.37.0</p>
                   </div>
                 </div>
 
                 <div className="space-y-4">
                   <h3 className="text-[14px] font-bold text-primary border-b border-outline-variant/30 pb-2">Histórico de Versões (Changelog)</h3>
+
+                  <div className="bg-surface-container-lowest rounded-2xl p-4 border border-outline-variant/50 mb-4">
+                    <div className="flex justify-between items-center mb-2">
+                      <span className="font-bold text-[14px] text-on-surface">Versão 3.37.0</span>
+                      <span className="text-[11px] font-bold text-on-surface-variant px-2 py-1 bg-surface-container rounded-lg">16 Outubro 2026</span>
+                    </div>
+                    <ul className="list-disc pl-5 space-y-1.5 text-[13px] text-on-surface-variant mt-3">
+                      <li><strong className="text-on-surface">Chave Pix automática:</strong> quando o cliente pede o Pix, o robô responde na hora e manda a chave sozinha numa mensagem, para copiar com um toque, sem ninguém da equipe precisar agir. A chave e o texto ficam em Configurações &gt; WhatsApp.</li>
+                    </ul>
+                  </div>
 
                   <div className="bg-surface-container-lowest rounded-2xl p-4 border border-outline-variant/50 mb-4">
                     <div className="flex justify-between items-center mb-2">

@@ -2,6 +2,10 @@
 
 Todas as mudanças notáveis neste projeto serão documentadas neste arquivo.
 
+## [3.37.0] - 2026-10-16
+### Adicionado
+- **Chave Pix enviada automaticamente.** Quando o cliente pede a chave ("me passa seu pix", "qual o pix?", "chave pix?"), o robô responde na hora, sem ninguém da equipe: manda um texto e, logo depois, a chave **sozinha** numa mensagem (para copiar com um toque). Funciona mesmo quando a Gabi está conversando com o cliente. A chave e o texto ficam em Configurações > WhatsApp; com a chave vazia o robô não responde pedidos de Pix. "Pix feito", "já mandei" e perguntas de valor continuam sem receber a chave.
+
 ## [3.36.0] - 2026-10-16
 ### Corrigido
 - **Robô dizia "Recebi seu pagamento" sem ter recebido (caso Iris).** A cliente escreveu "me passa seu pix" (pedindo a chave) e a IA entendeu como pagamento feito: o robô respondeu "Recebi aqui, obrigada!" e avisou a profissional à toa. Agora o pagamento só é considerado quando o texto **afirma** que pagou ("pix feito", "paguei", "comprovante"); pedido de chave, pergunta, "vou pagar" e conversa solta são ignorados. E o robô **nunca mais diz que recebeu**: responde "vou pedir pra equipe conferir" e a profissional recebe o aviso com a frase do cliente.

@@ -358,5 +358,7 @@ export interface WhatsappBotSettings {
   resgateMaxPorCliente: number;
   resgateIntervaloDias: number;
   mensagemResgate: string;
+  pixChave: string;
+  mensagemPix: string;
 }
 
