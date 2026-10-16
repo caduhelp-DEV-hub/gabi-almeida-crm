@@ -333,6 +333,25 @@ export interface HorarioDia {
 
 export type DiaSemana = 'dom' | 'seg' | 'ter' | 'qua' | 'qui' | 'sex' | 'sab';
 
+/** Ajuste de UMA frase do bot feito na tela: texto próprio e/ou desligada. Sem entrada = padrão do bot. */
+export interface MensagemFluxoConfig {
+  texto?: string;
+  ativo?: boolean;
+}
+
+/** Frase do catálogo que o próprio bot publica no banco (chave `mensagens_catalogo`). */
+export interface DefMensagemTela {
+  chave: string;
+  grupo: string;
+  rotulo: string;
+  padrao: string;
+  variaveis: string[];
+  obrigatorias: string[];
+  opcional: boolean;
+  /** Frase com campo próprio na tela (boas-vindas, lembrete...): aqui só liga/desliga. */
+  legado: boolean;
+}
+
 export interface WhatsappBotSettings {
   botAtivo: boolean;
   mensagemBoasVindas: string;
@@ -360,5 +379,8 @@ export interface WhatsappBotSettings {
   mensagemResgate: string;
   pixChave: string;
   mensagemPix: string;
+  mensagensFluxo: Record<string, MensagemFluxoConfig>;
+  /** Somente leitura: publicado pelo bot. Nunca é gravado de volta pela tela. */
+  catalogoMensagens: DefMensagemTela[];
 }
 

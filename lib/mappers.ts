@@ -411,6 +411,8 @@ export const WHATSAPP_SETTINGS_DEFAULTS: WhatsappBotSettings = {
   resgateMinutos: 5,
   resgateMaxPorCliente: 1,
   resgateIntervaloDias: 7,
+  mensagensFluxo: {},
+  catalogoMensagens: [],
   pixChave: '',
   mensagemPix: 'Claro! 💕 Vou te mandar nossa chave Pix na próxima mensagem, sozinha, pra você copiar fácil. Depois de pagar, é só me avisar aqui com o comprovante. 😊',
   mensagemResgate: 'Oi! 😊 Vi que você estava escolhendo seu horário ([procedimento]). Posso te ajudar a concluir? É só responder abaixo ou digitar *menu* para recomeçar.'
@@ -443,6 +445,8 @@ export const mapWhatsappSettingsRowsToFrontend = (rows: { chave: string; valor: 
     resgateMaxPorCliente: map['resgate_max_por_cliente'] ?? WHATSAPP_SETTINGS_DEFAULTS.resgateMaxPorCliente,
     resgateIntervaloDias: map['resgate_intervalo_dias'] ?? WHATSAPP_SETTINGS_DEFAULTS.resgateIntervaloDias,
     mensagemResgate: map['mensagem_resgate'] ?? WHATSAPP_SETTINGS_DEFAULTS.mensagemResgate,
+    mensagensFluxo: map['mensagens_fluxo'] ?? WHATSAPP_SETTINGS_DEFAULTS.mensagensFluxo,
+    catalogoMensagens: Array.isArray(map['mensagens_catalogo']) ? map['mensagens_catalogo'] : WHATSAPP_SETTINGS_DEFAULTS.catalogoMensagens,
     pixChave: map['pix_chave'] ?? WHATSAPP_SETTINGS_DEFAULTS.pixChave,
     mensagemPix: map['mensagem_pix'] ?? WHATSAPP_SETTINGS_DEFAULTS.mensagemPix
   };
@@ -473,6 +477,7 @@ export const mapWhatsappSettingsToRows = (s: WhatsappBotSettings): { chave: stri
   { chave: 'resgate_max_por_cliente', valor: s.resgateMaxPorCliente },
   { chave: 'resgate_intervalo_dias', valor: s.resgateIntervaloDias },
   { chave: 'mensagem_resgate', valor: s.mensagemResgate },
+  { chave: 'mensagens_fluxo', valor: s.mensagensFluxo },
   { chave: 'pix_chave', valor: s.pixChave },
   { chave: 'mensagem_pix', valor: s.mensagemPix }
 ]);

@@ -14,6 +14,7 @@ import CustomSearchableSelect from '../components/ui/CustomSearchableSelect';
 import ServicePieChart from '../components/dashboard/ServicePieChart';
 import DespesaModal from '../components/modals/DespesaModal';
 import Sidebar from '../components/layout/Sidebar';
+import FrasesAtendimento, { InterruptorFrase } from '../components/FrasesAtendimento';
 import { supabase, refreshDbAuth, clearDbToken } from '../lib/supabase';
 import { dataLocalISO } from '../lib/utils';
 import { calcularEstatisticasProntuario } from '../lib/patientStats';
@@ -1986,7 +1987,7 @@ export default function SystemPage() {
               <span>Acesso seguro. Todos os dados são criptografados.</span>
             </div>
             <span>© 2026 Gabi Almeida Estética.</span>
-            <span>Desenvolvido: caduhelp-dev | Ver. 3.37.0</span>
+            <span>Desenvolvido: caduhelp-dev | Ver. 3.38.0</span>
           </div>
         </div>
       </div>
@@ -6579,23 +6580,17 @@ export default function SystemPage() {
                 </div>
 
                 <div className="space-y-1.5">
-                  <label className="font-bold text-[13px] text-on-surface-variant">Mensagem de boas-vindas</label>
+                  <div className="flex items-center justify-between gap-3">
+                    <label className="font-bold text-[13px] text-on-surface-variant">Mensagem de boas-vindas</label>
+                    <InterruptorFrase chave="boas_vindas" valor={whatsappSettings.mensagensFluxo} onChange={(m) => setWhatsappSettings(prev => ({ ...prev, mensagensFluxo: m }))} />
+                  </div>
                   <textarea
                     value={whatsappSettings.mensagemBoasVindas}
                     onChange={(e) => setWhatsappSettings(prev => ({ ...prev, mensagemBoasVindas: e.target.value }))}
                     rows={3}
                     className="w-full p-2.5 bg-surface rounded-xl border border-outline-variant/60 focus:outline-none focus:ring-1 focus:ring-primary/40 font-medium font-sans text-[13px]"
                   />
-                </div>
-
-                <div className="space-y-1.5">
-                  <label className="font-bold text-[13px] text-on-surface-variant">Mensagem fora do horário de atendimento</label>
-                  <textarea
-                    value={whatsappSettings.mensagemForaHorario}
-                    onChange={(e) => setWhatsappSettings(prev => ({ ...prev, mensagemForaHorario: e.target.value }))}
-                    rows={3}
-                    className="w-full p-2.5 bg-surface rounded-xl border border-outline-variant/60 focus:outline-none focus:ring-1 focus:ring-primary/40 font-medium font-sans text-[13px]"
-                  />
+                  <p className="text-[11px] text-on-surface-variant">Desligada, o robô responde só com o menu na primeira mensagem do cliente.</p>
                 </div>
 
                 <div className="space-y-1.5">
@@ -6636,7 +6631,10 @@ export default function SystemPage() {
                 </div>
 
                 <div className="space-y-1.5">
-                  <label className="font-bold text-[13px] text-on-surface-variant">Mensagem quando não há horário disponível</label>
+                  <div className="flex items-center justify-between gap-3">
+                    <label className="font-bold text-[13px] text-on-surface-variant">Mensagem quando não há horário disponível</label>
+                    <InterruptorFrase chave="sem_horario" valor={whatsappSettings.mensagensFluxo} onChange={(m) => setWhatsappSettings(prev => ({ ...prev, mensagensFluxo: m }))} />
+                  </div>
                   <textarea
                     value={whatsappSettings.mensagemSemHorario}
                     onChange={(e) => setWhatsappSettings(prev => ({ ...prev, mensagemSemHorario: e.target.value }))}
@@ -6745,6 +6743,12 @@ export default function SystemPage() {
                   )}
                 </div>
 
+                <FrasesAtendimento
+                  catalogo={whatsappSettings.catalogoMensagens}
+                  valor={whatsappSettings.mensagensFluxo}
+                  onChange={(m) => setWhatsappSettings(prev => ({ ...prev, mensagensFluxo: m }))}
+                />
+
                 <div className="space-y-2">
                   <label className="font-bold text-[13px] text-on-surface-variant">Horário de atendimento</label>
                   <div className="space-y-1.5">
@@ -6815,7 +6819,10 @@ export default function SystemPage() {
                 </div>
 
                 <div className="space-y-1.5">
-                  <label className="font-bold text-[13px] text-on-surface-variant">Mensagem do lembrete</label>
+                  <div className="flex items-center justify-between gap-3">
+                    <label className="font-bold text-[13px] text-on-surface-variant">Mensagem do lembrete</label>
+                    <InterruptorFrase chave="lembrete_diario" valor={whatsappSettings.mensagensFluxo} onChange={(m) => setWhatsappSettings(prev => ({ ...prev, mensagensFluxo: m }))} />
+                  </div>
                   <textarea
                     value={whatsappSettings.mensagemLembrete}
                     onChange={(e) => setWhatsappSettings(prev => ({ ...prev, mensagemLembrete: e.target.value }))}
@@ -6873,7 +6880,10 @@ export default function SystemPage() {
                 <p className="text-[11px] text-on-surface-variant -mt-2">Agendamentos marcados com menos de {whatsappSettings.avisoFinalAntecedenciaHoras + 1}h de antecedência não entram nessa regra. Se a profissional marcar o horário como "Confirmado" na Agenda, o cancelamento automático não acontece.</p>
 
                 <div className="space-y-1.5">
-                  <label className="font-bold text-[13px] text-on-surface-variant">Mensagem do aviso final (pro cliente)</label>
+                  <div className="flex items-center justify-between gap-3">
+                    <label className="font-bold text-[13px] text-on-surface-variant">Mensagem do aviso final (pro cliente)</label>
+                    <InterruptorFrase chave="aviso_final" valor={whatsappSettings.mensagensFluxo} onChange={(m) => setWhatsappSettings(prev => ({ ...prev, mensagensFluxo: m }))} />
+                  </div>
                   <textarea
                     value={whatsappSettings.mensagemAvisoFinal}
                     onChange={(e) => setWhatsappSettings(prev => ({ ...prev, mensagemAvisoFinal: e.target.value }))}
@@ -6895,7 +6905,10 @@ export default function SystemPage() {
                 </div>
 
                 <div className="space-y-1.5">
-                  <label className="font-bold text-[13px] text-on-surface-variant">Mensagem para quem está na Lista de Espera</label>
+                  <div className="flex items-center justify-between gap-3">
+                    <label className="font-bold text-[13px] text-on-surface-variant">Mensagem para quem está na Lista de Espera</label>
+                    <InterruptorFrase chave="lista_espera" valor={whatsappSettings.mensagensFluxo} onChange={(m) => setWhatsappSettings(prev => ({ ...prev, mensagensFluxo: m }))} />
+                  </div>
                   <textarea
                     value={whatsappSettings.mensagemListaEspera}
                     onChange={(e) => setWhatsappSettings(prev => ({ ...prev, mensagemListaEspera: e.target.value }))}
@@ -7096,12 +7109,24 @@ export default function SystemPage() {
                   </div>
                   <div>
                     <h2 className="text-[18px] font-bold text-on-surface">Gabi Almeida Estética Sistema</h2>
-                    <p className="text-[13px] text-on-surface-variant font-bold">Versão atual: 3.37.0</p>
+                    <p className="text-[13px] text-on-surface-variant font-bold">Versão atual: 3.38.0</p>
                   </div>
                 </div>
 
                 <div className="space-y-4">
                   <h3 className="text-[14px] font-bold text-primary border-b border-outline-variant/30 pb-2">Histórico de Versões (Changelog)</h3>
+
+                  <div className="bg-surface-container-lowest rounded-2xl p-4 border border-outline-variant/50 mb-4">
+                    <div className="flex justify-between items-center mb-2">
+                      <span className="font-bold text-[14px] text-on-surface">Versão 3.38.0</span>
+                      <span className="text-[11px] font-bold text-on-surface-variant px-2 py-1 bg-surface-container rounded-lg">16 Outubro 2026</span>
+                    </div>
+                    <ul className="list-disc pl-5 space-y-1.5 text-[13px] text-on-surface-variant mt-3">
+                      <li><strong className="text-on-surface">Frases do robô editáveis e desligáveis:</strong> em Configurações &gt; WhatsApp, o bloco "Frases do atendimento" mostra tudo o que o robô fala. Edite o texto de qualquer frase e desligue as opcionais (rodapés, dicas, cortesias), sem depender de programação. Há "Restaurar texto padrão" em cada uma.</li>
+                      <li><strong className="text-on-surface">Liga/desliga nas mensagens automáticas:</strong> boas-vindas, "sem horário", lembrete do dia seguinte, aviso final e lista de espera agora têm um interruptor.</li>
+                      <li><strong className="text-on-surface">Segurança nas edições:</strong> se você apagar uma variável obrigatória (como [lista]), a tela avisa e o robô usa o texto padrão daquela frase em vez de errar com o cliente.</li>
+                    </ul>
+                  </div>
 
                   <div className="bg-surface-container-lowest rounded-2xl p-4 border border-outline-variant/50 mb-4">
                     <div className="flex justify-between items-center mb-2">

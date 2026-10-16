@@ -2,6 +2,19 @@
 
 Todas as mudanças notáveis neste projeto serão documentadas neste arquivo.
 
+## [3.38.0] - 2026-10-16
+### Adicionado
+- **Controle total das frases do robô, sem código.** Antes só dava para ajustar o texto de algumas mensagens. Agora, em Configurações > WhatsApp, o bloco **"Frases do atendimento"** lista todas as frases do robô (menu, agendar, remarcar, cancelar, valores, cortesias), agrupadas, e para cada uma você pode **editar o texto** e, nas que o cliente consegue viver sem (rodapé "Digite 0 para voltar", dica "Digite menu", "Por nada!", "Tudo bem! Quando quiser…", avisos de horário reservado etc.), **desligar**. Há "Restaurar texto padrão" em cada frase. Frases essenciais (sem elas o cliente não saberia o que fazer) só podem ser editadas.
+- **Liga/desliga nas mensagens que já tinham campo próprio:** boas-vindas, "sem horário disponível", lembrete do dia seguinte e aviso final, além da lista de espera. Boas-vindas desligada: o robô responde só com o menu. Lembrete ou aviso final desligado: a mensagem automática correspondente deixa de ser enviada.
+- **Proteção contra erro de edição:** se um texto editado perder uma variável obrigatória (como `[lista]`), a tela avisa e o robô usa o texto padrão daquela frase em vez de quebrar a conversa.
+- **A lista de frases vem do próprio robô** (publicada no banco quando ele inicia), então frase nova no robô aparece sozinha na tela, sem alterar o CRM.
+
+### Removido
+- Campo "Mensagem fora do horário de atendimento" da tela: o robô atende 24 horas e já não usava esse texto.
+
+### Testes
+- Novos testes dos ajustes de frases (gravar só o que difere do padrão, restaurar, desligar) e do comportamento da tela. No robô, o roteiro de 43 situações foi gravado antes e depois da mudança e ficou **idêntico, linha a linha**, e as frases editadas/desligadas foram validadas de ponta a ponta com envio simulado.
+
 ## [3.37.0] - 2026-10-16
 ### Adicionado
 - **Chave Pix enviada automaticamente.** Quando o cliente pede a chave ("me passa seu pix", "qual o pix?", "chave pix?"), o robô responde na hora, sem ninguém da equipe: manda um texto e, logo depois, a chave **sozinha** numa mensagem (para copiar com um toque). Funciona mesmo quando a Gabi está conversando com o cliente. A chave e o texto ficam em Configurações > WhatsApp; com a chave vazia o robô não responde pedidos de Pix. "Pix feito", "já mandei" e perguntas de valor continuam sem receber a chave.
