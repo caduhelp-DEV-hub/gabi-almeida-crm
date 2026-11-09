@@ -1529,6 +1529,12 @@ export default function SystemPage() {
           .eq('id', editingAppointment.id);
         if (error) throw error;
         
+        if (newApptStatus === 'Confirmado') {
+          await supabase
+            .from('whatsapp_lembretes')
+            .upsert({ agendamento_id: editingAppointment.id, confirmado_em: new Date().toISOString() }, { onConflict: 'agendamento_id' });
+        }
+
         const updatedAppt = {
           ...editingAppointment,
           hora: newApptTime,
@@ -1552,6 +1558,11 @@ export default function SystemPage() {
         if (error) throw error;
         if (data && data[0]) {
           setAppointments(prev => [...prev, mapAgendamentoToFrontend(data[0])]);
+          if (newApptStatus === 'Confirmado') {
+            await supabase
+              .from('whatsapp_lembretes')
+              .upsert({ agendamento_id: data[0].id, confirmado_em: new Date().toISOString() }, { onConflict: 'agendamento_id' });
+          }
         }
         const { criadas, puladas } = await createRecurrenceOccurrences(apptData, newApptDate);
         if (criadas > 0 || puladas.length > 0) {
@@ -1594,6 +1605,12 @@ export default function SystemPage() {
           .eq('id', editingAppointment.id);
         if (error) throw error;
         
+        if (finalApptData.status === 'Confirmado') {
+          await supabase
+            .from('whatsapp_lembretes')
+            .upsert({ agendamento_id: editingAppointment.id, confirmado_em: new Date().toISOString() }, { onConflict: 'agendamento_id' });
+        }
+
         const updatedAppt = {
           ...editingAppointment,
           ...finalApptData
@@ -1608,6 +1625,11 @@ export default function SystemPage() {
         if (error) throw error;
         if (newData && newData[0]) {
           setAppointments(prev => [...prev, mapAgendamentoToFrontend(newData[0])]);
+          if (finalApptData.status === 'Confirmado') {
+            await supabase
+              .from('whatsapp_lembretes')
+              .upsert({ agendamento_id: newData[0].id, confirmado_em: new Date().toISOString() }, { onConflict: 'agendamento_id' });
+          }
         }
         const { criadas, puladas } = await createRecurrenceOccurrences(finalApptData, finalApptData.data);
         if (criadas > 0 || puladas.length > 0) {
@@ -1987,7 +2009,7 @@ export default function SystemPage() {
               <span>Acesso seguro. Todos os dados são criptografados.</span>
             </div>
             <span>© 2026 Gabi Almeida Estética.</span>
-            <span>Desenvolvido: caduhelp-dev | Ver. 3.38.0</span>
+            <span>Desenvolvido: caduhelp-dev | Ver. 3.39.0</span>
           </div>
         </div>
       </div>
@@ -6848,8 +6870,11 @@ export default function SystemPage() {
                 <div className="h-px bg-outline-variant/40" />
 
                 <div>
-                  <p className="font-bold text-[13px] text-on-surface mb-1">Aviso final + cancelamento automático</p>
-                  <p className="text-[11px] text-on-surface-variant mb-3">Perto da hora do agendamento, o bot manda um último aviso. Se ninguém responder nem agir a tempo, o horário é cancelado de verdade e oferecido pra quem está na Lista de Espera.</p>
+                  <div className="flex items-center gap-2 mb-1">
+                    <p className="font-bold text-[13px] text-on-surface">Validação Humana & Alertas Internos</p>
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800">100% Protegido</span>
+                  </div>
+                  <p className="text-[11px] text-on-surface-variant mb-3">O robô não cancela horários sozinho nem envia ameaças para clientes. Se o cliente não confirmar presença a tempo, o sistema avisa a equipe para decisão humana.</p>
                 </div>
 
                 <div className="flex gap-4 flex-wrap">
@@ -7109,12 +7134,25 @@ export default function SystemPage() {
                   </div>
                   <div>
                     <h2 className="text-[18px] font-bold text-on-surface">Gabi Almeida Estética Sistema</h2>
-                    <p className="text-[13px] text-on-surface-variant font-bold">Versão atual: 3.38.0</p>
+                    <p className="text-[13px] text-on-surface-variant font-bold">Versão atual: 3.39.0</p>
                   </div>
                 </div>
 
                 <div className="space-y-4">
                   <h3 className="text-[14px] font-bold text-primary border-b border-outline-variant/30 pb-2">Histórico de Versões (Changelog)</h3>
+
+                  <div className="bg-surface-container-lowest rounded-2xl p-4 border border-outline-variant/50 mb-4">
+                    <div className="flex justify-between items-center mb-2">
+                      <span className="font-bold text-[14px] text-on-surface">Versão 3.39.0</span>
+                      <span className="text-[11px] font-bold text-on-surface-variant px-2 py-1 bg-surface-container rounded-lg">09 Novembro 2026</span>
+                    </div>
+                    <ul className="list-disc pl-5 space-y-1.5 text-[13px] text-on-surface-variant mt-3">
+                      <li><strong className="text-on-surface">Validação 100% Humana (Fim dos cancelamentos automáticos):</strong> O robô foi desprogramado de cancelar horários por conta própria ou mandar ameaças/ultimatos de cancelamento para clientes. O cancelamento é uma decisão exclusivamente da equipe.</li>
+                      <li><strong className="text-on-surface">Sincronização Bidirecional de Confirmação:</strong> Ao marcar um agendamento como "Confirmado" na Agenda do CRM, o robô reconhece imediatamente e não cobra confirmação. Da mesma forma, quando o cliente confirma no WhatsApp, a Agenda atualiza em tempo real.</li>
+                      <li><strong className="text-on-surface">Reconhecimento Inteligente e Natural:</strong> Frases comuns dos clientes como "Vou sim", "Com certeza", "Pode confirmar", "Estou a caminho" são reconhecidas de imediato sem risco de falso negativo da IA.</li>
+                      <li><strong className="text-on-surface">Proteção do Modo Humano:</strong> Quando a profissional está conversando com a cliente no WhatsApp, o robô silencia os lembretes automáticos para não interromper o atendimento pessoal.</li>
+                    </ul>
+                  </div>
 
                   <div className="bg-surface-container-lowest rounded-2xl p-4 border border-outline-variant/50 mb-4">
                     <div className="flex justify-between items-center mb-2">
