@@ -2,6 +2,13 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '../../../../lib/supabase';
 import { isBotApiKeyValid } from '../../../../lib/botAuth';
 
+function normalizarTelefone(raw: string): string {
+  const digits = raw.replace(/\D/g, '');
+  if (digits.startsWith('55') && (digits.length === 12 || digits.length === 13)) return digits;
+  if (digits.length === 10 || digits.length === 11) return `55${digits}`;
+  return digits;
+}
+
 /**
  * GET /api/bot/status?numero=5511999999999
  * Retorna se o bot deve ou não responder para este número.
@@ -20,55 +27,62 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    // 1. Buscar a conversa
-    const { data: chat } = await supabaseAdmin
-      .from('whatsapp_chats')
-      .select('*')
-      .eq('numero', numero)
-      .single();
+    const telNorm = normalizarTelefone(numero);
+    const { data: contato } = await supabaseAdmin
+      .from('whatsapp_contacts')
+      .select('id')
+      .eq('telefone', telNorm)
+      .maybeSingle();
 
-    if (!chat) {
-      // Conversa não existe, bot ativo por padrão
+    if (!contato) {
       return NextResponse.json({ active: true });
     }
 
-    if (!chat.bot_disabled) {
+    const { data: conversa } = await supabaseAdmin
+      .from('whatsapp_conversations')
+      .select('id, mode, last_message_at')
+      .eq('contact_id', contato.id)
+      .neq('status', 'CLOSED')
+      .order('criado_em', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (!conversa || conversa.mode !== 'HUMAN') {
       return NextResponse.json({ active: true });
     }
 
-    // Bot está desabilitado, verificar se já passou o tempo de reativação automática
-    // 2. Buscar configurações do whatsapp para pegar o tempoAtivacaoAutomaticaHoras
-    const { data: settings } = await supabaseAdmin
+    const { data: settingRow } = await supabaseAdmin
       .from('whatsapp_bot_settings')
-      .select('*')
-      .limit(1);
-    
-    let tempoHoras = 24; // fallback padrão
-    if (settings && settings.length > 0) {
-      const mapSettings = Object.fromEntries(settings.map((r: any) => [r.chave, r.valor]));
-      if (mapSettings['tempo_ativacao_automatica_horas']) {
-        tempoHoras = Number(mapSettings['tempo_ativacao_automatica_horas']);
-      }
-    }
+      .select('valor')
+      .eq('chave', 'tempo_ativacao_automatica_horas')
+      .maybeSingle();
 
-    // 3. Verificar tempo
-    if (chat.disabled_at) {
-      const disabledAt = new Date(chat.disabled_at);
-      const now = new Date();
-      const diffHours = (now.getTime() - disabledAt.getTime()) / (1000 * 60 * 60);
+    const tempoHoras = Number(settingRow?.valor ?? 24) || 24;
 
+    const { data: ultimoHumano } = await supabaseAdmin
+      .from('whatsapp_conversation_events')
+      .select('criado_em')
+      .eq('conversation_id', conversa.id)
+      .in('tipo', ['humano_assumiu', 'humano_respondeu'])
+      .order('criado_em', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    const ref = ultimoHumano?.criado_em || conversa.last_message_at;
+    if (ref) {
+      const diffHours = (Date.now() - new Date(ref).getTime()) / (1000 * 60 * 60);
       if (diffHours >= tempoHoras) {
-        // Já passou o tempo, reativar o bot automaticamente
         await supabaseAdmin
-          .from('whatsapp_chats')
-          .update({ bot_disabled: false, disabled_at: null })
-          .eq('numero', numero);
-        
+          .from('whatsapp_conversations')
+          .update({ mode: 'BOT', bot_state: 'IDLE', contexto: null })
+          .eq('id', conversa.id);
+        await supabaseAdmin
+          .from('whatsapp_conversation_events')
+          .insert({ conversation_id: conversa.id, tipo: 'bot_retomado', detalhes: { motivo: 'auto_reativacao' } });
         return NextResponse.json({ active: true, reactivated: true });
       }
     }
 
-    // Bot continua desativado
     return NextResponse.json({ active: false });
 
   } catch (err: any) {

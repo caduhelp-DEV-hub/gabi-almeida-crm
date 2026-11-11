@@ -37,6 +37,11 @@ function agoraEmSaoPaulo(agora: Date): { data: string; hhmm: string } {
   return { data: `${get('year')}-${get('month')}-${get('day')}`, hhmm: `${get('hour')}:${get('minute')}` };
 }
 
+/** Data (YYYY-MM-DD) de hoje no fuso de Sao Paulo, independente do fuso do servidor. */
+export function hojeSaoPauloISO(agora: Date = new Date()): string {
+  return agoraEmSaoPaulo(agora).data;
+}
+
 /** O horario `data` + `hora` ja passou (ou e agora)? Usado pra nunca oferecer nem gravar horario no passado. */
 export function jaPassou(dataISO: string, hora: string, agora: Date = new Date()): boolean {
   const atual = agoraEmSaoPaulo(agora);

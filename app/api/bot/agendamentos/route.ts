@@ -34,6 +34,16 @@ function firstWordNorm(v: string): string {
   );
 }
 
+function dddESufixo(phone: string): { ddd: string; suffix: string } {
+  const digits = phone.replace(/\D/g, '');
+  const norm = digits.startsWith('55') && (digits.length === 12 || digits.length === 13)
+    ? digits
+    : (digits.length === 10 || digits.length === 11 ? `55${digits}` : digits);
+  const suffix = norm.slice(-8);
+  const ddd = norm.startsWith('55') && (norm.length === 12 || norm.length === 13) ? norm.slice(2, 4) : '';
+  return { ddd, suffix };
+}
+
 async function resolveOrCreateClienteId(
   clienteId: string | undefined,
   clienteNome: string,
@@ -41,8 +51,8 @@ async function resolveOrCreateClienteId(
 ): Promise<string | undefined> {
   if (clienteId) return clienteId;
   const digits = (telefone || '').replace(/\D/g, '');
-  const alvo = digits.slice(-8);
-  if (!alvo) return undefined;
+  const alvo = dddESufixo(digits);
+  if (!alvo.suffix) return undefined;
 
   const { data: clientes } = await supabaseAdmin
     .from('clientes')
@@ -50,9 +60,18 @@ async function resolveOrCreateClienteId(
     .not('telefone', 'is', null);
 
   type ClienteRow = { id: string; nome: string | null; telefone: string | null };
-  const matches = ((clientes || []) as ClienteRow[]).filter(
-    (c) => c.telefone && phoneSuffix(String(c.telefone)) === alvo,
-  );
+  const lista = (clientes || []) as ClienteRow[];
+  const comMesmoDdd = alvo.ddd
+    ? lista.filter((c) => {
+        if (!c.telefone) return false;
+        const cand = dddESufixo(String(c.telefone));
+        return cand.suffix === alvo.suffix && cand.ddd === alvo.ddd;
+      })
+    : [];
+  const matches =
+    comMesmoDdd.length > 0
+      ? comMesmoDdd
+      : lista.filter((c) => c.telefone && phoneSuffix(String(c.telefone)) === alvo.suffix);
   let resolvedId: string | undefined;
 
   if (matches.length === 1) {

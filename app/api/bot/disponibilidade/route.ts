@@ -22,12 +22,53 @@ export async function GET(request: NextRequest) {
   const data = searchParams.get('data');
   const profissional = searchParams.get('profissional');
   const procedimento = searchParams.get('procedimento') || '';
+  const diasRaw = Number(searchParams.get('dias') || '1');
+  const dias = Number.isFinite(diasRaw) && diasRaw > 1 ? Math.min(14, Math.floor(diasRaw)) : 1;
 
   if (!data || !profissional) {
     return NextResponse.json({ error: 'parametros "data" e "profissional" sao obrigatorios' }, { status: 400 });
   }
 
   try {
+    if (dias > 1) {
+      const base = new Date(`${data}T12:00:00Z`);
+      const datas = Array.from({ length: dias }, (_, i) => {
+        const d = new Date(base);
+        d.setUTCDate(d.getUTCDate() + i);
+        return d.toISOString().slice(0, 10);
+      });
+
+      const [{ data: servs }, { data: appts }, { data: blks }, horarioAtendimento] = await Promise.all([
+        supabaseAdmin.from('servicos').select('*'),
+        supabaseAdmin.from('agendamentos').select('*').in('data', datas),
+        supabaseAdmin.from('bloqueios_agenda').select('*').in('data', datas),
+        carregarHorarioAtendimento(),
+      ]);
+
+      const services = (servs || []).map(mapServicoToFrontend);
+      const appointments = (appts || []).map(mapAgendamentoToFrontend);
+      const blocks = (blks || []).map(mapBloqueioToFrontend);
+      const durationMin = getServiceDuration(services, procedimento);
+
+      const diasComVaga = datas.filter((d) => {
+        const janela = janelaDoDia(horarioAtendimento, d);
+        if (!janela) return false;
+        const slots = getAvailableSlots({
+          date: d,
+          profissional,
+          durationMin,
+          appointments: appointments.filter((a: { data: string }) => a.data === d),
+          blocks: blocks.filter((b: { data: string }) => b.data === d),
+          services,
+          startMinutesFromMidnight: janela.inicioMin,
+          endMinutesFromMidnight: janela.fimMin,
+        });
+        return slots.some((h) => !jaPassou(d, h));
+      });
+
+      return NextResponse.json({ diasComVaga, durationMin });
+    }
+
     const [{ data: servs }, { data: appts }, { data: blks }, horarioAtendimento] = await Promise.all([
       supabaseAdmin.from('servicos').select('*'),
       supabaseAdmin.from('agendamentos').select('*').eq('data', data),

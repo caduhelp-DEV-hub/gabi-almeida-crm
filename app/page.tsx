@@ -2009,7 +2009,7 @@ export default function SystemPage() {
               <span>Acesso seguro. Todos os dados são criptografados.</span>
             </div>
             <span>© 2026 Gabi Almeida Estética.</span>
-            <span>Desenvolvido: caduhelp-dev | Ver. 3.40.0</span>
+            <span>Desenvolvido: caduhelp-dev | Ver. 3.41.0</span>
           </div>
         </div>
       </div>
@@ -7078,11 +7078,19 @@ export default function SystemPage() {
                       <button
                         onClick={async () => {
                           const novoStatus = selectedWhatsappChat.mode === 'BOT' ? 'HUMAN' : 'BOT';
-                          const res = await supabase.from('whatsapp_conversations').update({
-                            mode: novoStatus
-                          }).eq('id', selectedWhatsappChat.id);
+                          const payloadUpdate: Record<string, unknown> = { mode: novoStatus };
+                          if (novoStatus === 'BOT') {
+                            payloadUpdate.bot_state = 'IDLE';
+                            payloadUpdate.contexto = null;
+                          }
+                          const res = await supabase.from('whatsapp_conversations').update(payloadUpdate).eq('id', selectedWhatsappChat.id);
                           
                           if (!res.error) {
+                            await supabase.from('whatsapp_conversation_events').insert({
+                              conversation_id: selectedWhatsappChat.id,
+                              tipo: novoStatus === 'BOT' ? 'bot_retomado' : 'humano_assumiu',
+                              detalhes: { origem: 'crm_manual' },
+                            });
                             const updatedChat = { ...selectedWhatsappChat, mode: novoStatus as 'BOT' | 'HUMAN' };
                             setSelectedWhatsappChat(updatedChat);
                             setWhatsappChats(prev => prev.map(c => c.id === updatedChat.id ? updatedChat : c));
@@ -7134,12 +7142,24 @@ export default function SystemPage() {
                   </div>
                   <div>
                     <h2 className="text-[18px] font-bold text-on-surface">Gabi Almeida Estética Sistema</h2>
-                    <p className="text-[13px] text-on-surface-variant font-bold">Versão atual: 3.40.0</p>
+                    <p className="text-[13px] text-on-surface-variant font-bold">Versão atual: 3.41.0</p>
                   </div>
                 </div>
 
                 <div className="space-y-4">
                   <h3 className="text-[14px] font-bold text-primary border-b border-outline-variant/30 pb-2">Histórico de Versões (Changelog)</h3>
+
+                  <div className="bg-surface-container-lowest rounded-2xl p-4 border border-outline-variant/50 mb-4">
+                    <div className="flex justify-between items-center mb-2">
+                      <span className="font-bold text-[14px] text-on-surface">Versão 3.41.0</span>
+                      <span className="text-[11px] font-bold text-on-surface-variant px-2 py-1 bg-surface-container rounded-lg">11 Novembro 2026</span>
+                    </div>
+                    <ul className="list-disc pl-5 space-y-1.5 text-[13px] text-on-surface-variant mt-3">
+                      <li><strong className="text-on-surface">Fim do Travamento e Perda de Mensagens no Robô:</strong> Adicionados timeouts nas consultas ao CRM e na fila por conversa, liberação para retentativas em falhas momentâneas, preservação das configurações em cache durante oscilações de rede e resolução completa de contatos em formato privado (<code className="text-[12px]">@lid</code>).</li>
+                      <li><strong className="text-on-surface">Retomada e Pausa Confiáveis:</strong> O botão "Reativar Robô" passa a encerrar a pausa imediatamente no histórico de eventos, a reativação automática de 24h deixa de ser reiniciada por perguntas do cliente e a verificação de eco confere também o histórico salvo no banco.</li>
+                      <li><strong className="text-on-surface">Contexto e Fuso Horário Corrigidos:</strong> Consultas de agendamentos passam a usar o fuso horário de São Paulo (corrigindo ocultação entre 21h e 23h59), ignorando atendimentos finalizados/passados; disponibilidade de 10 dias em chamada única; saudações no meio do fluxo e mensagens de resgate não apagam mais o agendamento em andamento; e reagendamento respeita a profissional original.</li>
+                    </ul>
+                  </div>
 
                   <div className="bg-surface-container-lowest rounded-2xl p-4 border border-outline-variant/50 mb-4">
                     <div className="flex justify-between items-center mb-2">
