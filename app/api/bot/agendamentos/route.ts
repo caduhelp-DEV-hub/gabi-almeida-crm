@@ -9,6 +9,7 @@ import { carregarHorarioAtendimento } from '../../../../lib/botHorario';
 interface CriarAgendamentoBody {
   clienteId?: string;
   clienteNome: string;
+  telefone?: string;
   clienteAvatar?: string;
   procedimento: string;
   profissional: string;
@@ -16,6 +17,72 @@ interface CriarAgendamentoBody {
   data: string;
   hora: string;
   valor?: number;
+}
+
+function phoneSuffix(v: string): string {
+  return v.replace(/\D/g, '').slice(-8);
+}
+
+function firstWordNorm(v: string): string {
+  return (
+    (v || '')
+      .trim()
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .split(/\s+/)[0] || ''
+  );
+}
+
+async function resolveOrCreateClienteId(
+  clienteId: string | undefined,
+  clienteNome: string,
+  telefone: string | undefined,
+): Promise<string | undefined> {
+  if (clienteId) return clienteId;
+  const digits = (telefone || '').replace(/\D/g, '');
+  const alvo = digits.slice(-8);
+  if (!alvo) return undefined;
+
+  const { data: clientes } = await supabaseAdmin
+    .from('clientes')
+    .select('id, nome, telefone')
+    .not('telefone', 'is', null);
+
+  type ClienteRow = { id: string; nome: string | null; telefone: string | null };
+  const matches = ((clientes || []) as ClienteRow[]).filter(
+    (c) => c.telefone && phoneSuffix(String(c.telefone)) === alvo,
+  );
+  let resolvedId: string | undefined;
+
+  if (matches.length === 1) {
+    resolvedId = matches[0].id as string;
+  } else if (matches.length > 1) {
+    const firstNames = matches.map((m) => firstWordNorm(String(m.nome || ''))).filter(Boolean);
+    if (firstNames.length === matches.length && new Set(firstNames).size === 1) {
+      const sorted = [...matches].sort((a, b) => String(b.nome || '').length - String(a.nome || '').length);
+      resolvedId = sorted[0].id as string;
+    }
+  }
+
+  if (!resolvedId) {
+    const { data: novoCliente } = await supabaseAdmin
+      .from('clientes')
+      .insert([{ nome: clienteNome, telefone: digits, status: 'Ativo' }])
+      .select('id')
+      .single();
+    if (novoCliente?.id) resolvedId = novoCliente.id as string;
+  }
+
+  if (resolvedId) {
+    await supabaseAdmin
+      .from('whatsapp_contacts')
+      .update({ cliente_id: resolvedId })
+      .eq('telefone', digits)
+      .is('cliente_id', null);
+  }
+
+  return resolvedId;
 }
 
 /**
@@ -39,7 +106,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'JSON invalido.' }, { status: 400 });
   }
 
-  const { clienteId, clienteNome, clienteAvatar, procedimento, profissional, categoria, data, hora, valor } = body;
+  const { clienteId, clienteNome, telefone, clienteAvatar, procedimento, profissional, categoria, data, hora, valor } = body;
   if (!clienteNome || !procedimento || !profissional || !data || !hora) {
     return NextResponse.json({ error: 'clienteNome, procedimento, profissional, data e hora sao obrigatorios' }, { status: 400 });
   }
@@ -74,8 +141,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'horario_ocupado', motivo: 'Esse horário acabou de ser reservado.' }, { status: 409 });
     }
 
+    const resolvedClienteId = await resolveOrCreateClienteId(clienteId, clienteNome, telefone);
+
     const payload = mapAgendamentoToBackend({
-      clienteId,
+      clienteId: resolvedClienteId,
       clienteNome,
       clienteAvatar,
       procedimento,
